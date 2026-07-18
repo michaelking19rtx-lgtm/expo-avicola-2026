@@ -73,19 +73,39 @@ function momento(hora) {
 }
 
 /**
- * Parte `site.horario` ("08:00 – 16:30") en inicio y fin.
+ * Parte un rango ("08:00 – 16:30") en dos ISO 8601 completos.
+ *
+ * Lo usan tanto `site.horario` (el evento entero) como el `hora` de cada bloque
+ * del programa, que tienen exactamente el mismo formato.
  *
  * OJO: el separador es una raya (–, U+2013), no un guion. Se acepta cualquiera
  * de los dos para que un cambio tipográfico en el JSON no rompa el marcado.
  *
+ * Un bloque sin rango —la clausura es solo "16:30"— devuelve `fin: null`, y
+ * `limpiar()` se encarga de podarlo.
+ *
+ * @param {string | undefined} rango
  * @returns {{ inicio: string | null, fin: string | null }}
  */
-function franjaHoraria() {
-  const partes = String(site.horario ?? '').split(/\s*[–-]\s*/);
+function franjaHoraria(rango) {
+  const partes = String(rango ?? '').split(/\s*[–-]\s*/);
   return {
     inicio: partes[0] ? momento(partes[0]) : null,
     fin: partes[1] ? momento(partes[1]) : null,
   };
+}
+
+/**
+ * ¿Este nombre de ponente es un marcador de "todavía no lo sabemos"?
+ *
+ * Vive en el ámbito del módulo porque lo consultan dos sitios: la lista de
+ * `performer` del evento y el `performer` de cada sesión.
+ *
+ * @param {string} nombre
+ */
+function esPendiente(nombre) {
+  const n = nombre.trim().toLowerCase();
+  return n.startsWith('ponente por confirmar') || n === 'por confirmar';
 }
 
 /**
@@ -99,9 +119,6 @@ function franjaHoraria() {
  */
 function ponentes() {
   const vistos = new Set();
-  const esPendiente = (n) =>
-    n.trim().toLowerCase().startsWith('ponente por confirmar') ||
-    n.trim().toLowerCase() === 'por confirmar';
 
   // 1. Quien tiene ponencia asignada en la agenda.
   for (const bloque of programa.bloques ?? []) {
@@ -132,6 +149,53 @@ function ponentes() {
   }
 
   return [...vistos].map((name) => ({ '@type': 'Person', name }));
+}
+
+/**
+ * Cada conferencia como `subEvent` del congreso.
+ *
+ * Solo los bloques `tipo: 'ponencia'`. El registro, el coffee, el show, la
+ * comida y la clausura NO son sub-eventos: son logística del mismo evento, y
+ * declararlos como `Event` propios ensuciaría el grafo con cosas que nadie
+ * busca ni a las que nadie asiste por separado.
+ *
+ * **Cada sesión repite `location`.** Un `subEvent` es un `Event` completo y
+ * Google lo valida como tal —name, startDate y location son sus campos
+ * obligatorios—, así que heredar la sede del padre no basta: sin `location`
+ * cada sesión saldría con un aviso. El coste es repetir el Place siete veces;
+ * lo he preferido a un marcado que valida con advertencias.
+ *
+ * El `performer` va como ARRAY de una persona aunque hoy nunca haya dos: es el
+ * tipo que schema.org espera y evita que añadir un segundo ponente a una mesa
+ * obligue a cambiar la forma del campo.
+ *
+ * @returns {Record<string, unknown>[]}
+ */
+function sesiones() {
+  return (programa.bloques ?? [])
+    .filter((bloque) => bloque.tipo === 'ponencia')
+    .map((bloque) => {
+      const { inicio, fin } = franjaHoraria(bloque.hora);
+      const ponente = bloque.ponente?.trim();
+      return {
+        '@type': 'Event',
+        name: bloque.titulo,
+        startDate: inicio,
+        endDate: fin,
+        eventStatus: 'https://schema.org/EventScheduled',
+        eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+        location: lugar(),
+        /*
+          Una sesión sin ponente confirmado se declara igual —la sesión existe
+          y tiene hora—, pero SIN `performer`. Afirmar que actúa alguien
+          llamado "Por confirmar" es peor que no decir quién actúa.
+        */
+        performer:
+          ponente && !esPendiente(ponente)
+            ? [{ '@type': 'Person', name: ponente }]
+            : undefined,
+      };
+    });
 }
 
 /**
@@ -177,6 +241,10 @@ function ofertas(urlBoletos) {
  * build. Lo que no puede es pasar en silencio.
  */
 function avisaSiLaDescripcionSeDesfasa() {
+  const conferencias = (programa.bloques ?? []).filter(
+    (b) => b.tipo === 'ponencia'
+  ).length;
+
   for (const boleto of boletos) {
     if (!boleto.descripcion) continue;
     for (const [clave, valor] of [
@@ -190,6 +258,27 @@ function avisaSiLaDescripcionSeDesfasa() {
             `boletos.json Y la descripción del producto en Stripe.`
         );
       }
+    }
+
+    /*
+      El conteo de conferencias, que es el único sitio del proyecto donde ese
+      número sigue escrito a mano.
+
+      No se interpola —ver el comentario de `description` en `ofertas()`— así
+      que lo que queda es gritar cuando deja de cuadrar. Se busca el número
+      seguido de "conferencia": si la agenda pasa a 8 y la descripción sigue
+      diciendo 7, esto salta en build.
+    */
+    const dice = new RegExp(`\\b${conferencias}\\s+conferencias?\\b`).test(
+      boleto.descripcion
+    );
+    if (!dice) {
+      console.warn(
+        `[boletos] La descripción de "${boleto.id}" no dice ` +
+          `"${conferencias} conferencias", y la agenda tiene ${conferencias} ` +
+          `bloques de tipo "ponencia". Actualiza boletos.json Y la descripción ` +
+          `del producto en Stripe, que vive fuera del repo.`
+      );
     }
   }
 }
@@ -242,7 +331,7 @@ export function eventoJsonLd(canonical) {
   // bundle del cliente.
   avisaSiLaDescripcionSeDesfasa();
 
-  const { inicio, fin } = franjaHoraria();
+  const { inicio, fin } = franjaHoraria(site.horario);
   const urlBoletos = `${canonical.replace(/\/$/, '')}/#boletos`.replace(
     /([^:])\/\/+/g,
     '$1/'
@@ -259,6 +348,7 @@ export function eventoJsonLd(canonical) {
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: lugar(),
     performer: ponentes(),
+    subEvent: sesiones(),
     offers: ofertas(urlBoletos),
     organizer: {
       '@type': 'Organization',

@@ -1,6 +1,7 @@
 ---
 import boletos from '../data/boletos.json';
 import site from '../data/site.json';
+import { conConteo } from '../scripts/programa.js';
 
 /*
   Punto de conversión del sitio. TODO sale de src/data/boletos.json y
@@ -141,7 +142,9 @@ const entradas = boletos.map((boleto) => ({
                     stroke-linejoin="round"
                   />
                 </svg>
-                <span>{punto}</span>
+                {/* conConteo: el primer punto lleva {conferencias}, que sale
+                    de contar las ponencias de programa.json. */}
+                <span>{conConteo(punto)}</span>
               </li>
             ))}
           </ul>

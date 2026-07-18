@@ -1,5 +1,6 @@
 ---
 import faq from '../data/faq.json';
+import { conConteo } from '../scripts/programa.js';
 
 /*
   Preguntas frecuentes.
@@ -42,7 +43,9 @@ import faq from '../data/faq.json';
             </svg>
           </summary>
           <div class="item__respuesta">
-            <p>{item.respuesta}</p>
+            {/* conConteo: la respuesta del boleto lleva {conferenciasPalabra},
+                que sale de contar las ponencias de programa.json. */}
+            <p>{conConteo(item.respuesta)}</p>
           </div>
         </details>
       ))}

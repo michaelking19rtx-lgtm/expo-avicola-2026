@@ -1,4 +1,6 @@
 ---
+import { totalConferencias, enPalabra } from '../scripts/programa.js';
+
 /*
   Sección de introducción al congreso.
 
@@ -6,6 +8,14 @@
   16:9, para que al sustituirlo no cambie el layout. El marcado definitivo
   queda escrito abajo en un comentario de Astro (no llega al HTML servido).
 */
+
+/*
+  El lead ABRE con el número, así que va en letra y con mayúscula inicial. Se
+  compone aquí y no en la plantilla para no meter un `replace` con expresión
+  regular en medio del texto, que es donde peor se lee.
+*/
+const cuantas = enPalabra(totalConferencias());
+const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
 ---
 
 <section class="intro" id="congreso">
@@ -14,7 +24,7 @@
       <p class="intro__eyebrow" data-anim>El congreso</p>
       <h2 class="intro__title" data-anim>Un día, toda la operación avícola</h2>
       <p class="intro__lead" data-anim>
-        Siete conferencias, un panel de expertos y un show de medio tiempo conectan
+        {Cuantas} conferencias, un panel de expertos y un show de medio tiempo conectan
         los tres frentes que deciden el resultado de una granja: productividad,
         sanidad preventiva y tecnología aplicada. Entre sesiones, coffee break y
         área comercial para ver equipo y hablar de frente con proveedores.

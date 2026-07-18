@@ -63,7 +63,7 @@ expo-avicola-2026/
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin,404}.astro
-│   ├── scripts/{theme,animations,paths,fechas,schema}.js
+│   ├── scripts/{theme,animations,paths,fechas,schema,programa}.js
 │   └── styles/{tokens,global}.css
 ├── astro.config.mjs
 ├── CLAUDE.md
@@ -385,7 +385,7 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | ~~11~~ | ~~**Ponente de la sesión de IA**~~ | ~~`programa.json`, bloque 13:10~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera |
 | ~~15~~ | ~~**Hueco en la agenda para la 7ª ponencia**~~ | ~~`programa.json`~~ | **RESUELTO** — 13:15, con el reparto 4+3 a 30 min |
-| 16 | **Actualizar la descripción del producto en STRIPE** | panel de Stripe, fuera del repo | `boletos.json` ya dice «7 conferencias»; **Stripe sigue diciendo 6**. Lo tiene que editar una persona |
+| 16 | **Actualizar la descripción del producto en STRIPE** | panel de Stripe, fuera del repo | `boletos.json` ya dice «7 conferencias»; **Stripe sigue diciendo 6**. Lo tiene que editar una persona. El build ya avisa si `boletos.json` se desfasa, pero **no puede ver Stripe** |
 | ~~12~~ | ~~**Stripe**: producto, precio y checkout~~ | ~~`boletos.json`~~ | **RESUELTO** — Payment Link conectado en `checkoutUrl` |
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
 | 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
@@ -1961,6 +1961,104 @@ absolutos, que salen de componer `site.fecha` + la hora del bloque + el desfase
   360 px de ancho: de 2.69 a **2.84 pantallas**. Sigue siendo aceptable —es una
   agenda, se recorre— y el crecimiento es del 5.5%, proporcional a la fila que
   se añadió. No hay efecto de segundo orden: ninguna otra fila cambió de alto.
+
+---
+
+### `subEvent` en el JSON-LD y el conteo derivado de la agenda
+
+Dos cosas de la misma zona: cada conferencia pasa a declararse como `subEvent`, y
+el número de conferencias deja de estar escrito a mano.
+
+**Qué se hizo**
+
+- `schema.js`: nueva `sesiones()`, que emite un `Event` por cada bloque
+  `tipo === 'ponencia'`. `franjaHoraria()` se generalizó para partir cualquier
+  rango («09:00 – 09:30») en vez de solo `site.horario`, y `esPendiente()` subió
+  al ámbito del módulo porque ahora la consultan dos sitios.
+- `src/scripts/programa.js` (nuevo): `totalConferencias()`, `enPalabra()` y
+  `conConteo()`.
+- Cuatro textos pasan a derivarse. El quinto, no: ver abajo.
+
+#### `subEvent`
+
+Solo las ponencias. El registro, el coffee, el show, la comida y la clausura NO
+son sub-eventos: son logística del mismo evento, y declararlos como `Event`
+propios ensuciaría el grafo con cosas a las que nadie asiste por separado.
+
+**Cada sesión repite `location`, y es deliberado.** Un `subEvent` es un `Event`
+completo y Google lo valida como tal —name, startDate y location son
+obligatorios—, así que heredar la sede del padre no basta: sin `location` cada
+sesión saldría con un aviso.
+
+Se dudó por el peso, y se midió antes de decidir:
+
+| | crudo | gzip | brotli |
+| :-- | --: | --: | --: |
+| JSON-LD con `subEvent` | 6.59 KB | 1.30 KB | 1.09 KB |
+| sin `subEvent` | 1.70 KB | 0.86 KB | 0.73 KB |
+| **coste** | **4.89 KB** | **0.45 KB** | **0.36 KB** |
+
+Y sobre la página servida entera, que es lo que cuenta: **+0.19 KB gzip, +0.14 KB
+brotli.** Los 4.89 KB crudos colapsan a ~140 bytes porque los siete `location`
+son idénticos y es justo lo que un compresor hace mejor. **La duplicación que
+parecía cara sale gratis.** Decidir por el número crudo habría sido decidir por
+un número que nadie descarga.
+
+Una sesión sin ponente confirmado se declara igual —existe y tiene hora— pero
+**sin `performer`**: afirmar que actúa alguien llamado «Por confirmar» es peor
+que no decir quién actúa. Hoy no se da el caso, pero se dio hace dos commits.
+
+#### El conteo derivado, y el texto que NO se derivó
+
+El número estaba a mano en cinco sitios de cuatro archivos. Cuatro se derivan ya
+de `programa.bloques.filter(b => b.tipo === 'ponencia').length`:
+
+| Dónde | Cómo | Forma |
+| :---- | :--- | :---- |
+| `Programa.astro` | interpolación directa | «siete» |
+| `VideoSection.astro` | interpolación directa, capitalizada | «Siete» (abre frase) |
+| `faq.json` | marcador `{conferenciasPalabra}` | «siete» |
+| `boletos.json` → `incluye[0]` | marcador `{conferencias}` | «7» |
+
+Los `.astro` interpolan y ya. Los JSON no pueden ejecutar código, así que llevan
+un marcador que sustituye `conConteo()` al pintar. **Hay dos marcadores porque
+los textos no comparten estilo** —la lista de boletos usa cifra y la FAQ usa
+letra—; unificarlos sería una decisión editorial, no técnica.
+
+**`boletos.descripcion` SIGUE A MANO, y debe seguir.** Es texto plano a propósito
+para que una persona lo copie tal cual a Stripe; con un marcador dentro habría
+que compilar el sitio para obtener el texto final, que es exactamente lo que ese
+campo existe para evitar. Lo que lo protege es
+`avisaSiLaDescripcionSeDesfasa()`, que ya vigilaba el recinto y ahora vigila
+también el conteo: si la agenda pasa a 8 y la descripción sigue diciendo 7,
+salta en build.
+
+> **El guardián no puede ver Stripe.** Avisa de que `boletos.json` se desfasó de
+> la agenda; que la descripción del producto en el panel de Stripe siga diciendo
+> otra cosa no lo detecta nadie desde aquí. Es el pendiente 16.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+- **Los 7 `subEvent` cotejados uno a uno contra `programa.json`**: horas, título,
+  `performer`, `location` y huso (−06:00) cuadran en los siete. Sin nulos y sin
+  «confirmar» en todo el marcado. El `performer` del evento padre sigue en 6.
+- **El guardián se probó haciéndolo fallar**, no viéndolo pasar: quitando la
+  ponencia de Esteban de la agenda, el build escupe el aviso —«no dice "6
+  conferencias", y la agenda tiene 6»— y **los cuatro textos derivados pasan
+  solos de «siete» a «seis» y de «7» a «6»**. Restaurado después, verificando
+  con `git diff` que lo descartado eran exactamente las 6 líneas de la prueba.
+- **Cero marcadores `{…}` sin sustituir** en el HTML compilado.
+- 0 px de desbordamiento en los cuatro textos, y comprobado en captura que
+  «Siete conferencias» abre frase con mayúscula.
+
+> **Otra vez la cirugía de strings en shell.** El script de verificación se
+> escribió con un heredoc y perdió un backslash por el camino: `/\s+/g` acabó
+> siendo `/s+/g`, y el informe salió con todas las eses convertidas en espacios
+> («conferencias» → «conferencia »). Las MEDIDAS eran correctas; el texto
+> mostrado, no. Es la tercera vez que pasa en este proyecto. **Los scripts se
+> escriben con Write, no con heredoc ni `node -e`.**
 
 ---
 
