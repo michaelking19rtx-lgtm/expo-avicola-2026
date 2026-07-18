@@ -147,6 +147,16 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
     archivos que vas a incluir, no solo los que tocaste a propósito. En la
     Fase 2 se coló un `dbg2.mjs` de depuración y hubo que borrarlo en un commit
     aparte. Los scripts temporales no van al repo.
+11. **No escribir cifras de medición (ms, KB, %) en comentarios, commits o
+    reportes sin haberlas medido en esa misma sesión.** Si es una estimación,
+    decir que lo es. Un número inventado en un comentario sobrevive al
+    contexto que lo justificaba.
+
+    > Origen: en la Fase 2b se escribió en un comentario del código que bajar
+    > `fetchpriority` mejoraba el LCP «de 504 a 424 ms», antes de medirlo. Al
+    > medirlo de verdad la diferencia estaba dentro del ruido. El comentario
+    > se corrigió, pero de no haberse revisado habría quedado en el repo como
+    > una justificación falsa de una decisión correcta por otro motivo.
 
 ## 6. Roadmap
 
