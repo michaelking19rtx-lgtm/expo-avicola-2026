@@ -119,14 +119,55 @@ function ofertas(urlBoletos) {
   return boletos.map((boleto) => ({
     '@type': 'Offer',
     name: boleto.nombre,
+    /*
+      `descripcion` de boletos.json es TEXTO PLANO a propósito, no una
+      plantilla con `{recinto}`: su razón de ser es que una persona lo copie
+      tal cual a la descripción del producto en Stripe, y con marcadores
+      dentro habría que compilar el sitio para obtener el texto final.
+
+      Lo que protege de que se desincronice del resto de los datos es
+      `avisaSiLaDescripcionSeDesfasa()`, unas líneas más abajo.
+    */
+    description: boleto.descripcion,
     price: boleto.precio,
     priceCurrency: boleto.moneda,
     availability: boleto.disponible
       ? 'https://schema.org/InStock'
       : 'https://schema.org/SoldOut',
-    // Cuando exista la pasarela, el enlace de compra manda sobre el ancla.
+    // Con la pasarela viva, el enlace de compra manda sobre el ancla.
     url: boleto.checkoutUrl ?? urlBoletos,
   }));
+}
+
+/**
+ * Avisa en build si la descripción del boleto dejó de nombrar el recinto o la
+ * ciudad que hay en site.json.
+ *
+ * El caso que evita: cambia la sede, alguien actualiza site.json, y la
+ * descripción —que es texto plano— se queda nombrando el salón anterior. Ese
+ * texto acaba en el JSON-LD y, peor, alguien lo copia a Stripe, así que el
+ * comprador ve una sede equivocada justo al pagar.
+ *
+ * Es un aviso y no una excepción: si algún día la descripción se reescribe sin
+ * nombrar la sede, es una decisión editorial legítima y no debe tumbar el
+ * build. Lo que no puede es pasar en silencio.
+ */
+function avisaSiLaDescripcionSeDesfasa() {
+  for (const boleto of boletos) {
+    if (!boleto.descripcion) continue;
+    for (const [clave, valor] of [
+      ['recinto', site.recinto],
+      ['ciudad', site.ciudad],
+    ]) {
+      if (valor && !boleto.descripcion.includes(valor)) {
+        console.warn(
+          `[boletos] La descripción de "${boleto.id}" no nombra ${clave} ` +
+            `("${valor}") de site.json. Si la sede cambió, actualiza también ` +
+            `boletos.json Y la descripción del producto en Stripe.`
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -173,6 +214,10 @@ function lugar() {
  * @returns {Record<string, unknown>}
  */
 export function eventoJsonLd(canonical) {
+  // Corre en build, que es cuando se genera el JSON-LD. No añade nada al
+  // bundle del cliente.
+  avisaSiLaDescripcionSeDesfasa();
+
   const { inicio, fin } = franjaHoraria();
   const urlBoletos = `${canonical.replace(/\/$/, '')}/#boletos`.replace(
     /([^:])\/\/+/g,

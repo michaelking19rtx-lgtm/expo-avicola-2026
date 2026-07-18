@@ -1273,6 +1273,39 @@ Tres cosas que conviene resolver antes de promocionar:
 3. La descripción **no menciona** la constancia con QR, el coffee break, el
    show ni los stands, que sí son argumentos de venta en la tarjeta.
 
+#### `boletos.descripcion` — EL ESPEJO DE STRIPE
+
+El boleto estrena `descripcion`, y su razón de ser es doble: alimenta el
+`description` del `Offer` en el JSON-LD **y es el texto que hay que copiar a
+mano a la descripción del producto en el panel de Stripe.** Junto a él va
+`descripcionNota`, que lo dice explícitamente para quien abra el JSON sin
+haber leído esto. Ninguno de los dos llega al cliente: `boletos.json` se
+importa solo en build (verificado: la nota no aparece ni en el HTML ni en el
+JSON-LD).
+
+**Es TEXTO PLANO a propósito, no una plantilla.** Se valoró escribirlo como
+`"...en el {recinto}, {ciudad}..."` y resolverlo en build, que es lo que pide
+la costumbre del proyecto. **Se descartó porque rompería justo el flujo para
+el que existe el campo:** quien lo abra para copiarlo a Stripe se encontraría
+marcadores y tendría que compilar el sitio para obtener el texto final.
+
+Lo que sí protege de la desincronización es
+`avisaSiLaDescripcionSeDesfasa()` en `schema.js`: en cada build comprueba que
+la descripción siga nombrando el `recinto` y la `ciudad` de `site.json`, y
+avisa por consola si no. Es aviso y no excepción — reescribir la descripción
+sin nombrar la sede es una decisión editorial legítima; lo que no puede es
+pasar en silencio.
+
+> **Probado haciéndolo fallar**, no solo viéndolo pasar: se cambió
+> `site.recinto` a otro valor, el build escupió el aviso nombrando el recinto
+> nuevo, y al restaurar volvió a 0 avisos. Un guardián que nunca se ha visto
+> disparar no está verificado (convención 14).
+
+El caso que evita: cambia la sede, alguien actualiza `site.json`, y la
+descripción se queda nombrando el salón anterior — texto que acaba en el
+JSON-LD y, peor, que alguien copia a Stripe, así que el comprador ve una sede
+equivocada justo al pagar.
+
 **PENDIENTE DE FASE FUTURA — no hay webhook ni constancia automática.** Al ser
 un Payment Link sin backend, el sitio no se entera de que alguien pagó: no hay
 página de gracias propia, ni registro de asistentes, ni emisión de la
