@@ -264,8 +264,24 @@ const IMG_H = 900;
 <section class="hero" id="inicio">
   <div class="hero__inner">
     <div class="hero__content">
+      {/*
+        El eyebrow va partido en DOS PIEZAS, y no es cosmético.
+
+        Con el texto corrido, «TEHUACÁN, PUEBLA · 7 DE AGOSTO 2026» cabía en
+        una línea con la fuente de respaldo y se partía en dos al entrar Inter
+        Variable, empujando el título 22px hacia abajo. Medido en 4G a 390px:
+        eyebrow de 21px a 43px y CLS de 0.028, cuatrocientas veces el de
+        escritorio.
+
+        Partiéndolo por CSS el número de líneas lo decide el layout y no la
+        métrica de la fuente, así que no hay reflow posible. De paso el corte
+        cae donde tiene sentido —lugar arriba, fecha abajo— en vez de a mitad
+        de «7 DE / AGOSTO», que es donde caía solo.
+      */}
       <p class="hero__eyebrow" data-anim>
-        {site.ciudad} · 7 de agosto 2026
+        <span class="hero__eyebrow-parte">{site.ciudad}</span>
+        <span class="hero__eyebrow-sep" aria-hidden="true"> · </span>
+        <span class="hero__eyebrow-parte">7 de agosto 2026</span>
       </p>
 
       <h1 class="hero__title">
@@ -718,6 +734,11 @@ const IMG_H = 900;
     display: flex;
     min-height: 100svh;
     align-items: center;
+    /*
+      Ver más abajo: en pantallas BAJAS el min-height se rebaja. Un teléfono
+      girado tiene ~430px de alto y exigir 100svh dejaba los CTAs en y=567,
+      fuera de pantalla.
+    */
     /* clip y no hidden: no crea contenedor de scroll y evita desbordes
        horizontales del halo, del parallax y del sangrado del conjunto. */
     overflow: clip;
@@ -788,6 +809,22 @@ const IMG_H = 900;
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
+  }
+
+  /*
+    Por debajo de 27rem el eyebrow se parte SIEMPRE en dos líneas, decidido
+    por CSS y no por lo que mida la fuente. Es lo que elimina el reflow al
+    entrar Inter Variable. Por encima cabe de sobra en una línea y vuelve a
+    ser texto corrido con su separador.
+  */
+  @media (max-width: 27rem) {
+    .hero__eyebrow-parte {
+      display: block;
+    }
+
+    .hero__eyebrow-sep {
+      display: none;
+    }
   }
 
   .hero__title {
@@ -1080,7 +1117,9 @@ const IMG_H = 900;
 
   .figura__tema {
     color: var(--text-muted);
-    font-size: 11px;
+    /* 12px, no 11: era el texto más pequeño del sitio y va bajo cada cara en
+       la rejilla de móvil, que es donde se lee. */
+    font-size: 12px;
     line-height: 1.3;
   }
 
@@ -1093,6 +1132,76 @@ const IMG_H = 900;
   @media (min-width: 27rem) {
     .conjunto {
       --cols: 3;
+    }
+  }
+
+  /*
+    PANTALLA BAJA — típicamente un teléfono girado.
+
+    Medido a 932×430: el hero pedía 100svh y acababa midiendo 1025px, con los
+    CTAs en y=567, fuera de pantalla. En un viewport de 430px de alto, reservar
+    la altura completa no aporta nada: el contenido ya es más alto que la
+    pantalla, así que el min-height solo añade aire muerto por arriba y por
+    abajo.
+
+    Se afloja el mínimo y se recorta el padding vertical, que a esa altura es
+    lo que más pesa. Solo por debajo de 34rem de ALTO: cualquier pantalla
+    vertical, por pequeña que sea, queda fuera de esta regla.
+  */
+  @media (max-height: 34rem) {
+    .hero {
+      min-height: 0;
+      padding-block: calc(var(--nav-h) + var(--space-2xs)) var(--space-lg);
+    }
+
+    /*
+      Aflojar el min-height no bastaba: medido a 932×430, el hero bajaba de
+      1025 a 961px pero los CTAs seguían en y=543, fuera de una pantalla de
+      430. El contenido ya era más alto que el viewport, así que hay que
+      comprimir el bloque, no solo la caja que lo envuelve.
+
+      Se recorta lo que más ocupa a esa altura: el título —que a 932px de
+      ancho se iba a 3.6rem y cuatro líneas— y el ritmo vertical entre
+      bloques. El texto no pierde jerarquía, solo deja de estar compuesto para
+      una pantalla alta que aquí no existe.
+    */
+    .hero__title {
+      font-size: 2.25rem;
+      margin-block-start: var(--space-2xs);
+    }
+
+    .hero__tagline {
+      margin-block-start: var(--space-xs);
+    }
+
+    .countdown,
+    .hero__ctas {
+      margin-block-start: var(--space-sm);
+    }
+  }
+
+  /*
+    SEGUNDO ESCALÓN, para pantallas aún más bajas (un iPhone 12 girado son
+    390px). Con el escalón anterior los CTAs se quedaban 23px fuera; aquí se
+    aprieta el ritmo al mínimo y el título baja un punto más.
+
+    Va en un tramo aparte y no endureciendo el escalón de 34rem porque a 430px
+    de alto ese ya entra holgado y comprimirlo más solo le quitaría aire sin
+    ganar nada.
+  */
+  @media (max-height: 26rem) {
+    .hero {
+      padding-block: var(--nav-h) var(--space-md);
+    }
+
+    .hero__title {
+      font-size: 2rem;
+    }
+
+    .hero__tagline,
+    .countdown,
+    .hero__ctas {
+      margin-block-start: var(--space-2xs);
     }
   }
 

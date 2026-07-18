@@ -194,6 +194,10 @@ import enlaces from '../data/navegacion.json';
     z-index: var(--z-modal);
     inset-block-start: var(--space-xs);
     inset-inline-start: var(--space-xs);
+    display: inline-flex;
+    align-items: center;
+    /* 44px de alto: es un control real aunque solo aparezca con el foco. */
+    min-block-size: 44px;
     padding: var(--space-xs) var(--space-md);
     border-radius: var(--radius-sm);
     background-color: var(--accent);
@@ -274,6 +278,19 @@ import enlaces from '../data/navegacion.json';
     /* Cabe en una línea incluso a 320px (~196px de ancho frente a ~224px
        disponibles junto a la hamburguesa), así que no se fuerza el corte. */
     white-space: nowrap;
+  }
+
+  /*
+    ÁREA DE TOQUE del wordmark en móvil: medía 189×15, y es el enlace de
+    vuelta al inicio. Se le da alto pulsable sin tocar la tipografía ni la
+    altura de la barra, que la fija --nav-h.
+  */
+  @media (max-width: 61.9375rem) {
+    .nav__brand {
+      display: inline-flex;
+      align-items: center;
+      min-block-size: 44px;
+    }
   }
 
   .nav__links {

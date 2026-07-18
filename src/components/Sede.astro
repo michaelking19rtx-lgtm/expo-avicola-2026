@@ -448,6 +448,22 @@ const tituloMapa = `Mapa de la ubicación: ${site.recinto}, ${site.direccion}`;
     margin-block-start: var(--space-md);
   }
 
+  /*
+    ÁREA DE TOQUE en móvil. «Cómo llegar» medía 104×24 y «Ver mapa» 111×43,
+    uno por debajo y el otro a un píxel del mínimo de 44. Se agranda el área
+    pulsable, no la letra.
+  */
+  @media (max-width: 61.9375rem) {
+    .mapa__enlace {
+      min-block-size: 44px;
+      padding-block: 0.6rem;
+    }
+
+    .mapa__accion {
+      min-block-size: 44px;
+    }
+  }
+
   .mapa__enlace {
     display: inline-flex;
     align-items: center;

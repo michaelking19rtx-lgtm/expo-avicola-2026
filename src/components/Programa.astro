@@ -281,5 +281,22 @@ const bloques = programa.bloques.map((bloque) => ({
     .slot__cuerpo {
       margin-block-start: var(--space-2xs);
     }
+
+    /*
+      MÁS ANCHO PARA EL TÍTULO. Medido a 360px: el título disponía de 232px y
+      los nombres de las conferencias se partían en trozos de 23 a 26
+      caracteres. De los 128px que se iban en márgenes, 40 eran la sangría del
+      slot y 48 el relleno de la caja.
+
+      Recortando ambos, el título pasa de 232 a 264px sin tocar el carril
+      —que sigue en --rail: 5px— ni el punto, que van posicionados aparte.
+    */
+    .slot {
+      padding-inline-start: var(--space-lg);
+    }
+
+    .slot__caja {
+      padding-inline: var(--space-md);
+    }
   }
 </style>

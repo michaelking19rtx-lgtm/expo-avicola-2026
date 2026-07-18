@@ -167,6 +167,29 @@ const anio = new Date(site.fecha).getUTCFullYear();
     transition: color var(--t-base) var(--ease-out);
   }
 
+  /*
+    ÁREAS DE TOQUE en móvil. Medidos a 360px, estos cuatro enlaces daban
+    20px de alto —«Sede» era un blanco de 39×20— frente a los 44×44 que pide
+    WCAG 2.5.5. El texto no cambia de tamaño: se agranda el área pulsable con
+    padding, que es lo único que hace falta.
+
+    Acotado por ancho para no separar el pie en escritorio, donde se pulsa con
+    ratón y el listado ya está compuesto.
+  */
+  @media (max-width: 61.9375rem) {
+    .pie__enlace,
+    .pie__wordmark {
+      display: inline-block;
+      min-block-size: 44px;
+      padding-block: 0.7rem;
+    }
+
+    .pie__enlace {
+      /* Un poco de aire lateral para que dos enlaces contiguos no se toquen. */
+      padding-inline-end: var(--space-sm);
+    }
+  }
+
   .pie__enlace:hover {
     color: var(--accent);
   }

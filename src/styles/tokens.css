@@ -52,7 +52,17 @@
     -apple-system, 'Segoe UI', sans-serif;
 
   /* Escala fluida (clamp: móvil → desktop) */
-  --step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.9rem);
+  /*
+    El MÍNIMO sube de 0.83rem (13.28px) a 0.875rem (14px): por debajo de 14px
+    el texto corrido en un teléfono deja de ser cómodo, y este escalón lo usan
+    el ponente y la hora del programa, el pie entero, las notas de la tarjeta
+    de boletos y la dirección de la sede.
+
+    Escritorio NO se mueve: el tramo variable (0.8rem + 0.15vw) alcanza los
+    14px a partir de 800px de ancho, así que de ahí para arriba manda el mismo
+    máximo de 0.9rem de siempre. Solo cambian los anchos pequeños.
+  */
+  --step--1: clamp(0.875rem, 0.8rem + 0.15vw, 0.9rem);
   --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
   --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
   --step-2: clamp(1.5rem, 1.3rem + 1vw, 2.25rem);

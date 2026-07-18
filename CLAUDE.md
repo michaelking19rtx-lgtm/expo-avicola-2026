@@ -1289,6 +1289,96 @@ esa extensión no está en la lista.
 
 ---
 
+### Revisión de móvil — el sitio ya cobra y el tráfico llega por WhatsApp
+
+Móvil pasa a ser la versión principal, no la secundaria. Siete arreglos, todos
+medidos antes y después, y **ninguno toca escritorio** salvo uno declarado.
+
+| # | Qué pasaba | Cómo quedó |
+| - | :--------- | :--------- |
+| 1 | CLS 0.028 en 4G: el eyebrow saltaba de 1 a 2 líneas al cargar la fuente y empujaba el título 22px | **CLS 0.0094** |
+| 2 | 9 áreas de toque bajo 44px (4 del pie a **20px de alto**) | **0** |
+| 3 | El CTA de compra caía **628px** por debajo del precio | **114px**, ambos en pantalla |
+| 4 | 52 textos por debajo de 14px | **6** (los `figura__tema`, a 12px por decisión) |
+| 5 | Título del programa partido a 23–26 caracteres | 232 → **264px** de ancho |
+| 6 | En horizontal los CTAs quedaban en y=543 de 430 | **dentro** a 430 y a 390 de alto |
+
+**Decisiones**
+
+- **El eyebrow se parte por CSS, no por métrica de fuente.** Se eligió el
+  salto deliberado en vez de reservar la altura porque arregla dos cosas de
+  una: elimina el reflow y además el corte cae donde tiene sentido —lugar
+  arriba, fecha abajo— en vez de a mitad de «7 DE / AGOSTO», que es donde caía
+  solo. El número de líneas lo decide el layout, así que no hay reflow posible.
+- **En móvil el orden de decisión es precio → botón → detalles.** El CTA se
+  duplica: uno bajo el precio y otro al final de «incluye», para quien
+  necesitó leerla. No se ven recargados porque quedan a ~600px: **nunca
+  coinciden en pantalla**. En escritorio el de cabecera no se pinta y la
+  tarjeta queda exactamente igual que antes.
+- **Las áreas de toque se agrandan solo por debajo de 62rem.** Un blanco de
+  44px en escritorio no sobra, pero habría separado el pie sin que nadie lo
+  pidiera. Se agranda el área pulsable con padding; **la letra no cambia**.
+- **Dos escalones para pantalla baja, no uno.** Aflojar el `min-height` a
+  `max-height: 34rem` dejaba los CTAs 23px fuera a 390px de alto, porque el
+  contenido ya era más alto que el viewport: hay que comprimir el bloque, no
+  la caja. El segundo escalón (`max-height: 26rem`) aprieta más el ritmo. Van
+  separados porque a 430px el primero ya entra holgado y comprimirlo más solo
+  le quitaría aire.
+- **El programa no estrena navegación por horas ni acordeón.** Para un evento
+  de un día, 13 filas de scroll continuo son aceptables; se ganó ancho
+  recortando la sangría del slot y el relleno de la caja, sin tocar el carril.
+
+> **ESCRITORIO: un solo cambio, y es el pedido.** `figura__tema` pasa de 11 a
+> 12px en todos los anchos. Todo lo demás quedó verificado idéntico a 1024,
+> 1280, 1440 y 1920: altura del hero, alto de la tarjeta (839/851/852/852),
+> tamaño de las figuras (279/357/406/444), eyebrow en una línea, un solo CTA y
+> sangría del programa en 40px. El mínimo del clamp de `--step--1` sube a 14px
+> pero **el tramo variable ya alcanzaba 14px a partir de 800px de ancho**, así
+> que de ahí para arriba manda el mismo máximo de siempre.
+
+**Rendimiento en 4G, móvil 390×844, mediana de 5**
+
+| | Antes | Después |
+| :-- | --: | --: |
+| LCP | 2180 ms | **2176 ms** |
+| CLS | 0.02836 | **0.00939** |
+| texto legible | 1865 ms | 1868 ms |
+| hero completo | 2548 ms | 2547 ms |
+
+El CLS que queda (0.0094, muy por debajo del 0.1 de «bueno») lo produce el
+reflow de las etiquetas bajo las figuras al cargar la fuente. **No se persiguió
+a propósito:** reservarles altura fija sería apostar por un largo de nombre que
+va a cambiar en cuanto lleguen los nombres reales.
+
+> **Dos falsos negativos propios en esta tanda, los dos de tubería mal puesta.**
+> (1) La primera medición de 4G dio «LCP 540 ms, CLS 0.588»: el script apuntaba
+> a `localhost:4321/expo-avicola-2026/`, una URL de antes de la migración que un
+> preview viejo seguía sirviendo. Se detectó porque 540 ms en 4G es imposible.
+> (2) Un `npm run build | grep | head -1` mató el build por SIGPIPE a media
+> ejecución y dejó `dist/` con la versión anterior, así que dos verificaciones
+> seguidas midieron un build que no era el del código. **No pasar la salida del
+> build por `head`.**
+
+**Lo que NO se hizo, y por qué**
+
+- **Barra de compra fija.** Se propuso y se descartó de momento: se come ~56px
+  de un viewport de 800 y compite con el CTA del hero durante todo el scroll.
+  Primero el arreglo 3, y ya cumple el objetivo —precio y botón en pantalla—,
+  así que la barra no hace falta hoy. Si se retoma: `IntersectionObserver`
+  sobre hero y boletos (no listeners de scroll, para no tocar Lenis),
+  `visualViewport` para esconderla con el teclado abierto, reserva de hueco con
+  `padding-block-end` en el `body` y `env(safe-area-inset-bottom)`.
+- **Las seis etiquetas «Ponente por confirmar».** Tres pantallas de repetición
+  en móvil, pero se resuelve solo al llegar los nombres.
+
+**Lo que ya estaba bien** y se confirmó midiendo: cero scroll horizontal en
+360/375/390/414/430 y en horizontal, en ambos temas; el countdown cabe en una
+línea en todos los anchos; las 8 anclas aterrizan libres de la nav; y la
+hamburguesa, el menú móvil, los `<summary>` del FAQ y las figuras del hero ya
+superaban los 44px.
+
+---
+
 ### Qué entra a `public/img/` y qué no
 
 > **Léelo antes de subir la imagen Open Graph, los logos de patrocinadores o

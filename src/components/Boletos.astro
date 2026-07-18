@@ -98,6 +98,31 @@ const entradas = boletos.map((boleto) => ({
 
           <p class="tarjeta__nota">Precio por persona · Cupo limitado</p>
 
+          {/*
+            CTA DE CABECERA — solo móvil.
+
+            En un teléfono el orden de decisión es precio → botón → detalles,
+            no precio → detalles → botón. Medido a 360×800: la tarjeta mide
+            894px y el botón caía 628px por debajo del precio, así que NO
+            existía ningún momento en que precio y botón se vieran a la vez.
+
+            En escritorio no aparece: ahí la tarjeta cabe en pantalla y el
+            orden actual —leer qué incluye y decidir al final— funciona.
+          */}
+          {boleto.compraAbierta && (
+            <a
+              class="cta cta--movil"
+              href={boleto.checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Comprar mi boleto
+              <span class="sr-only">
+                (abre el pago seguro en una pestaña nueva)
+              </span>
+            </a>
+          )}
+
           <ul class="incluye" role="list">
             {boleto.incluye.map((punto) => (
               <li class="incluye__item" data-anim-punto>
@@ -493,6 +518,33 @@ const entradas = boletos.map((boleto) => ({
     color: var(--text-muted);
     font-size: var(--step--1);
     text-align: center;
+  }
+
+  /*
+    El CTA de cabecera existe SOLO en móvil. Por defecto no se pinta; la
+    consulta de abajo lo enciende. Hacerlo así —y no al revés— deja el
+    escritorio exactamente igual que antes.
+  */
+  .cta--movil {
+    display: none;
+  }
+
+  @media (max-width: 47.9375rem) {
+    .cta--movil {
+      display: block;
+      margin-block-start: var(--space-lg);
+    }
+
+    /*
+      Con el botón ya arriba, la lista de «incluye» deja de ser el muro que
+      hay que cruzar para llegar a él y pasa a ser lo que es: el detalle para
+      quien lo quiera leer. Se le quita algo de aire por arriba para que el
+      bloque de decisión —precio, botón— quede compacto.
+    */
+    .incluye {
+      margin-block-start: var(--space-lg);
+      padding-block-start: var(--space-lg);
+    }
   }
 
   /* Aviso ------------------------------------------------------------------ */
