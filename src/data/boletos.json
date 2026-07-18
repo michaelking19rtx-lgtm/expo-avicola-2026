@@ -5,10 +5,10 @@
     "precio": 699,
     "moneda": "MXN",
     "disponible": true,
-    "descripcion": "Acceso completo al congreso del 7 de agosto de 2026 en el Salón de Eventos Bugambilias, Tehuacán, Puebla. Incluye 6 conferencias especializadas, panel de preguntas y respuestas, show de medio tiempo, coffee break, área comercial, networking y constancia digital con código QR verificable.",
+    "descripcion": "Acceso completo al congreso del 7 de agosto de 2026 en el Salón de Eventos Bugambilias, Tehuacán, Puebla. Incluye 7 conferencias especializadas, panel de preguntas y respuestas, show de medio tiempo, coffee break, área comercial, networking y constancia digital con código QR verificable.",
     "descripcionNota": "ESPEJO DE STRIPE: este texto es el que debe copiarse a la descripción del producto en el panel de Stripe. El checkout vive fuera del repo, así que cambiarlo aquí NO lo cambia allá. Alimenta también el description del Offer en el JSON-LD.",
     "incluye": [
-      "Acceso a las 6 conferencias especializadas",
+      "Acceso a las 7 conferencias especializadas",
       "Panel de preguntas y respuestas con los ponentes",
       "Show especial de medio tiempo",
       "Coffee break incluido",

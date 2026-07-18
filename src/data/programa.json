@@ -1,5 +1,5 @@
 {
-  "notaDuracion": "Cada conferencia incluye 30 minutos de exposición y 5 de preguntas.",
+  "notaDuracion": "Cada conferencia son 30 minutos de exposición. Las preguntas se concentran en el panel de la tarde, con los siete ponentes en el escenario.",
   "bloques": [
     {
       "hora": "08:00 – 09:00",
@@ -8,51 +8,57 @@
       "tipo": "logistica"
     },
     {
-      "hora": "09:00 – 09:35",
+      "hora": "09:00 – 09:30",
       "titulo": "Productividad en pollo y gallina: manejo, nutrición y resultados medibles",
       "ponente": "IAZ. José Ángel de la Cruz Hernández",
       "tipo": "ponencia"
     },
     {
-      "hora": "09:35 – 10:10",
+      "hora": "09:30 – 10:00",
       "titulo": "Diagnóstico temprano en aves: señales que todo productor debe saber interpretar",
       "ponente": "Q.F.B. Edgar Oliva Ramírez",
       "tipo": "ponencia"
     },
     {
-      "hora": "10:10 – 10:45",
+      "hora": "10:00 – 10:30",
       "titulo": "Mortalidad en granja: causas frecuentes y estrategias para reducir pérdidas",
       "ponente": "M.V.Z. Miguel Ángel Castillo López",
       "tipo": "ponencia"
     },
     {
-      "hora": "10:45 – 11:30",
+      "hora": "10:30 – 11:00",
+      "titulo": "Inteligencia artificial en avicultura: herramientas para producir, vender y decidir mejor",
+      "ponente": "Ing. Ricardo Olmos Rivera",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "11:00 – 11:45",
       "titulo": "Coffee break, networking y recorrido de stands",
       "ponente": null,
       "tipo": "break"
     },
     {
-      "hora": "11:30 – 12:00",
+      "hora": "11:45 – 12:15",
       "titulo": "Show especial de medio tiempo",
       "ponente": null,
       "tipo": "show"
     },
     {
-      "hora": "12:00 – 12:35",
+      "hora": "12:15 – 12:45",
       "titulo": "Bioseguridad inteligente: cómo proteger la granja antes de perder dinero",
       "ponente": "Ing. Alejandro Espinosa Arista",
       "tipo": "ponencia"
     },
     {
-      "hora": "12:35 – 13:10",
+      "hora": "12:45 – 13:15",
       "titulo": "Vacunación y prevención: decisiones sanitarias que protegen la producción",
       "ponente": "Q.F.B. Edgar Oliva Ramírez",
       "tipo": "ponencia"
     },
     {
-      "hora": "13:10 – 13:45",
-      "titulo": "Inteligencia artificial en avicultura: herramientas para producir, vender y decidir mejor",
-      "ponente": "Ing. Ricardo Olmos Rivera",
+      "hora": "13:15 – 13:45",
+      "titulo": "Detrás de la vacuna: qué determina que un biológico proteja tu parvada",
+      "ponente": "IBQ. Esteban Fructuoso Alducin",
       "tipo": "ponencia"
     },
     {

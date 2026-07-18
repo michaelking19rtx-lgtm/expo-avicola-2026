@@ -384,33 +384,32 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | ~~9c~~ | ~~**Las otras 3 figuras del hero**~~ | ~~`public/img/hero/ponente-0{4,5,6}.webp`~~ | **RESUELTO** — entregadas e integradas en la Fase 2c |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | ~~11~~ | ~~**Ponente de la sesión de IA**~~ | ~~`programa.json`, bloque 13:10~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera |
-| 15 | **Hueco en la agenda para la 7ª ponencia** (Esteban) | `programa.json` | Su sesión sale en el hero y en el JSON-LD, pero **no aparece en la agenda**. Ver el riesgo abierto de abajo |
+| ~~15~~ | ~~**Hueco en la agenda para la 7ª ponencia**~~ | ~~`programa.json`~~ | **RESUELTO** — 13:15, con el reparto 4+3 a 30 min |
+| 16 | **Actualizar la descripción del producto en STRIPE** | panel de Stripe, fuera del repo | `boletos.json` ya dice «7 conferencias»; **Stripe sigue diciendo 6**. Lo tiene que editar una persona |
 | ~~12~~ | ~~**Stripe**: producto, precio y checkout~~ | ~~`boletos.json`~~ | **RESUELTO** — Payment Link conectado en `checkoutUrl` |
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
 | 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
 
-El que más pesa ahora es el **15**: hay siete ponentes anunciados y la agenda
-solo enseña seis sesiones. El 8 sigue bloqueando la Fase 3.
+El que más pesa ahora es el **16**, porque lo ve quien está pagando: la página
+promete siete conferencias y la pantalla de Stripe, a un clic de distancia,
+sigue prometiendo seis. El 8 sigue bloqueando la Fase 3.
 
-### La séptima ponencia no tiene hueco en la agenda · ABIERTO · decide el cliente
+### La séptima ponencia · CERRADO · las 7 sesiones están en la agenda
 
-`programa.json` tiene **6 ponencias y hay 7 ponentes**. La de Esteban —«Detrás
-de la vacuna: qué determina que un biológico proteja tu parvada»— está en el
-hero, en su ficha y en el JSON-LD, pero **no tiene horario**.
+`programa.json` tiene ya **7 ponencias para 7 ponentes**. La de Esteban entra a
+las 13:15, cerrando el arco Bioseguridad → Vacunación → Detrás de la vacuna.
 
-**El día está lleno al minuto:** 08:00–16:30 son 510 min y los bloques actuales
-suman 510. Meter una ponencia de 35 min obliga a quitar 35 de otro sitio. Se le
-pasaron tres opciones al cliente con su coste (ver la bitácora, «Los dos datos
-que faltaban»); **no se tocó ningún horario a la espera de su decisión.**
+Se resolvió recortando las ponencias de 35 a 30 min: `7 × 30 = 210 = 6 × 35`, la
+misma huella. **Comida, panel, networking final y clausura no se movieron ni un
+minuto** (13:45 / 14:45 / 15:30 / 16:30); lo único que cambió de hora fue el
+coffee (10:45 → 11:00) y el show (11:30 → 11:45). Ver la bitácora, «La séptima
+ponencia y el reparto 4+3».
 
-Mientras tanto la incoherencia es visible para quien compare el hero con la
-agenda. No es un fallo de código: es un dato que falta.
-
-> **`ponentes()` de `schema.js` ya lo cubre.** Une agenda Y hero justamente para
-> este caso: un ponente confirmado y anunciado que todavía no tiene hueco. Por
-> eso el JSON-LD declara los seis del hero aunque la agenda solo liste cinco
-> nombres. Si algún día toda la agenda estuviera completa, la unión seguiría
-> siendo correcta, solo que redundante.
+> **`ponentes()` de `schema.js` sigue uniendo agenda Y hero, y hay que
+> mantenerlo así.** Hoy las dos fuentes dan lo mismo y la unión parece
+> redundante, pero es la red que cubre el caso «anunciado sin hueco todavía»,
+> que ya se dio una vez. Quitarla ahorraría cuatro líneas y volvería a dejar
+> fuera del JSON-LD al primer ponente que se anuncie antes de tener horario.
 
 ---
 
@@ -1863,6 +1862,105 @@ se había encendido. Seleccionando por nombre, las cajas cuadran con las del
 primer script. **Dos medidas que coinciden cuando no deberían son una señal de
 que se está midiendo el elemento equivocado** — la misma familia que la
 convención 13.
+
+---
+
+### La séptima ponencia y el reparto 4+3
+
+Entra la sesión de Esteban y la agenda pasa de 6 a 7 ponencias **sin mover el
+final del día ni la comida**.
+
+**La aritmética que lo hizo posible**
+
+El día está lleno al minuto: 08:00–16:30 son 510 min y los bloques sumaban 510.
+Pero `7 × 30 = 210 = 6 × 35`: bajando la ponencia de 35 a 30 min, siete ocupan
+exactamente lo que ocupaban seis. **Comida (13:45), panel (14:45), networking
+final (15:30) y clausura (16:30) se quedan donde estaban.** Solo se movieron el
+coffee (10:45 → 11:00) y el show (11:30 → 11:45).
+
+**Y el recorte no le quita escenario a nadie.** `notaDuracion` decía «30 minutos
+de exposición y 5 de preguntas»: los 35 nunca fueron 35 de exposición. Lo que
+desaparece son los 5 de preguntas de cada sesión, que el panel de la tarde ya
+cubre con los siete ponentes presentes. Es un aviso a los ponentes, no una
+renegociación.
+
+**El reparto es 4 + 3, y el orden cambió**
+
+| | Mañana (4 seguidas, 120 min) | Tarde (3 seguidas, 90 min) |
+| :- | :-- | :-- |
+| | Productividad · Diagnóstico · Mortalidad | Bioseguridad ┐ |
+| | **IA (Ricardo)** ← subió de la tarde | Vacunación │ sanidad |
+| | | **Detrás de la vacuna** ┘ |
+
+Dos razones, y la segunda pesa más que la primera:
+
+- **El show cae en el medio literal.** Termina a las 12:15, que es el punto medio
+  exacto de 08:00–16:30, y tras 4 de 7 ponencias. Con reparto 3+4 caía a las
+  11:45 y tras 3 de 7.
+- **Ricardo cierra la mañana porque responde lo que las otras tres dejan
+  abierto.** Su ficha lo dice: «Los demás ponentes coinciden en que hay que
+  medir. Él responde la pregunta que queda flotando después: cómo medirlo».
+  Productividad, Diagnóstico y Mortalidad son justamente las tres que dicen «hay
+  que medir». En el reparto 3+4 esa respuesta llegaba hora y media más tarde,
+  al final del día, cuando ya nadie la conecta.
+
+Se descartó el reparto 4+3 **con el orden anterior** porque partía el trío de
+sanidad: Bioseguridad cerraba la mañana y Vacunación abría la tarde, con 75 min
+de coffee y show en medio.
+
+**Decisiones**
+
+- **El panel se queda en 45 min y el networking final en 60.** Se propuso pasar
+  el panel a 60 quitando 15 al networking, porque las preguntas totales del día
+  bajan de 75 min a 45 (6.4 min por ponente). El cliente lo rechazó con dos
+  razones que quedan aquí porque no se deducen del código: **el networking final
+  es donde los patrocinadores rentabilizan su stand**, y un panel de 7 personas
+  después de comer se arrastra más de lo que aporta.
+- **El «6» estaba escrito en cinco sitios de cuatro archivos**, ninguno derivado
+  de `programa.json`: el lead de `Programa.astro` (que además prometía los 5 min
+  de preguntas), el lead de `VideoSection.astro`, la `descripcion` y el
+  `incluye[0]` de `boletos.json`, y la respuesta «¿Qué incluye mi boleto?» de
+  `faq.json`. **Ese número no se deriva de los datos y volverá a desfasarse.**
+  Si algún día se toca esta zona, considerar calcularlo desde
+  `programa.bloques.filter(b => b.tipo === 'ponencia').length`.
+- **La `descripcion` de `boletos.json` dice ya «7 conferencias» y STRIPE SIGUE
+  DICIENDO 6.** Ese texto es espejo de un producto que vive fuera del repo;
+  cambiarlo aquí no lo cambia allá. Queda como pendiente 16.
+
+**El JSON-LD no tiene `subEvent`, y nunca lo tuvo**
+
+Al pedir la verificación se dio por hecho que la agenda estaba en el marcado
+como 6 `subEvent` que pasarían a 7. **No es así:** `schema.js` emite un único
+`Event` con `performer`, `offers` y `location`, y sus únicas horas son
+`startDate` y `endDate` (08:00–16:30), que este cambio no toca. No había 6 que
+pasaran a 7.
+
+Declarar cada sesión como `subEvent` sería una mejora real —permite a Google
+enseñar el detalle por sesión— y ahora que la agenda está completa es el momento
+en que tendría sentido. **No se hizo: no estaba en el encargo y añade una
+superficie nueva de schema.org.** Si se hace, la fuente es `programa.json`
+filtrando `tipo === 'ponencia'`, y cada `subEvent` necesita `startDate`/`endDate`
+absolutos, que salen de componer `site.fecha` + la hora del bloque + el desfase
+—exactamente lo que ya hace `momento()`.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+- **Parrilla validada por script**: 7 ponencias, cadena sin huecos ni solapes
+  entre bloques consecutivos, y cierre en 16:30 exacto.
+- **`grep` de «6/seis conferencias» en `src/`, `public/`, `dist/` y el
+  README: 0 ocurrencias.**
+- **JSON-LD**: `performer` sigue en **6** —Esteban ya está en las dos fuentes y
+  la deduplicación funciona—, `startDate`/`endDate` intactos, y
+  `offers[0].description` dice ya «7 conferencias».
+- **`notaDuracion`** pasa de 63 a 133 caracteres: cae en **4 líneas** a 360/375/
+  390 y en **3** a 430, con **0 px** de desborde de caja y **0 px** de desborde
+  horizontal en los cuatro. Comprobado en captura que no deja palabra huérfana.
+- **La sección de programa creció +119 px** (una fila), de 2150 a 2269 px a
+  360 px de ancho: de 2.69 a **2.84 pantallas**. Sigue siendo aceptable —es una
+  agenda, se recorre— y el crecimiento es del 5.5%, proporcional a la fila que
+  se añadió. No hay efecto de segundo orden: ninguna otra fila cambió de alto.
 
 ---
 
