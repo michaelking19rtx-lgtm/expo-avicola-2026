@@ -13,6 +13,7 @@
 import site from '../data/site.json';
 import programa from '../data/programa.json';
 import boletos from '../data/boletos.json';
+import heroPonentes from '../data/hero-ponentes.json';
 
 /**
  * Poda recursiva de null, undefined, strings vacíos, arrays vacíos y objetos
@@ -98,12 +99,35 @@ function franjaHoraria() {
  */
 function ponentes() {
   const vistos = new Set();
+  const esPendiente = (n) =>
+    n.trim().toLowerCase().startsWith('ponente por confirmar') ||
+    n.trim().toLowerCase() === 'por confirmar';
 
+  // 1. Quien tiene ponencia asignada en la agenda.
   for (const bloque of programa.bloques ?? []) {
     const nombre = bloque.ponente;
     if (!nombre) continue;
     if (bloque.tipo !== 'ponencia') continue;
-    if (nombre.trim().toLowerCase() === 'por confirmar') continue;
+    if (esPendiente(nombre)) continue;
+    vistos.add(nombre.trim());
+  }
+
+  /*
+    2. Y quien está anunciado en el hero.
+
+    Hacen falta LAS DOS fuentes, y ninguna basta sola: un ponente puede estar
+    confirmado y anunciado sin tener todavía sesión en la agenda —hoy es el
+    caso de IBQ. Esteban Fructuoso Alducin, que aparece en el hero con su
+    credencial en vez de tema porque su ponencia no está asignada—, y a la
+    inversa, la agenda podría llevar a alguien que no salga en el hero.
+
+    Un `performer` es quien participa en el evento, no quien tiene hueco en el
+    horario, así que quedarse solo con la agenda dejaría fuera a una persona
+    real. Se unen y se deduplica: Edgar da dos sesiones y aparece una vez.
+  */
+  for (const figura of heroPonentes) {
+    const nombre = figura?.nombre;
+    if (!nombre || esPendiente(nombre)) continue;
     vistos.add(nombre.trim());
   }
 

@@ -1,49 +1,51 @@
 [
   {
     "id": "01",
-    "slug": "ponente-01",
-    "nombre": "Ponente por confirmar",
-    "tema": "Tema por confirmar",
+    "slug": "edgar-oliva-ramirez",
+    "nombre": "Q.F.B. Edgar Oliva Ramírez",
+    "tema": "Diagnóstico temprano en aves",
     "img": "img/hero/ponente-01.webp",
-    "destacado": false
-  },
-  {
-    "id": "02",
-    "slug": "ponente-02",
-    "nombre": "Ponente por confirmar",
-    "tema": "Tema por confirmar",
-    "img": "img/hero/ponente-02.webp",
     "destacado": true
   },
   {
+    "id": "02",
+    "slug": "alejandro-espinosa-arista",
+    "nombre": "Ing. Alejandro Espinosa Arista",
+    "tema": "Bioseguridad inteligente",
+    "img": "img/hero/ponente-02.webp",
+    "destacado": false
+  },
+  {
     "id": "03",
-    "slug": "ponente-03",
-    "nombre": "Ponente por confirmar",
-    "tema": "Tema por confirmar",
+    "slug": "jose-angel-de-la-cruz-hernandez",
+    "nombre": "IAZ. José Ángel de la Cruz Hernández",
+    "tema": "Productividad en pollo y gallina",
     "img": "img/hero/ponente-03.webp",
     "destacado": false
   },
   {
     "id": "06",
-    "slug": "ponente-06",
-    "nombre": "Ponente por confirmar",
-    "tema": "Tema por confirmar",
+    "slug": "esteban-fructuoso-alducin",
+    "nombre": "IBQ. Esteban Fructuoso Alducin",
+    "tema": "Profesional Autorizado SENASICA",
+    "temaEsCredencial": true,
     "img": "img/hero/ponente-06.webp",
     "destacado": false
   },
   {
     "id": "05",
-    "slug": "ponente-05",
-    "nombre": "Ponente por confirmar",
-    "tema": "Tema por confirmar",
+    "slug": "miguel-angel-castillo-lopez",
+    "nombre": "M.V.Z. Miguel Ángel Castillo López",
+    "tema": "Mortalidad en granja",
     "img": "img/hero/ponente-05.webp",
     "destacado": false
   },
   {
     "id": "04",
-    "slug": "ponente-04",
+    "slug": "ricardo",
+    "slugProvisional": true,
     "nombre": "Ponente por confirmar",
-    "tema": "Tema por confirmar",
+    "tema": "Inteligencia artificial en avicultura",
     "img": "img/hero/ponente-04.webp",
     "destacado": false
   }

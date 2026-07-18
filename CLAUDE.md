@@ -265,23 +265,55 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
 
-### Nombres PLACEHOLDER en el hero · ABIERTO · BLOQUEA LA PROMOCIÓN
+### Falta UN nombre en el hero · ABIERTO · MANTIENE EL `noindex`
 
-Las etiquetas del hero llevan nombres PLACEHOLDER. NO publicar
-promocionalmente hasta sustituirlos por los nombres reales de cada ponente en
-`src/data/hero-ponentes.json`.
+**Cinco de seis ponentes ya llevan su nombre real.** Queda uno:
+`ponente-04`, cuya ponencia sí está confirmada —«Inteligencia artificial en
+avicultura»— pero cuyo nombre no. Su etiqueta dice «Ponente por confirmar» a
+propósito.
 
-Hoy las SEIS figuras dicen «Ponente por confirmar» / «Tema por confirmar», y
-sus `slug` son provisionales (`ponente-01` … `-06`). Son marcadores
-deliberados, no un dato que se haya perdido: el hero ya enseña las caras
-reales de tres ponentes, así que **una captura del hero circulando por redes
-mostraría personas identificables junto a una etiqueta vacía**. Es el único
-punto del sitio donde un dato pendiente no se degrada con dignidad, porque la
-foto sí es real.
+**CONDICIÓN EXACTA PARA RETIRAR EL `noindex`**, y son las tres a la vez:
 
-Al rellenarlo, los `slug` pasan a derivarse del nombre (minúsculas, sin
-acentos) y hay que actualizarlos a la vez en los dos sitios: ese `slug` es el
-ancla que consumirá la Fase 3.
+1. `ponente-04` tiene su nombre real en `hero-ponentes.json`.
+2. Su `slug` deja de ser el provisional `ponente-04` y pasa a derivarse del
+   nombre; se borra la clave `slugProvisional`.
+3. Se quita el atributo `noindex` de `<Base>` en `src/pages/index.astro`.
+
+Mientras tanto **la home sigue fuera de buscadores**: el hero enseña seis caras
+reales y una de ellas iría acompañada de una etiqueta vacía. Es el único punto
+del sitio donde un dato pendiente no se degrada con dignidad, porque la foto sí
+es real. Con cinco de seis el riesgo baja mucho —una sola cara sin nombre entre
+cinco identificadas se lee como «falta este», no como «esto está sin
+terminar»—, pero no desaparece.
+
+> **`ponente-06` NO es un placeholder.** IBQ. Esteban Fructuoso Alducin lleva
+> su credencial real —«Profesional Autorizado SENASICA»— en la segunda línea
+> porque su ponencia todavía no está asignada. Es dato verdadero: no hay que
+> «arreglarlo», y cuando se le asigne tema, se sustituye.
+
+#### Los `slug` son ya los definitivos, y NO hay dónde contrastarlos
+
+Los cinco confirmados usan su nombre en minúsculas y sin acentos, sin la
+credencial:
+
+| id | slug |
+| :- | :--- |
+| 01 | `edgar-oliva-ramirez` |
+| 02 | `alejandro-espinosa-arista` |
+| 03 | `jose-angel-de-la-cruz-hernandez` |
+| 04 | `ricardo` ← **provisional**, marcado con `slugProvisional: true` |
+| 05 | `miguel-angel-castillo-lopez` |
+| 06 | `esteban-fructuoso-alducin` |
+
+**`src/data/ponentes.json` YA EXISTE** —fichas completas para la Fase 3, sin
+rastrear todavía y sin que ningún componente lo importe— y los seis slugs se
+cotejaron uno a uno contra él: **coinciden los seis**, igual que el destacado
+(Edgar en los dos archivos).
+
+El de `04` es `ricardo` en ambos, provisional en ambos: en `ponentes.json` su
+credencial dice «PENDIENTE — falta nombre completo». **Cuando llegue el nombre
+completo hay que cambiarlo en los DOS ficheros a la vez**, porque de ese slug
+cuelga el ancla `#ponente-{slug}` que enlazará el hero con la ficha.
 
 **LA HOME ESTÁ EN `noindex` POR ESTO.** `src/pages/index.astro` pasa `noindex`
 a `<Base>` desde la Fase 2c: que un buscador indexe y cachee una versión con
@@ -347,7 +379,7 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
 | 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera. Las 3 del hero ya están; faltan las de las fichas |
 | ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
-| 9b | **Nombres reales de las 6 figuras del hero** | `src/data/hero-ponentes.json` | «Ponente por confirmar». **Ver el primer riesgo abierto: bloquea la promoción y mantiene la home en noindex** |
+| 9b | **Nombre real de UNA figura del hero** (`ponente-04`) | `src/data/hero-ponentes.json` | «Ponente por confirmar» en una de seis. **Ver el primer riesgo abierto: mantiene la home en `noindex`** |
 | ~~9c~~ | ~~**Las otras 3 figuras del hero**~~ | ~~`public/img/hero/ponente-0{4,5,6}.webp`~~ | **RESUELTO** — entregadas e integradas en la Fase 2c |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
@@ -1286,6 +1318,50 @@ Las figuras del hero se salvaron por casualidad, no por diseño: son `.webp` y
 esa extensión no está en la lista.
 
 **CERRADA** — ver «Qué entra a `public/img/` y qué no», justo debajo.
+
+---
+
+### Nombres reales en el hero — cinco de seis
+
+**Qué se hizo**
+
+- `hero-ponentes.json`: nombres, temas y `slug` definitivos de los cinco
+  confirmados. El destacado pasa de `ponente-02` a `ponente-01` (Edgar).
+- `schema.js`: los `performer` del JSON-LD pasan a salir de DOS fuentes.
+
+**Los `performer` unen agenda y hero, y ninguna fuente basta sola.** Salían
+solo de `programa.json`, que lista a quien tiene sesión asignada. IBQ. Esteban
+Fructuoso Alducin está confirmado y anunciado en el hero pero **todavía no
+tiene ponencia**, así que quedaba fuera. Un `performer` es quien participa en
+el evento, no quien tiene hueco en el horario. Se unen las dos listas y se
+deduplica —Edgar da dos sesiones y aparece una vez— y salen los cinco.
+
+Verificado extrayendo el JSON-LD del HTML compilado: 5 performers, cero
+`null`, y ningún «Por confirmar» colado.
+
+**Las etiquetas aguantan los nombres largos.** El más largo, «IAZ. José Ángel
+de la Cruz Hernández», ocupa 36 caracteres frente a los 21 del placeholder.
+Medido en 360/375/390/430/768/1024/1440 × verde/azul: **0 px de desbordamiento,
+ninguna etiqueta se sale del viewport, ninguna tapa una cara** y el nombre no
+pasa de dos líneas en ningún ancho. La etiqueta más alta son 90px en
+escritorio y 68px en la rejilla de móvil.
+
+> **EFECTO SECUNDARIO DEL CAMBIO DE DESTACADO, y va contra la regla de
+> recorte.** Con Edgar (`01`, coronilla 7.54%) en el centro, las laterales
+> pasan a ser `02` (4.50%) y `03` (7.63%): **3.13% de diferencia**, cuando la
+> regla pide 1%. Antes las laterales eran `01` y `03` —0.09%— y la de
+> coronilla más alta, `02`, iba al centro, que es justo donde la regla la
+> permite.
+>
+> Medido en pantalla a 1440: la coronilla de Alejandro queda **12px por encima**
+> de la de Edgar, que es el destacado, y el sombrero acentúa la diferencia. El
+> arco se invierte por el lado izquierdo y el centro deja de leerse como el
+> protagonista.
+>
+> **Se dejó así porque el reparto lo fija el encargo.** La salida, si algún día
+> molesta, es una línea de datos: reordenar `hero-ponentes.json` para que tras
+> el destacado vayan `03` y `05` (laterales a 0.58%), lo que manda a Alejandro
+> a la fila de fondo. Es una decisión editorial —quién va delante—, no técnica.
 
 ---
 
