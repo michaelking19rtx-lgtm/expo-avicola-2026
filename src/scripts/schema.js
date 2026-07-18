@@ -147,6 +147,22 @@ function lugar() {
       addressRegion: site.region,
       addressCountry: site.pais,
     },
+    /*
+      `geo` solo si hay coordenadas. Es el dato que permite a un buscador
+      situar el evento en un mapa sin depender de geocodificar la calle, que
+      con una dirección mexicana abreviada («Pue.») no siempre acierta.
+
+      Si `site.coordenadas` no existe, esto queda en undefined y `limpiar()`
+      lo poda igual que a los demás nulos: declarar un GeoCoordinates vacío
+      sería peor que no declararlo.
+    */
+    geo: site.coordenadas
+      ? {
+          '@type': 'GeoCoordinates',
+          latitude: site.coordenadas.lat,
+          longitude: site.coordenadas.lng,
+        }
+      : undefined,
   };
 }
 

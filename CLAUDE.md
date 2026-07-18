@@ -305,9 +305,9 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 
 | # | Qué falta | Dónde entra | Qué se ve mientras tanto |
 | - | :-------- | :---------- | :----------------------- |
-| 1 | **Recinto** de la sede | `site.recinto` | «Por confirmar» en cursiva + aviso bajo la ficha |
-| 2 | **Dirección** exacta | `site.direccion` | «Por confirmar» en cursiva |
-| 3 | **Mapa** de la sede | comentario en `Sede.astro` | Placeholder con pin y «Ubicación por confirmar» |
+| ~~1~~ | ~~**Recinto** de la sede~~ | ~~`site.recinto`~~ | **RESUELTO** — «Salón de Eventos Bugambilias» |
+| ~~2~~ | ~~**Dirección** exacta~~ | ~~`site.direccion`~~ | **RESUELTO** — López Rayón 3, Centro de la Ciudad, 75700 |
+| ~~3~~ | ~~**Mapa** de la sede~~ | ~~comentario en `Sede.astro`~~ | **RESUELTO** — iframe de Maps en lazy + enlace «Cómo llegar» |
 | 4 | **Correo** de contacto | `site.contacto.correo` | «Próximamente» en el footer |
 | 5 | **Teléfono** | `site.contacto.telefono` | «Próximamente» en el footer |
 | 6 | **WhatsApp** | `site.contacto.whatsapp` | «Próximamente» en el footer; el aviso de Boletos no promete WhatsApp |
@@ -322,9 +322,8 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
 | 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
 
-Los tres que más pesan: **el 12 impide vender**, el **8 bloquea una fase entera**
-y los **1–3** dejan la sección de sede a medio contestar la pregunta que da
-título a la sección.
+Los dos que más pesan ahora: **el 12 impide vender** y el **9b mantiene la home
+en `noindex`**. El 8 sigue bloqueando la Fase 3.
 
 ---
 
@@ -487,9 +486,8 @@ horizontal; menú móvil ejercitado con clics y teclado; con
 | `public/video/congreso.mp4` y `.webm` | Video de la sección "El congreso" | Sustituir el bloque `.intro__placeholder` por el marcado ya escrito en el comentario de `VideoSection.astro`. |
 | `public/img/hero/poster-congreso.jpg` | Póster del video | Mismo 16:9 del reproductor. |
 
-**DATO PENDIENTE:** el recinto de la sede. `site.json` lo tiene como
-`"recinto": null` y el hero muestra solo "Tehuacán, Puebla". Cuando se confirme,
-rellena esa clave y decide dónde mostrarlo.
+~~**DATO PENDIENTE:** el recinto de la sede.~~ **RESUELTO** — confirmado y
+rellenado. Ver «Sede confirmada» al final de la bitácora.
 
 ---
 
@@ -1163,6 +1161,67 @@ Con HTTP/2 el coste es bajo y el total son 10 KB, así que **no se tocó**:
 unificarlos obligaría a sacar el JS de los once componentes a un punto de
 entrada común y a perder la localidad que hace legible cada uno. Queda anotado
 por si algún día una auditoría de red lo señala.
+
+---
+
+### Sede confirmada — recinto, dirección y mapa real
+
+Cierra los pendientes 1, 2 y 3. **No hizo falta tocar la lógica de ninguna
+sección**: `Sede.astro`, el JSON-LD y la ficha ya leían de `site.json`, así que
+el estado «Por confirmar» y el aviso de «estamos cerrando el recinto»
+desaparecieron solos al dejar de ser null. Verificado sobre el HTML compilado:
+0 ocurrencias del aviso y el único «Por confirmar» que queda es el ponente de
+la sesión de IA, que es otro pendiente distinto.
+
+**Datos nuevos en `site.json`**
+
+| Clave | Valor |
+| :---- | :---- |
+| `recinto` | Salón de Eventos Bugambilias |
+| `direccion` | López Rayón 3, Centro de la Ciudad, 75700 Tehuacán, Pue. |
+| `telefonoRecinto` | +52 238 383 2490 |
+| `coordenadas` | `{ lat: 18.462627, lng: -97.391909 }` |
+
+**`telefonoRecinto` va fuera de `contacto` a propósito.** Ese objeto es el
+contacto DEL EVENTO (sus tres claves siguen en null); el teléfono del salón es
+un dato de la sede. **Y no se muestra en ninguna parte**: publicarlo mandaría a
+los asistentes a llamar a un recinto que no puede responder dudas del congreso.
+Queda como dato por si hace falta para logística.
+
+**Decisiones**
+
+- **El embed usa `output=embed`, que no pide clave de API.** Es la única vía sin
+  dar de alta un proyecto en Google Cloud; a cambio no está documentada como API
+  pública. Si algún día deja de responder, el sustituto con soporte oficial es
+  Maps Embed API (`/maps/embed/v1/place`), que sí exige clave. El enlace «Cómo
+  llegar» sí usa las URLs universales de Maps, esas documentadas.
+- **Las dos URLs se derivan de `site.coordenadas`.** Ni el embed ni el enlace
+  llevan una coordenada escrita a mano: mover la sede es cambiar dos números.
+- **El iframe va en `loading="lazy"` y el alto lo reserva `.mapa__marco` con
+  `aspect-ratio`.** Sin esa reserva el hueco valdría 0 hasta que Maps
+  respondiera y la página daría un tirón justo al llegar scrolleando. Medido
+  recorriendo la página entera: **CLS 0** sin limitar y 0.00007 en 4G —el mismo
+  salto de la nav que ya existía—, LCP intacto y **una sola petición a Google,
+  y solo después de hacer scroll**.
+- **`geo` entra en el JSON-LD.** Permite a un buscador situar el evento sin
+  geocodificar la calle, que con una dirección mexicana abreviada («Pue.») no
+  siempre acierta. Si `coordenadas` faltara, queda `undefined` y `limpiar()` lo
+  poda igual que a los demás nulos.
+- **El estado «Por confirmar» NO se borró del código.** Sigue en `Sede.astro`
+  como respaldo: es la misma pieza que cubriría un cambio de sede de última
+  hora. Mientras el valor exista, no se ve.
+
+**PENDIENTE DE DECISIÓN — el mapa desentona.** El embed de Maps es blanco y es
+el único rectángulo claro de una página deliberadamente oscura: se lleva la
+atención y se lee como widget incrustado, no como parte del diseño. Se dejó
+**sin alterar** a la espera de decisión, porque las alternativas tienen coste:
+
+| Opción | Qué implica |
+| :----- | :---------- |
+| **1. Tal cual** (hoy) | Cumple los términos de Google al pie de la letra. Desentona. |
+| 2. `filter: invert + hue-rotate` | Integra bien, pero invierte también el logo y la atribución de Google — alterar esa presentación choca con sus términos. |
+| 3. Atenuar (`grayscale` + `brightness`) | Apenas cambia el golpe visual. Sigue siendo alteración. |
+| **4. Bajo demanda** | Marco oscuro propio con recinto y dirección, y Maps solo carga al pulsar «Ver mapa». Resuelve la estética sin alterar nada de Google, y además no deja cookies suyas hasta que el usuario lo pide. **Recomendada.** |
 
 ---
 

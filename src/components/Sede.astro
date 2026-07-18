@@ -5,10 +5,10 @@ import { fechaLarga } from '../scripts/fechas.js';
 /*
   Sede y fecha del congreso.
 
-  El recinto y la dirección todavía no están confirmados (`null` en site.json).
-  Ninguno de los dos se inventa ni se deja como hueco: se pinta un estado "por
-  confirmar" explícito, para que quien lea la página sepa que el dato falta a
-  propósito y no que la página está rota.
+  Recinto y dirección ya están confirmados en site.json. El estado "Por
+  confirmar" NO se borra del código: sigue aquí como respaldo, porque es la
+  misma pieza que cubre a cualquier dato que vuelva a null (un cambio de sede
+  de última hora, por ejemplo). Mientras el valor exista, no se ve.
 */
 const datos = [
   { etiqueta: 'Fecha', valor: fechaLarga(site.fecha) },
@@ -17,6 +17,28 @@ const datos = [
   { etiqueta: 'Recinto', valor: site.recinto, pendiente: 'Por confirmar' },
   { etiqueta: 'Dirección', valor: site.direccion, pendiente: 'Por confirmar' },
 ];
+
+/*
+  MAPA. Las dos URLs se derivan de site.coordenadas: ni el embed ni el enlace
+  llevan una coordenada escrita a mano, así que mover la sede es cambiar dos
+  números en el JSON.
+
+  `output=embed` es la incrustación de Maps que NO pide clave de API. Es la
+  única vía sin dar de alta un proyecto en Google Cloud; a cambio no está
+  documentada como API pública. Si algún día dejara de responder, el sustituto
+  con soporte oficial es Maps Embed API (`/maps/embed/v1/place`), que sí exige
+  clave.
+
+  El enlace de abajo usa las URLs universales de Maps, esas sí documentadas.
+*/
+const { lat, lng } = site.coordenadas;
+const puntoMapa = `${lat},${lng}`;
+const mapaEmbed = `https://www.google.com/maps?q=${puntoMapa}&z=16&hl=es&output=embed`;
+const mapaComoLlegar = `https://www.google.com/maps/dir/?api=1&destination=${puntoMapa}`;
+
+// El title del iframe nombra el recinto: un iframe sin nombre accesible es un
+// agujero para quien navega con lector de pantalla.
+const tituloMapa = `Mapa de la ubicación: ${site.recinto}, ${site.direccion}`;
 ---
 
 <section class="sede" id="sede">
@@ -43,39 +65,53 @@ const datos = [
     </div>
 
     <div class="sede__mapa" data-anim>
-      {/*
-        SUSTITUIR este bloque .mapa__placeholder por el mapa real cuando exista
-        la dirección. El iframe va con loading="lazy" para no pagar el coste de
-        Maps en la primera carga, y con un title descriptivo porque un iframe
-        sin nombre accesible es un agujero para quien navega con lector:
+      <div class="mapa__marco">
+        {/*
+          `loading="lazy"`: el mapa vive bajo el pliegue y Maps arrastra bastante
+          peso. Que no entre en la primera carga es lo que impide que toque el
+          LCP del hero.
 
+          El alto lo reserva `.mapa__marco` con aspect-ratio ANTES de que el
+          iframe cargue, así que el CLS no se mueve de 0.
+        */}
         <iframe
-          class="mapa__marco"
-          src="https://www.google.com/maps/embed?pb=..."
-          title="Mapa de la sede de la Expo Avícola Productiva 2026"
+          class="mapa__iframe"
+          src={mapaEmbed}
+          title={tituloMapa}
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
-allowfullscreen
+          allowfullscreen
         ></iframe>
-      */}
-      <div class="mapa__placeholder">
-        <svg
-          class="mapa__pin"
-          viewBox="0 0 24 24"
-          width="32"
-          height="32"
-          stroke-width="1.5"
-          aria-hidden="true"
-        >
-          <path
-            d="M12 21.2s6.8-5.7 6.8-11a6.8 6.8 0 1 0-13.6 0c0 5.3 6.8 11 6.8 11Z"
-            stroke="currentColor"
-            stroke-linejoin="round"
-          />
-          <circle cx="12" cy="10.2" r="2.6" stroke="currentColor" />
-        </svg>
-        <p class="mapa__texto">Ubicación por confirmar</p>
       </div>
+
+      <p class="mapa__pie">
+        <a
+          class="mapa__enlace"
+          href={mapaComoLlegar}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <svg
+            class="mapa__pin"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 21.2s6.8-5.7 6.8-11a6.8 6.8 0 1 0-13.6 0c0 5.3 6.8 11 6.8 11Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+              fill="none"
+            />
+            <circle cx="12" cy="10.2" r="2.6" stroke="currentColor" fill="none" />
+          </svg>
+          Cómo llegar
+          {/* El destino abre en pestaña nueva; se anuncia para que no sorprenda. */}
+          <span class="sr-only">(abre Google Maps en una pestaña nueva)</span>
+        </a>
+      </p>
     </div>
   </div>
 </section>
@@ -190,35 +226,58 @@ allowfullscreen
 
   /* Mapa ------------------------------------------------------------------- */
   .sede__mapa {
+    min-width: 0;
+  }
+
+  /*
+    El marco RESERVA la caja antes de que el iframe cargue. Como el mapa va en
+    lazy, sin esta reserva el hueco valdría 0 hasta que Maps respondiera y la
+    página daría un tirón justo al llegar scrolleando. Con aspect-ratio aquí,
+    el CLS se queda en 0.
+  */
+  .mapa__marco {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
     background-color: var(--surface);
-    overflow: hidden;
   }
 
-  .mapa__placeholder,
-  .sede__mapa :global(.mapa__marco) {
-    display: grid;
+  .mapa__iframe {
+    display: block;
     width: 100%;
-    aspect-ratio: 4 / 3;
+    height: 100%;
     border: 0;
   }
 
-  .mapa__placeholder {
-    align-content: center;
-    justify-items: center;
-    gap: var(--space-sm);
+  .mapa__pie {
+    margin-block-start: var(--space-md);
+  }
+
+  .mapa__enlace {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text);
+    font-size: var(--step--1);
+    font-weight: 600;
+    /* El subrayado nace del borde y no de text-decoration para poder separarlo
+       del texto y animarlo sin que salte la línea base. */
+    border-block-end: 1px solid var(--border);
+    padding-block-end: 2px;
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      color var(--t-base) var(--ease-out);
+  }
+
+  .mapa__enlace:hover {
+    color: var(--accent);
+    border-block-end-color: var(--accent);
   }
 
   .mapa__pin {
-    color: var(--text-muted);
-  }
-
-  .mapa__texto {
-    color: var(--text-muted);
-    font-size: var(--step--1);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    flex: none;
+    color: var(--accent);
   }
 
   /* Desktop: datos a la izquierda, mapa a la derecha. En móvil el orden del

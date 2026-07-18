@@ -9,8 +9,13 @@
   "localidad": "Tehuacán",
   "region": "Puebla",
   "pais": "MX",
-  "recinto": null,
-  "direccion": null,
+  "recinto": "Salón de Eventos Bugambilias",
+  "direccion": "López Rayón 3, Centro de la Ciudad, 75700 Tehuacán, Pue.",
+  "telefonoRecinto": "+52 238 383 2490",
+  "coordenadas": {
+    "lat": 18.462627,
+    "lng": -97.391909
+  },
   "contacto": {
     "correo": null,
     "telefono": null,
