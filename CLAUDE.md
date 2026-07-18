@@ -706,11 +706,14 @@ Cero secciones nuevas. Todo es cabecera, archivos de indexación y rendimiento.
   claves. Verificado con `recinto` y `direccion` en null (no aparecen) y
   rellenándolos a mano (aparecen).
 - **Las fechas del schema se derivan de `site.horario`, no de `site.inicio`.**
-  Ojo con esto: `site.inicio` son las **09:00** (la primera conferencia) y lo usa
-  la cuenta regresiva, mientras que el evento **abre a las 08:00** con el
-  registro. El JSON-LD declara 08:00–16:30 porque es cuando el asistente puede
-  entrar. El desfase horario (`-06:00`) sí se saca de `site.inicio`, para que la
-  zona del evento viva en un solo sitio.
+  El JSON-LD declara 08:00–16:30 porque es la franja en la que el asistente
+  puede entrar. De `site.inicio` solo se toma el **desfase horario** (`-06:00`),
+  para que la zona del evento viva en un único sitio; su hora no interviene.
+
+  > Corregido después de la Fase 7: `site.inicio` marcaba las 09:00 (la primera
+  > conferencia), así que la cuenta regresiva del hero llegaba a cero una hora
+  > después de que abrieran las puertas. Ahora son las **08:00**, iguales que el
+  > `startDate`. El JSON-LD no cambió ni un byte: nunca dependió de esa hora.
 - **«Por confirmar» no entra como `performer`.** Declarar una `Person` con ese
   nombre sería afirmar que existe alguien que se llama así. Los cuatro ponentes
   reales sí entran, y Edgar Oliva —que da dos sesiones— aparece una sola vez.

@@ -9,8 +9,8 @@
  * —que va por detrás de UTC— saldría "6 de agosto". De ahí el `timeZone: 'UTC'`
  * en todos los formateadores de aquí.
  *
- * La hora real del evento, con offset explícito, vive en `site.inicio` y la usa
- * la cuenta regresiva del hero. Estas funciones solo se ocupan del día.
+ * La hora de apertura, con offset explícito, vive en `site.inicio` y la usa la
+ * cuenta regresiva del hero. Estas funciones solo se ocupan del día.
  */
 
 /** @param {string} fechaISO Fecha en formato "YYYY-MM-DD". */

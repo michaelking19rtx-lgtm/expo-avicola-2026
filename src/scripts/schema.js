@@ -45,10 +45,11 @@ function limpiar(valor) {
 }
 
 /**
- * Extrae el desfase horario de `site.inicio` ("...T09:00:00-06:00" → "-06:00").
+ * Extrae el desfase horario de `site.inicio` ("...T08:00:00-06:00" → "-06:00").
  *
  * Se saca de ahí en vez de escribirlo a mano para que exista un solo sitio
- * donde vive la zona horaria del evento.
+ * donde vive la zona horaria del evento. Solo se usa el DESFASE: la hora de
+ * `site.inicio` no interviene, el rango del evento lo marca `site.horario`.
  *
  * @returns {string} El desfase, o cadena vacía si no se puede determinar.
  */
