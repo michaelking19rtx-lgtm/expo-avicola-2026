@@ -1,5 +1,6 @@
 ---
 import site from '../data/site.json';
+import ponentesHero from '../data/hero-ponentes.json';
 import { asset } from '../scripts/paths.js';
 
 /*
@@ -34,6 +35,126 @@ const unidades = [
   { clave: 'min', etiqueta: 'Min', valor: dosDigitos(Math.floor((totalSegundos % 3600) / 60)) },
   { clave: 'seg', etiqueta: 'Seg', valor: dosDigitos(totalSegundos % 60) },
 ];
+
+/* ===========================================================================
+   ABANICO DE PONENTES
+
+   Todo lo de aquí abajo se DERIVA de hero-ponentes.json. No hay ni una
+   posición, ni un z-index, ni una duración escrita a mano. Pasar de 3 a 6
+   figuras es añadir tres objetos al JSON y subir sus WebP: ni el CSS ni el JS
+   se tocan.
+   ======================================================================== */
+
+const n = ponentesHero.length;
+
+/*
+  El destacado va al centro, y el resto se reparte alternando hacia afuera.
+
+  Se ordena aquí, en build, y NO con `order` de CSS a propósito: así el orden
+  del DOM coincide con el orden visual de izquierda a derecha, que es el único
+  orden de tabulación que tiene sentido para quien navega con teclado. Con
+  `order` el foco saltaría del centro a un extremo.
+*/
+function ordenarEnAbanico<T extends { destacado: boolean }>(lista: T[]): T[] {
+  if (lista.length === 0) return [];
+  const destacado = lista.find((p) => p.destacado) ?? lista[0];
+  const resto = lista.filter((p) => p !== destacado);
+  const posiciones: T[] = new Array(lista.length);
+  const centro = Math.floor((lista.length - 1) / 2);
+  posiciones[centro] = destacado;
+
+  let izq = centro - 1;
+  let der = centro + 1;
+  let haciaIzquierda = true;
+  for (const p of resto) {
+    if (haciaIzquierda && izq >= 0) posiciones[izq--] = p;
+    else if (der < lista.length) posiciones[der++] = p;
+    else posiciones[izq--] = p;
+    haciaIzquierda = !haciaIzquierda;
+  }
+  return posiciones;
+}
+
+const ordenados = ordenarEnAbanico(ponentesHero);
+
+/*
+  `paso` es la distancia al centro normalizada a 0..1: 0 es la figura central y
+  1 la más exterior. De él salen la escala, la opacidad, el desplazamiento
+  vertical y el z-index, todos en CSS. Es la pieza que hace que el sistema
+  aguante cualquier número de figuras: con 6, los pasos salen 1 / 0.6 / 0.2 y
+  el arco se escalona solo.
+*/
+const centroIdx = (n - 1) / 2;
+const maxDist = centroIdx || 1; // n===1 → sin división por cero.
+
+/*
+  SOLAPE. Dos correcciones sobre el «20%» de partida, las dos medidas:
+
+  1. EL 20% ES DE CUERPO, NO DE LIENZO. Los PNG traen ~38% de margen
+     transparente alrededor de la persona (la silueta ocupa de 335 a 1444 px
+     sobre 1792, un 62% del ancho). Con los lienzos solapando un 20%, los
+     CUERPOS no llegaban a tocarse y el hero se leía como tres recortes
+     sueltos en fila, no como un abanico. Para que los cuerpos solapen un 20%
+     hacen falta lienzos solapando un 50%:
+         solape_cuerpo = (0.62 − paso) / 0.62 = 0.20  →  paso = 0.5
+     Efecto colateral bueno: el conjunto ocupa menos y la figura pasa de 131
+     a 170px de ancho.
+
+  2. EL SOLAPE CRECE CON n. Con un paso fijo, n figuras ocupan 1 + paso·(n−1)
+     anchos y cada una encoge proporcionalmente. Medido con 6 figuras y paso
+     fijo: la figura caía a 77px y las caras dejaban de distinguirse. Se topa
+     el ANCHO TOTAL en 3.2 anchos de figura y el paso sale de ahí; con 3 el
+     tope no llega a morder.
+*/
+const PASO_BASE = 0.5; // 1 − 0.5 de solape de lienzo ≈ 20% de solape de cuerpo
+const TRAMOS_MAX = 3.2;
+const pasoSolape =
+  n > 1 ? Math.min(PASO_BASE, (TRAMOS_MAX - 1) / (n - 1)) : PASO_BASE;
+
+const tramos = 1 + pasoSolape * (n - 1);
+
+const figuras = ordenados.map((p, i) => {
+  const dist = Math.abs(i - centroIdx);
+  const paso = dist / maxDist;
+  const lado = i < centroIdx ? 'izq' : 'der';
+
+  /*
+    `fuera` es lo que la etiqueta tiene que volar DE MÁS, medido en anchos de
+    figura, para salir del conjunto en vez de solo de su propia caja.
+
+    Hace falta porque las figuras se SOLAPAN: la etiqueta de la central salía
+    del borde de su caja y aterrizaba encima de la vecina, con el nombre sobre
+    una cara. Se vio en captura, no en las medidas — el rectángulo de la
+    etiqueta estaba dentro del viewport y no pisaba la columna de texto, así
+    que todas las comprobaciones numéricas daban OK.
+
+    Para las de la izquierda, la distancia al borde izquierdo del abanico es
+    i·paso; para las de la derecha, lo que queda hasta el borde derecho. Las
+    exteriores dan 0 y su etiqueta sale pegada a la figura, como debe.
+  */
+  const fuera = lado === 'izq' ? i * pasoSolape : tramos - i * pasoSolape - 1;
+
+  return {
+    ...p,
+    i,
+    lado,
+    fuera: +Math.max(0, fuera).toFixed(4),
+    paso: +paso.toFixed(4),
+    // z-index por distancia al centro, nunca a mano. Enteros y decrecientes
+    // hacia los extremos: el centro siempre queda al frente.
+    z: 100 - Math.round(paso * 50),
+  };
+});
+
+// Orden de ENTRADA: del centro hacia afuera. Se calcula aquí y viaja como
+// data-orden para que el JS no tenga que volver a medir distancias.
+const porDistancia = [...figuras].sort((a, b) => a.paso - b.paso);
+const ordenEntrada = new Map(porDistancia.map((f, rank) => [f.i, rank]));
+
+// Dimensiones reales del WebP. Con valores que no correspondan, el navegador
+// reserva una caja con la proporción equivocada y reaparece el salto de layout.
+const IMG_W = 560;
+const IMG_H = 750;
 ---
 
 <section class="hero" id="inicio">
@@ -80,31 +201,95 @@ const unidades = [
       <div class="hero__halo" aria-hidden="true"></div>
 
       <div class="hero__float" data-hero-float>
-        <div class="hero__frame" data-hero-frame data-anim>
-          {/*
-            WebP a 1400px de ancho, sin respaldo PNG: WebP con alfa lo soportan
-            todos los navegadores desde 2020. El original de 2752px pesaba
-            4.79 MB y tardaba 25 s en 4G lento; este pesa 125 KB.
+        <ul
+          class="abanico"
+          style={`--n: ${n}; --paso-solape: ${pasoSolape}`}
+          data-abanico
+        >
+          {figuras.map((p) => (
+            <li
+              class:list={['abanico__item', `abanico__item--${p.lado}`]}
+              style={`--i: ${p.i}; --paso: ${p.paso}; --z: ${p.z}; --fuera: ${p.fuera}`}
+              data-figura
+            >
+              {/*
+                PENDIENTE — Fase 3 (Ponentes).
+                Cuando exista la sección, esta <figure> se envuelve en:
 
-            width/height son los REALES del archivo (1400×781). Con valores que
-            no correspondan, el navegador reserva una caja con la proporción
-            equivocada y reaparece el salto de layout que evitan.
-          */}
-          <img
-            class="hero__img"
-            src={asset('img/hero/ponentes.webp')}
-            alt="Ponentes de la Expo Avícola Productiva 2026"
-            width="1400"
-            height="781"
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-            data-hero-img
-          />
-          <div class="hero__placeholder">
-            <span>Imagen de ponentes</span>
-          </div>
-        </div>
+                  <a class="figura__enlace" href={`#ponente-${p.slug}`}>
+                    ... la <figure> tal cual ...
+                  </a>
+
+                y entonces DESAPARECE el tabindex="0" de la <figure>: el enlace
+                ya aporta el foco, y dejar los dos crearía dos paradas de
+                tabulación por ponente. Hoy no se enlaza porque #ponentes no
+                existe y un ancla muerta es peor que ningún enlace.
+              */}
+              <figure class="figura" tabindex="0" data-fig-orden={ordenEntrada.get(p.i)}>
+                <div class="figura__profundidad">
+                  <div class="figura__flota" data-fig-flota>
+                    <div class="figura__entrada" data-fig-entrada data-anim>
+                      <div class="figura__marco" data-fig-marco>
+                        {/*
+                          Las tres en `eager` porque están sobre el pliegue,
+                          pero solo la destacada en prioridad alta.
+
+                          Honestidad sobre la medición: se probó A/B (las tres
+                          en "high" contra destacada-high) en localhost y en 4G
+                          limitado, y la diferencia quedó DENTRO DEL RUIDO
+                          (mediana de LCP 532 vs 536 ms sobre 11 pasadas; las
+                          fuentes llegaban a 1054 ms en ambas). Así que esto no
+                          es una optimización medida: es higiene de la señal
+                          —marcar tres recursos como "alta prioridad" es no
+                          marcar ninguna—, y el LCP de esta página es el
+                          TÍTULO, no una imagen.
+
+                          El comentario va AQUÍ y no entre los atributos del
+                          <img>: ahí Astro lo compilaba bien pero `astro check`
+                          daba 15 errores en cascada, porque un bloque {} entre
+                          atributos rompe el parseo JSX de la etiqueta entera.
+                        */}
+                        <img
+                          class="figura__img"
+                          src={asset(p.img)}
+                          alt={`Retrato de ${p.nombre}`}
+                          width={IMG_W}
+                          height={IMG_H}
+                          loading="eager"
+                          fetchpriority={p.destacado ? 'high' : 'auto'}
+                          decoding="async"
+                          data-fig-img
+                        />
+                        {/*
+                          Mismo reparto que tenía la imagen grupal: si la
+                          imagen no carga, manda este marco punteado con el
+                          nombre dentro. Nunca un icono de imagen rota.
+                        */}
+                        <div class="figura__placeholder">
+                          <span>{p.nombre}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/*
+                  La etiqueta es <figcaption>: está SIEMPRE en el árbol de
+                  accesibilidad, aunque visualmente esté oculta en reposo. Un
+                  lector de pantalla anuncia nombre y tema al llegar a la
+                  figura sin depender del hover, que no existe para él.
+                */}
+                <figcaption class="figura__etiqueta">
+                  <span class="figura__linea" aria-hidden="true"></span>
+                  <span class="figura__texto">
+                    <span class="figura__nombre">{p.nombre}</span>
+                    <span class="figura__tema">{p.tema}</span>
+                  </span>
+                </figcaption>
+              </figure>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   </div>
@@ -114,8 +299,8 @@ const unidades = [
   import site from '../data/site.json';
 
   /*
-    Nada de esto depende de GSAP. La cuenta regresiva y el reemplazo de la
-    imagen se resuelven primero y sin imports pesados: si el chunk de
+    Nada de esto depende de GSAP. La cuenta regresiva y el reemplazo de las
+    imágenes se resuelven primero y sin imports pesados: si el chunk de
     animaciones (~132 KB) no llega, el hero sigue siendo correcto.
   */
   const hero = document.querySelector<HTMLElement>('.hero');
@@ -161,25 +346,27 @@ const unidades = [
   })();
 
   // -----------------------------------------------------------------------
-  // Imagen de ponentes: nunca debe verse un icono de imagen rota.
-  // El <img> arranca invisible (solo si hay JS) y únicamente se muestra al
-  // confirmar la carga; mientras tanto manda el placeholder.
+  // Figuras: nunca debe verse un icono de imagen rota.
+  // Cada <img> arranca invisible (solo si hay JS) y únicamente se muestra al
+  // confirmar su carga; mientras tanto manda su placeholder punteado. Es por
+  // figura, no global: que falle una no debe apagar a las demás.
   // -----------------------------------------------------------------------
   (() => {
-    const frame = document.querySelector<HTMLElement>('[data-hero-frame]');
-    const img = document.querySelector<HTMLImageElement>('[data-hero-img]');
-    if (!frame || !img) return;
+    for (const marco of document.querySelectorAll<HTMLElement>('[data-fig-marco]')) {
+      const img = marco.querySelector<HTMLImageElement>('[data-fig-img]');
+      if (!img) continue;
 
-    const cargada = () => (frame.dataset.state = 'loaded');
-    const fallida = () => (frame.dataset.state = 'failed');
+      const cargada = () => (marco.dataset.state = 'loaded');
+      const fallida = () => (marco.dataset.state = 'failed');
 
-    if (img.complete) {
-      // Ya resuelta antes de que corriera este script.
-      if (img.naturalWidth > 0) cargada();
-      else fallida();
-    } else {
-      img.addEventListener('load', cargada, { once: true });
-      img.addEventListener('error', fallida, { once: true });
+      if (img.complete) {
+        // Ya resuelta antes de que corriera este script.
+        if (img.naturalWidth > 0) cargada();
+        else fallida();
+      } else {
+        img.addEventListener('load', cargada, { once: true });
+        img.addEventListener('error', fallida, { once: true });
+      }
     }
   })();
 
@@ -192,65 +379,90 @@ const unidades = [
       const { gsap, reduced } = initMotion();
       if (reduced || !gsap || !hero) return;
 
-    const media = hero.querySelector<HTMLElement>('[data-hero-media]');
-    const flotante = hero.querySelector<HTMLElement>('[data-hero-float]');
-    const frame = hero.querySelector<HTMLElement>('[data-hero-frame]');
-    const entradas = hero.querySelectorAll<HTMLElement>('.hero__content [data-anim]');
+      const media = hero.querySelector<HTMLElement>('[data-hero-media]');
+      const entradas = hero.querySelectorAll<HTMLElement>('.hero__content [data-anim]');
 
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-
-    // Eyebrow, cada línea del título, tagline, cuenta regresiva y botones.
-    tl.fromTo(
-      entradas,
-      { opacity: 0, y: 24 },
-      { opacity: 1, y: 0, duration: 0.8, stagger: 0.08 }
-    );
-
-    if (frame) {
-      tl.fromTo(
-        frame,
-        { opacity: 0, y: 40, scale: 0.97 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 1.2,
-          onComplete: () => {
-            if (!flotante) return;
-            /*
-              Flotación permanente: ±10px en 6s. Va en un elemento aparte del
-              reveal y del parallax para que las tres no se peleen por el mismo
-              transform.
-
-              Primero un tramo de entrada de 0 a -10: arrancar el ciclo
-              directamente en y:10 daría un salto seco de 10px justo al acabar
-              el reveal.
-            */
-            gsap.to(flotante, {
-              y: -10,
-              duration: 1.5,
-              ease: 'sine.out',
-              onComplete: () => {
-                gsap.fromTo(
-                  flotante,
-                  { y: -10 },
-                  {
-                    y: 10,
-                    duration: 3,
-                    ease: 'sine.inOut',
-                    yoyo: true,
-                    repeat: -1,
-                  }
-                );
-              },
-            });
-          },
-        },
-        0.2
+      /*
+        Las figuras se ordenan por data-fig-orden (0 = la destacada), calculado
+        en build. Así el stagger de GSAP recorre el abanico del centro hacia
+        afuera sin que el JS tenga que medir distancias otra vez.
+      */
+      const figuras = [...hero.querySelectorAll<HTMLElement>('.figura')].sort(
+        (a, b) => Number(a.dataset.figOrden ?? 0) - Number(b.dataset.figOrden ?? 0)
       );
-    }
+      const cajasEntrada = figuras
+        .map((f) => f.querySelector<HTMLElement>('[data-fig-entrada]'))
+        .filter((el): el is HTMLElement => el !== null);
 
-      // Parallax: la imagen se queda atrás respecto al texto al hacer scroll.
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      // Eyebrow, cada línea del título, tagline, cuenta regresiva y botones.
+      tl.fromTo(
+        entradas,
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.8, stagger: 0.08 }
+      );
+
+      if (cajasEntrada.length) {
+        tl.fromTo(
+          cajasEntrada,
+          { opacity: 0, y: 40, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 1.1,
+            stagger: 0.12,
+            onComplete: () => {
+              /*
+                Flotación permanente, una timeline INDEPENDIENTE por figura.
+
+                Duración y desfase se derivan del índice visual: si las tres
+                subieran y bajaran a la vez, el abanico entero se leería como
+                una sola imagen moviéndose, que es justo lo que queremos
+                evitar. Con estos números salen 5.4 / 6.25 / 7.1 s y arranques
+                separados 0.37 s. Con 6 figuras la fórmula sigue dando seis
+                periodos distintos sin tocar nada.
+              */
+              figuras.forEach((figura, i) => {
+                const flota = figura.querySelector<HTMLElement>('[data-fig-flota]');
+                if (!flota) return;
+
+                const duracion = 5.4 + i * 0.85;
+                const desfase = i * 0.37;
+
+                /*
+                  Tramo de entrada de 0 a -10 antes del ciclo: arrancar
+                  directamente en y:10 daría un salto seco justo al acabar el
+                  reveal. Es el mismo patrón que tenía la imagen grupal.
+                */
+                gsap.to(flota, {
+                  y: -10,
+                  duration: 1.5,
+                  delay: desfase,
+                  ease: 'sine.out',
+                  onComplete: () => {
+                    gsap.fromTo(
+                      flota,
+                      { y: -10 },
+                      {
+                        y: 10,
+                        duration: duracion / 2,
+                        ease: 'sine.inOut',
+                        yoyo: true,
+                        repeat: -1,
+                      }
+                    );
+                  },
+                });
+              });
+            },
+          },
+          0.2
+        );
+      }
+
+      // Parallax: el conjunto se queda atrás respecto al texto al hacer scroll.
       if (media) {
         gsap.to(media, {
           yPercent: 12,
@@ -275,7 +487,7 @@ const unidades = [
     min-height: 100svh;
     align-items: center;
     /* clip y no hidden: no crea contenedor de scroll y evita desbordes
-       horizontales del halo y del parallax. */
+       horizontales del halo, del parallax y de las etiquetas. */
     overflow: clip;
     padding-block: calc(var(--nav-h) + var(--space-xl)) var(--space-2xl);
   }
@@ -432,9 +644,11 @@ const unidades = [
     border-color: var(--primary-bright);
   }
 
-  /* Columna de imagen ------------------------------------------------------ */
+  /* =========================================================================
+     Columna de figuras
+     ====================================================================== */
   /* En móvil el orden natural del DOM ya es el correcto: texto arriba,
-     imagen abajo. En desktop, columnas 52/48 en ese mismo orden. */
+     figuras abajo. En desktop, columnas 52/48 en ese mismo orden. */
   .hero__media {
     position: relative;
   }
@@ -446,39 +660,83 @@ const unidades = [
     aspect-ratio: 1;
     margin: auto;
     border-radius: 50%;
-    /* Sutil a propósito: solo evita que el recorte flote sobre un plano vacío. */
+    /* Sutil a propósito: solo evita que los recortes floten sobre un plano
+       vacío. Se conserva tal cual estaba con la imagen grupal. */
     background: radial-gradient(circle, var(--primary) 0%, transparent 68%);
     opacity: 0.3;
     filter: blur(56px);
     pointer-events: none;
   }
 
-  /*
-    16/9 y no 4/3: la imagen real es 1400×781 (1.792). Con 4/3 el marco
-    reservaba entre 32 y 65 px de alto que la imagen nunca ocupaba —invisibles,
-    porque el fondo es transparente, pero descuadraban el bloque. Con 16/9 el
-    desajuste baja a ~1.5 px.
+  /* -------------------------------------------------------------------------
+     El abanico — TRES REGÍMENES
 
-    Ojo: esto NO agranda la imagen. En los tres breakpoints el `contain` está
-    limitado por el ancho, así que el tamaño dibujado no cambia; lo único que
-    desaparece es el alto muerto.
-  */
-  .hero__frame {
-    position: relative;
-    aspect-ratio: 16 / 9;
+     El hero no encoge: cambia de layout según el ancho REAL disponible. Los
+     tres cortes salen de medir la página, no de números redondos (ver la
+     bitácora de la Fase 2b en CLAUDE.md):
+
+       <  43.75rem (700px) · REJILLA de retratos. No hay hover en táctil, así
+                             que el nombre va siempre visible bajo cada cara.
+       >= 43.75rem         · ABANICO. Nombre siempre visible, centrado bajo la
+                             figura. Sin líneas guía: no caben.
+       >= 80rem  (1280px)  · ABANICO + ETIQUETA CON LÍNEA GUÍA, revelada al
+                             hover o al foco. Es el único ancho donde la
+                             etiqueta lateral cabe sin pisar la columna de
+                             texto ni salirse del viewport.
+
+     Todo lo geométrico se deriva de --n (número de figuras) y --i (índice
+     visual). Pasar de 3 a 6 no toca ni una línea de este bloque.
+     ---------------------------------------------------------------------- */
+
+  /* === BASE (móvil): rejilla de retratos ================================= */
+  .abanico {
+    /*
+      Flex con wrap y no grid a propósito: con un número impar de figuras el
+      sobrante queda CENTRADO en su fila en vez de alineado a la izquierda con
+      un hueco huérfano al lado. Con 3 y 2 columnas sale 2+1 centrado; con 6 y
+      3 columnas, dos filas llenas.
+    */
+    --cols: 2;
+
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .hero__img {
+  .abanico__item {
+    /* El ancho sale del número de COLUMNAS, no del de figuras: la rejilla se
+       ve igual de ordenada con 3 que con 6. */
+    inline-size: calc((100% - (var(--cols) - 1) * var(--space-md)) / var(--cols));
+  }
+
+  .figura {
+    position: relative;
+    margin: 0;
+    /* El anillo de foco lo dibuja :focus-visible global; el radio hace que
+       siga la silueta del marco y no un rectángulo suelto. */
+    border-radius: var(--radius-media);
+  }
+
+  .figura__marco {
+    position: relative;
+    aspect-ratio: 560 / 750;
+  }
+
+  .figura__img {
     width: 100%;
     height: 100%;
     object-fit: contain;
     /*
-      Desvanecido inferior: los ponentes están recortados a media altura del
-      torso y, flotando sobre el halo, ese corte recto se leía como un tajo.
-      El degradado ocupa solo el último 12% para que se funda con el fondo sin
-      llegar a comerse los cuerpos.
+      Desvanecido inferior: mismo patrón que llevaba la imagen grupal. Las
+      figuras están recortadas al borde inferior del lienzo y ese corte recto,
+      flotando sobre el halo, se lee como un tajo. El degradado ocupa el último
+      12% para fundirlo con el fondo sin comerse los cuerpos.
 
-      Va en el <img> y NO en .hero__frame a propósito: así el placeholder
+      Va en el <img> y NO en .figura__marco a propósito: así el placeholder
       punteado (hermano, no hijo) se queda intacto cuando la imagen no carga.
 
       El prefijo -webkit- es para Safari < 15.4, que soporta la propiedad pero
@@ -487,8 +745,7 @@ const unidades = [
 
       `black` y `transparent` NO son colores de diseño y por eso no salen de
       tokens.css: de una máscara el navegador solo lee el canal alfa, así que
-      esto significa «opaco → transparente», no «negro». Un token de color aquí
-      no tendría sentido.
+      esto significa «opaco → transparente», no «negro».
     */
     -webkit-mask-image: linear-gradient(
       to bottom,
@@ -504,16 +761,18 @@ const unidades = [
     );
   }
 
-  .hero__placeholder {
+  .figura__placeholder {
     position: absolute;
     inset: 0;
     display: none;
-    place-items: center;
+    align-content: center;
+    padding: var(--space-xs);
     border: 1px dashed var(--border);
     border-radius: var(--radius-media);
     color: var(--text-muted);
     font-size: var(--step--1);
     text-align: center;
+    text-wrap: balance;
   }
 
   /*
@@ -521,27 +780,328 @@ const unidades = [
     - Sin JS ([data-js] ausente): se ve la imagen, nunca el placeholder.
     - Con JS: manda el placeholder y la imagen espera invisible; solo aparece
       al confirmarse la carga. Así jamás se ve el icono de imagen rota.
+    Es POR FIGURA: que falle una no debe apagar a las demás.
   */
-  :global([data-js]) .hero__placeholder {
+  :global([data-js]) .figura__placeholder {
     display: grid;
   }
 
-  :global([data-js]) .hero__img {
+  :global([data-js]) .figura__img {
     opacity: 0;
     transition: opacity var(--t-slow) var(--ease-out);
   }
 
-  :global([data-js]) .hero__frame[data-state='loaded'] .hero__img {
+  :global([data-js]) .figura__marco[data-state='loaded'] .figura__img {
     opacity: 1;
   }
 
-  :global([data-js]) .hero__frame[data-state='loaded'] .hero__placeholder {
+  :global([data-js]) .figura__marco[data-state='loaded'] .figura__placeholder {
     display: none;
   }
 
-  :global([data-js]) .hero__frame[data-state='failed'] .hero__img {
+  :global([data-js]) .figura__marco[data-state='failed'] .figura__img {
     display: none;
   }
+
+  /* Etiqueta en modo «siempre visible» ------------------------------------- */
+  .figura__etiqueta {
+    display: block;
+    margin-block-start: var(--space-xs);
+    text-align: center;
+  }
+
+  /* La línea guía es un recurso del abanico ancho: aquí no apunta a nada. */
+  .figura__linea {
+    display: none;
+  }
+
+  .figura__texto {
+    display: grid;
+    gap: 2px;
+    min-inline-size: 0;
+  }
+
+  .figura__nombre {
+    color: var(--text);
+    font-size: var(--step--1);
+    font-weight: 600;
+    line-height: 1.25;
+    /* El tope de 5.9rem del texto es lo que garantiza que la etiqueta no se
+       salga del viewport (margen medido: 12px a 1280px, el caso más justo).
+       Una palabra más larga que ese tope se saldría de la caja y se llevaría
+       la garantía por delante, así que se parte. */
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+
+  .figura__tema {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  /*
+    Tres columnas en cuanto el ancho da para que una cara siga siendo
+    reconocible. Por debajo de 27rem (432px) tres retratos dejarían cada cara
+    en ~30px: se prioriza MENOS columnas antes que más figuras por fila.
+  */
+  @media (min-width: 27rem) {
+    .abanico {
+      --cols: 3;
+    }
+  }
+
+  /* === ABANICO ============================================================
+     GEOMETRÍA:
+     - Solape del 20% con la vecina  →  el paso entre figuras es 0.8 anchos.
+     - n figuras ocupan  1 + 0.8·(n−1)  anchos de figura.
+     - De ahí el ancho de cada una: 100% / (1 + 0.8·(n−1)).
+           n=3 → 38.46%   ·   n=6 → 20%
+     - Y su posición: --i · ancho · 0.8.
+     Nada escrito a mano, nada que dependa de que sean tres.
+     ===================================================================== */
+  @media (min-width: 43.75rem) {
+    .abanico {
+      /* --paso-solape lo inyecta el componente (1 − solape). Este valor solo
+         actúa de red por si el atributo style faltara. */
+      --paso-solape: 0.5;
+      --tramos: calc(1 + var(--paso-solape) * (var(--n) - 1));
+      --fig-w: calc(100% / var(--tramos));
+
+      position: relative;
+      display: block;
+      /*
+        Reserva la altura desde el primer pintado: las figuras van en position
+        absolute y no aportan alto. Sin esto habría CLS.
+
+        0.746667 es la proporción real del WebP (560/750). El alto del bloque
+        es el de una figura a escala 1, así que su aspect-ratio es
+        proporción · tramos.
+      */
+      aspect-ratio: calc(0.746667 * var(--tramos));
+      /* Sitio para la fila de nombres, que va en position absolute bajo el
+         conjunto y por tanto no empuja nada. */
+      margin-block-end: var(--space-xl);
+    }
+
+    .abanico__item {
+      position: absolute;
+      inset-block-end: 0;
+      /* La distribución sale del índice y del total, nunca de posiciones fijas. */
+      inset-inline-start: calc(var(--i) * var(--fig-w) * var(--paso-solape));
+      inline-size: var(--fig-w);
+      /* Profundidad por distancia al centro, calculada en build. */
+      z-index: var(--z);
+      transition: opacity var(--t-base) var(--ease-out);
+    }
+
+    /*
+      Profundidad: la central a escala 1 y opacidad 1; las laterales encogen,
+      se apagan y bajan unos px. --paso vale 0 en el centro y 1 en el extremo,
+      así que las tres reglas son una interpolación lineal y no una lista de
+      casos: con 6 figuras los valores intermedios salen solos.
+
+      transform-origin abajo para que todas compartan LÍNEA BASE al escalar.
+    */
+    .figura__profundidad {
+      transform: translateY(calc(var(--paso) * 8px))
+        scale(calc(1 - 0.1 * var(--paso)));
+      transform-origin: 50% 100%;
+      opacity: calc(1 - 0.18 * var(--paso));
+      transition:
+        transform var(--t-base) var(--ease-out),
+        opacity var(--t-base) var(--ease-out);
+    }
+
+    /*
+      El nombre baja a una fila común bajo el conjunto: en position absolute
+      para no alterar la geometría del abanico, y con el ancho topado al PASO
+      entre figuras (80% del ancho de una) para que dos nombres vecinos no se
+      toquen aunque las figuras sí se solapen.
+    */
+    .figura__etiqueta {
+      position: absolute;
+      inset-block-start: 100%;
+      inset-inline-start: 50%;
+      inline-size: 76%;
+      margin-block-start: var(--space-sm);
+      translate: -50% 0;
+    }
+
+    /* Solo el nombre: el tema no cabe en el paso entre figuras sin quedar en
+       dos palabras por línea. Vuelve en cuanto hay línea guía. */
+    .figura__tema {
+      display: none;
+    }
+  }
+
+  /* === ETIQUETA CON LÍNEA GUÍA ============================================
+     Nada de globo tipo tooltip: una línea fina que sale del hombro hacia
+     AFUERA de la composición y, al final, nombre y tema. Las figuras de la
+     mitad izquierda la sacan a la izquierda y las de la derecha a la derecha,
+     así dos líneas nunca se cruzan.
+
+     POR QUÉ 80rem Y NO ANTES. Medido sobre el layout real: el vuelo de una
+     etiqueta son 132px (32 de línea + 6 de aire + 80 de texto). A 1280px el
+     hueco libre a cada lado del abanico es de 144px, y a 1200px baja a 100px
+     por la derecha. Por debajo de 80rem la etiqueta o se sale del viewport o
+     se mete en la columna del título; en vez de recortarla hasta hacerla
+     ilegible, ese tramo usa el nombre bajo la figura, que no compite por
+     ancho con nada.
+     ===================================================================== */
+  @media (min-width: 80rem) {
+    /*
+      TODO el hueco de las etiquetas sale de aquí: el abanico se estrecha
+      dentro de su propia columna y la columna de texto no se entera.
+
+      72px por lado. Sumados a los 64px del canal del grid dan 136px de aire
+      hasta el título, con holgura sobre los 118px que vuela una etiqueta
+      (32 de línea + 6 de aire + 80 de texto). Coste medido: la figura pasa de
+      186px a 131px de ancho.
+    */
+    .hero__media {
+      padding-inline: 72px;
+    }
+
+    .abanico {
+      margin-block-end: 0;
+    }
+
+    .figura__etiqueta {
+      /* Tramo mínimo de línea, el que asoma en las figuras exteriores. */
+      --linea-min: 32px;
+      --texto-w: 5rem;
+
+      position: absolute;
+      /* Altura del hombro: por debajo de la cabeza, por encima del torso. */
+      inset-block-start: 26%;
+      inset-inline-start: auto;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      /*
+        El ancho lleva dentro `--fuera`, que son anchos de figura hasta salir
+        del conjunto (los porcentajes resuelven contra .figura, que mide justo
+        un ancho de figura). Así la etiqueta de una figura interior aterriza
+        fuera del abanico y no encima de su vecina, mientras que en las
+        exteriores --fuera vale 0 y todo queda como si no existiera.
+      */
+      inline-size: calc(
+        var(--fuera) * 100% + var(--texto-w) + var(--linea-min) + 6px
+      );
+      margin-block-start: 0;
+      translate: none;
+      pointer-events: none;
+    }
+
+    .abanico__item--izq .figura__etiqueta {
+      inset-inline-end: 100%;
+      flex-direction: row-reverse;
+      text-align: end;
+    }
+
+    .abanico__item--der .figura__etiqueta {
+      inset-inline-start: 100%;
+    }
+
+    .figura__linea {
+      display: block;
+      /*
+        La línea se come todo el espacio que sobra entre el hombro y el texto,
+        que es justo la distancia hasta salir del conjunto. En las figuras
+        exteriores son los 32px de --linea-min; en la central, ese tramo más
+        el ancho de figura que la separa del borde.
+
+        Se dibuja con scaleX y no animando el ancho porque un flex-grow no es
+        animable: con transform-origin en el lado de la figura, el trazo CRECE
+        desde el hombro hacia afuera, que es el gesto que se busca. En un
+        filete de 1px de alto no hay distorsión posible al escalar.
+      */
+      flex: 1 1 auto;
+      min-inline-size: var(--linea-min);
+      block-size: 1px;
+      background-color: var(--text-muted);
+      transform: scaleX(0);
+      transition: transform var(--t-slow) var(--ease-out);
+    }
+
+    /* El origen va SIEMPRE en el lado de la figura, que es de donde nace el
+       trazo: a la derecha para las de la mitad izquierda y al revés. */
+    .abanico__item--izq .figura__linea {
+      transform-origin: 100% 50%;
+    }
+
+    .abanico__item--der .figura__linea {
+      transform-origin: 0 50%;
+    }
+
+    /*
+      El tope de ancho del texto es lo que acota el vuelo de la etiqueta y, con
+      él, la garantía de que nunca se sale del viewport.
+    */
+    .figura__texto {
+      inline-size: max-content;
+      /*
+        5rem y no 5.9rem: el vuelo total de la etiqueta baja de 132px a 118px
+        y el aire hasta el título sube de 4px a 18px. Se paga con un nombre
+        que parte antes, que es mucho más barato que una etiqueta rozando el
+        título en cuanto una fuente renderice un pelo más ancha.
+      */
+      max-inline-size: 5rem;
+      opacity: 0;
+      transition:
+        opacity var(--t-slow) var(--ease-out),
+        transform var(--t-slow) var(--ease-out);
+    }
+
+    .abanico__item--izq .figura__texto {
+      transform: translateX(6px);
+    }
+
+    .abanico__item--der .figura__texto {
+      transform: translateX(-6px);
+    }
+
+    .figura__tema {
+      display: block;
+      /* El tema se trunca a UNA línea: un tema largo no puede reflowear el
+         abanico ni empujar la etiqueta fuera del viewport. */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Estado activo: hover o foco por teclado, mismo resultado -------------- */
+    .figura:hover .figura__linea,
+    .figura:focus-visible .figura__linea {
+      transform: scaleX(1);
+    }
+
+    .figura:hover .figura__texto,
+    .figura:focus-visible .figura__texto {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* La activa sube unos px y recupera escala y opacidad plenas. */
+    .figura:hover .figura__profundidad,
+    .figura:focus-visible .figura__profundidad {
+      transform: translateY(calc(var(--paso) * 8px - 6px)) scale(1);
+      opacity: 1;
+    }
+
+    /*
+      Las demás bajan a 0.55. Se resuelve con :has en el contenedor porque es
+      la única forma de que un elemento afecte a sus hermanos sin JS; el estado
+      visual del hero no debería depender del bundle de animaciones.
+    */
+    .abanico:has(.figura:hover, .figura:focus-visible)
+      .abanico__item:not(:has(.figura:hover, .figura:focus-visible)) {
+      opacity: 0.55;
+    }
+  }
+
 
   /* Desktop ---------------------------------------------------------------- */
   @media (min-width: 62rem) {
@@ -550,4 +1110,20 @@ const unidades = [
       gap: var(--space-2xl);
     }
   }
+
+  /*
+    NO SE TOCA EL `gap` DEL GRID PARA HACER SITIO A LAS ETIQUETAS.
+
+    Se intentó: ensancharlo a 6.5rem abría el hueco de la etiqueta izquierda,
+    pero estrechaba la columna de texto de 524px a 503px, y a 5rem la línea
+    «para el sector» mide ~490px con la fuente de respaldo y más con la
+    display. Resultado medido en 4G: la línea entraba antes del swap y se
+    partía después, el bloque del hero crecía de 598px a 674px y el CLS subía
+    de 0.00007 a 0.01572.
+
+    Es la misma trampa que documenta la Fase 2 sobre el reparto 52/48: la
+    columna de texto no admite recortes. El hueco de las etiquetas sale del
+    padding de .hero__media (ver el bloque de 80rem), que estrecha el abanico
+    y no el título.
+  */
 </style>

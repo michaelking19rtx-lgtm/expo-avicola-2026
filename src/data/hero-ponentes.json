@@ -1,0 +1,26 @@
+[
+  {
+    "id": "01",
+    "slug": "ponente-01",
+    "nombre": "Ponente por confirmar",
+    "tema": "Tema por confirmar",
+    "img": "img/hero/ponente-01.webp",
+    "destacado": false
+  },
+  {
+    "id": "02",
+    "slug": "ponente-02",
+    "nombre": "Ponente por confirmar",
+    "tema": "Tema por confirmar",
+    "img": "img/hero/ponente-02.webp",
+    "destacado": true
+  },
+  {
+    "id": "03",
+    "slug": "ponente-03",
+    "nombre": "Ponente por confirmar",
+    "tema": "Tema por confirmar",
+    "img": "img/hero/ponente-03.webp",
+    "destacado": false
+  }
+]

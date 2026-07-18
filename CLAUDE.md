@@ -51,7 +51,7 @@ expo-avicola-2026/
 │   │   ├── {Nav,Hero,VideoSection}.astro
 │   │   ├── {Pilares,Programa,ParaQuien,Boletos}.astro
 │   │   └── {Sede,Patrocinadores,Faq,CtaFinal,Footer}.astro
-│   ├── data/{site,navegacion,programa,boletos,patrocinadores,faq}.json
+│   ├── data/{site,navegacion,programa,boletos,patrocinadores,faq,hero-ponentes}.json
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin,404}.astro
@@ -154,6 +154,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | :--- | :----------------------------------------------------------------------- | :------------- |
 | 1    | Cimientos: arquitectura, doble tema, `/admin` mínimo, deploy              | **COMPLETADA** |
 | 2    | Nav + hero + sección de video, con capa de movimiento (GSAP, Lenis)      | **COMPLETADA** |
+| 2b   | Hero rediseñado: abanico de figuras individuales de ponentes              | **COMPLETADA** |
 | 3    | Ponentes: fichas con foto, cargo y sesión                                 | **POSPUESTA**  |
 | 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
@@ -176,6 +177,24 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 ## 7. Riesgos abiertos
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
+
+### Nombres PLACEHOLDER en el hero · ABIERTO · BLOQUEA LA PROMOCIÓN
+
+Las etiquetas del hero llevan nombres PLACEHOLDER. NO publicar
+promocionalmente hasta sustituirlos por los nombres reales de cada ponente en
+`src/data/hero-ponentes.json`.
+
+Hoy las tres figuras dicen «Ponente por confirmar» / «Tema por confirmar», y
+sus `slug` son provisionales (`ponente-01`, `-02`, `-03`). Son marcadores
+deliberados, no un dato que se haya perdido: el hero ya enseña las caras
+reales de tres ponentes, así que **una captura del hero circulando por redes
+mostraría personas identificables junto a una etiqueta vacía**. Es el único
+punto del sitio donde un dato pendiente no se degrada con dignidad, porque la
+foto sí es real.
+
+Al rellenarlo, los `slug` pasan a derivarse del nombre (minúsculas, sin
+acentos) y hay que actualizarlos a la vez en los dos sitios: ese `slug` es el
+ancla que consumirá la Fase 3.
 
 ### Anclas de navegación que no llevan a ningún sitio · CASI CERRADO
 
@@ -233,8 +252,10 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 5 | **Teléfono** | `site.contacto.telefono` | «Próximamente» en el footer |
 | 6 | **WhatsApp** | `site.contacto.whatsapp` | «Próximamente» en el footer; el aviso de Boletos no promete WhatsApp |
 | 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
-| 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera |
-| ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO** — entregada y optimizada a `ponentes.webp` (125 KB) |
+| 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera. Las 3 del hero ya están; faltan las de las fichas |
+| ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
+| 9b | **Nombres reales de las 3 figuras del hero** | `src/data/hero-ponentes.json` | «Ponente por confirmar». **Ver el primer riesgo abierto: bloquea la promoción** |
+| 9c | **Las otras 3 figuras del hero** | `public/img/hero/ponente-0{4,5,6}.webp` | El abanico funciona con 3; pasa a 6 solo con datos (ver Fase 2b) |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
 | 12 | **Stripe**: producto, precio y checkout | `boletos.json` (`priceId`, `checkoutUrl`) | El botón avisa de que la venta abre pronto |
@@ -402,13 +423,163 @@ horizontal; menú móvil ejercitado con clics y teclado; con
 
 | Archivo | Para qué | Notas |
 | :------ | :------- | :---- |
-| ~~`public/img/hero/ponentes.png`~~ | Imagen de ponentes del hero | **ENTREGADA.** Ver «Imagen del hero» en la bitácora de optimización, al final de este archivo. Hoy se sirve `ponentes.webp` (1400×781, 125 KB) y `.hero__frame` pasó a 16/9. |
+| ~~`public/img/hero/ponentes.png`~~ | Imagen de ponentes del hero | **ENTREGADA y luego RETIRADA.** Se optimizó a `ponentes.webp` (125 KB) y se sirvió hasta la Fase 2b, que la sustituyó por tres figuras individuales. `.hero__frame` ya no existe. |
 | `public/video/congreso.mp4` y `.webm` | Video de la sección "El congreso" | Sustituir el bloque `.intro__placeholder` por el marcado ya escrito en el comentario de `VideoSection.astro`. |
 | `public/img/hero/poster-congreso.jpg` | Póster del video | Mismo 16:9 del reproductor. |
 
 **DATO PENDIENTE:** el recinto de la sede. `site.json` lo tiene como
 `"recinto": null` y el hero muestra solo "Tehuacán, Puebla". Cuando se confirme,
 rellena esa clave y decide dónde mostrarlo.
+
+---
+
+### Fase 2b — Hero rediseñado: abanico de figuras individuales · COMPLETADA
+
+Sustituye la foto grupal del hero por una figura por ponente, en composición
+de abanico, con etiqueta de nombre y animación independiente. **Hoy son 3; el
+sistema está hecho para 6 sin tocar CSS ni JS.**
+
+**Qué se hizo**
+
+- `src/data/hero-ponentes.json`: única fuente de verdad del abanico. Un objeto
+  por figura con `id`, `slug`, `nombre`, `tema`, `img` y `destacado`.
+- `Hero.astro`: la columna derecha pasa de un `<img>` a un `<ul>` de figuras
+  posicionadas por cálculo. Toda la geometría se deriva de la longitud del
+  array y del índice.
+- Tres WebP nuevos (560×750) y fuera el `ponentes.webp` grupal.
+- `animations.js`: `detenerMovimiento()` cambia `[data-hero-frame]` (que ya no
+  existe) por `[data-fig-entrada], [data-fig-flota]`.
+
+#### CÓMO PASAR DE 3 A 6 FIGURAS
+
+**Solo se tocan datos e imágenes. Ni CSS ni JS.**
+
+1. Recortar las 3 nuevas con el mismo criterio: fondo transparente, persona
+   centrada y **pegada al borde inferior**, proporción 56:75.
+2. Convertirlas a WebP 560×750 calidad 90 (ver «Cómo regenerar los WebP» más
+   abajo) y dejarlas en `public/img/hero/ponente-0{4,5,6}.webp`. Los PNG
+   originales NO entran al repo: van a la carpeta hermana de originales.
+3. Añadir tres objetos a `hero-ponentes.json`. **Exactamente uno de los seis
+   lleva `destacado: true`.**
+
+Eso es todo. Se recalculan solos el ancho de cada figura, su posición, el
+z-index, la escala, la opacidad, el lado al que sale la etiqueta, el orden de
+entrada y las duraciones de flotación. Verificado de verdad: se metieron 6
+objetos en el JSON, se compiló y se midió en 7 breakpoints — 0 px de
+desbordamiento y etiquetas dentro del viewport en todos.
+
+> **REGLA DE RECORTE:** la figura destacada (centro) puede tener la coronilla
+> más alta; las laterales deben coincidir entre sí dentro del 1%. Al recibir
+> las 3 figuras restantes, verificar que ninguna con coronilla alta caiga en
+> posición lateral.
+
+En la entrega de las 3 primeras, las coronillas salieron a 7.54% / 4.50% /
+7.63% de la altura. La dispersión (3.13%) superaba el umbral del 3%, pero se
+aceptó sin retocar: las dos que se ven juntas (01 y 03) difieren un 0.09%, y
+la desviada es la central, donde una coronilla más alta REFUERZA el arco en
+vez de crear un escalón.
+
+**Decisiones**
+
+- **El «20% de solape» es de CUERPO, no de lienzo.** Los recortes traen ~38%
+  de margen transparente (la silueta ocupa un 62% del ancho del lienzo), así
+  que con los lienzos solapando un 20% los cuerpos ni se rozaban y el hero se
+  leía como tres recortes en fila. `solape_cuerpo = (0.62 − paso) / 0.62`, de
+  donde el paso entre figuras es 0.5. De regalo, la figura creció de 131 a
+  170px de ancho.
+- **El solape crece con n.** Con paso fijo, n figuras ocupan `1 + paso·(n−1)`
+  anchos y cada una encoge. Con 6 la figura caía a 77px y las caras dejaban de
+  distinguirse: el sistema «funcionaba» y el resultado no servía. Se topa el
+  ancho total en 3.2 anchos de figura y el paso sale de ahí.
+- **TRES REGÍMENES, no uno que encoge.** Los cortes salen de medir, no de
+  números redondos: `<700px` rejilla de retratos con el nombre siempre
+  visible; `≥700px` abanico con el nombre bajo cada figura; `≥1280px` abanico
+  con etiqueta de línea guía al hover o al foco. **Por debajo de 1280px la
+  etiqueta lateral no cabe**: vuela 118px y a 1200px el hueco libre por la
+  derecha baja a 100px. Antes que recortarla hasta hacerla ilegible, ese tramo
+  usa el nombre bajo la figura, que no compite por ancho con nada.
+- **El hueco de las etiquetas sale del padding de `.hero__media`, NUNCA del
+  `gap` del grid.** Se intentó ensanchar el canal a 6.5rem: abría el hueco,
+  pero estrechaba la columna de texto de 524 a 503px y a 5rem «para el sector»
+  ya no cabía. Entraba con la fuente de respaldo y se partía con la display,
+  así que **el CLS subía de 0.00007 a 0.01572** en 4G. Es la misma trampa del
+  reparto 52/48 de la Fase 2: la columna de texto no admite recortes.
+- **La etiqueta sale del borde del CONJUNTO, no del de su figura.** Como las
+  figuras se solapan, la etiqueta de la central aterrizaba sobre la cara de la
+  vecina. Cada figura lleva un `--fuera` (anchos de figura hasta salir del
+  abanico) y la línea guía se estira para cubrirlo. **Esto se vio en captura,
+  no en las medidas**: el rectángulo estaba dentro del viewport y no pisaba la
+  columna de texto, así que todas las comprobaciones numéricas daban OK.
+- **El orden del DOM es el orden visual, no el del JSON.** El destacado se
+  coloca en el centro en build reordenando el array, no con `order` de CSS:
+  con `order`, el foco por teclado saltaría del centro a un extremo.
+- **`z-index`, escala, opacidad y lado se derivan de `--paso`** (distancia al
+  centro normalizada a 0..1). Son interpolaciones lineales, no una lista de
+  casos, y por eso 6 figuras salen bien sin escribir un solo valor nuevo.
+- **Una timeline de flotación por figura, con periodo distinto.** Duración
+  `5.4 + i·0.85` s y desfase `i·0.37` s. Si las tres subieran a la vez el
+  abanico se leería como una sola imagen moviéndose.
+- **La etiqueta es `<figcaption>`, no un tooltip.** Está SIEMPRE en el árbol de
+  accesibilidad aunque esté oculta visualmente, así que un lector de pantalla
+  anuncia nombre y tema sin depender del hover, que para él no existe.
+- **560px de ancho y no 672.** La figura se dibuja como mucho a 346px (a 768px
+  de viewport), así que 560 cubre DPR2 con margen. A 672 los tres WebP sumaban
+  161.5 KB y **el LCP se degradaba de 576 a 708 ms**; a 560 suman 126.7 KB y
+  el LCP vuelve a la par con la imagen grupal.
+- **`fetchpriority="high"` solo en la destacada.** Se probó A/B en localhost y
+  en 4G limitado: la diferencia quedó dentro del ruido (532 vs 536 ms de
+  mediana sobre 11 pasadas). No es una optimización medida, es higiene de la
+  señal — marcar tres recursos como prioritarios es no marcar ninguno. El LCP
+  de esta página es el TÍTULO, no una imagen.
+- **Un comentario `{/* */}` entre los atributos de una etiqueta compila pero
+  rompe `astro check`** (15 errores en cascada, porque el bloque `{}` revienta
+  el parseo JSX de la etiqueta entera). Va siempre antes de la etiqueta.
+
+**PENDIENTE — convertir las figuras en enlaces (Fase 3).** Hoy la `<figure>`
+es enfocable solo para revelar su etiqueta: NO es un enlace, porque `#ponentes`
+todavía no existe y un ancla muerta es peor que ningún enlace. El sitio exacto
+donde entra el envoltorio `<a href="#ponente-{slug}">` está escrito en un
+comentario dentro de `Hero.astro`. **Al ponerlo hay que quitar el
+`tabindex="0"` de la `<figure>`**: el enlace ya aporta el foco y dejar los dos
+crearía dos paradas de tabulación por ponente.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+Verificado en Chrome 150 headless por CDP con interacción real (ratón y
+teclado), no leyendo el código:
+
+| Métrica | Antes (grupal) | Ahora (abanico) |
+| :------ | -------------: | --------------: |
+| Imágenes del hero | 125.6 KB | **126.7 KB** (3 archivos) |
+| Primera carga | ~282 KB | **~294 KB** |
+| LCP (mediana de 9, alternadas) | 580 ms | **568 ms** |
+| LCP en 4G lento | 2044 ms | **2012 ms** |
+| CLS | 0 | **0** |
+
+- **0 px de desbordamiento horizontal** en 375 / 430 / 768 / 992 / 1280 / 1440
+  / 1920, con 3 figuras y con 6.
+- **Etiquetas**: con hover y con Tab real, la línea llega a su largo, el texto
+  sube a opacidad 1, las otras figuras bajan a 0.55 y ninguna etiqueta sale del
+  viewport ni pisa la columna de texto. Aire más justo: 18px, a 1440px.
+- **Movimiento reducido** desde el arranque: `data-motion=off`, las 69
+  marcas `[data-anim]` visibles, flotaciones sin `transform`.
+- **Interrupción a media animación** (la lección del bug de la Fase 5):
+  activando «reducir movimiento» a los 350 ms, con el reveal en vuelo, quedan
+  **0 elementos invisibles**.
+- **Fallback por figura**: bloqueando solo `ponente-01`, esa figura pasa a
+  `state=failed` con su marco punteado y su nombre, y las otras dos siguen en
+  `loaded`. Nunca un icono de imagen rota.
+- **Contraste**: nombre 17.13:1 (verde) y 16.36:1 (azul); tema y línea guía
+  8.46:1 y 7.40:1. Todo por encima de AA.
+
+> **Cómo regenerar los WebP.** Igual que en la Fase 2: no hay herramienta de
+> imagen en el proyecto ni se añadió dependencia. Se conduce Chrome headless
+> por CDP y se vuelca `canvas.toDataURL('image/webp', 0.90)`, reescalando en
+> pasos de mitad (un `drawImage` directo de 1792 a 560 deja aliasing en el pelo
+> y en los bordes de la ropa). Los originales viven en
+> `C:\dev\expo-avicola-2026-assets-originales\`, fuera de control de versiones.
 
 ---
 
@@ -769,7 +940,11 @@ por si algún día una auditoría de red lo señala.
 
 ---
 
-### Imagen del hero — entregada y optimizada
+### Imagen del hero — entregada y optimizada · SUPERADA POR LA FASE 2b
+
+> Esta sección documenta la imagen GRUPAL, que ya no se sirve. Se conserva
+> porque el método de conversión y la política de originales fuera del repo
+> siguen vigentes. Para el hero actual, ver la Fase 2b.
 
 El cliente entregó `ponentes.png`: foto grupal de los seis ponentes, recortada
 sobre fondo transparente. **2752×1536 px y 4.79 MB.**

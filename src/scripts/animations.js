@@ -68,7 +68,8 @@ function detenerMovimiento() {
         a media animación.
       */
       g.set(
-        '[data-anim], [data-anim-punto], [data-hero-media], [data-hero-float], [data-hero-frame]',
+        '[data-anim], [data-anim-punto], [data-hero-media], [data-hero-float],' +
+          ' [data-fig-entrada], [data-fig-flota]',
         { clearProps: 'all' }
       );
       g.ticker.lagSmoothing(500, 33);
