@@ -1,0 +1,285 @@
+---
+import programa from '../data/programa.json';
+
+/*
+  Agenda del congreso. TODAS las filas salen de src/data/programa.json — no hay
+  un solo bloque escrito a mano aquí. Si cambia un horario, se cambia el JSON.
+
+  El campo `tipo` del JSON es dato editorial (logistica, ponencia, break, show,
+  panel, cierre). Para el CSS solo importa una distinción binaria: si la fila es
+  una conferencia (protagonista) o una pausa del programa (secundaria). Se
+  traduce aquí, en vez de repartir seis selectores por la hoja de estilos, para
+  que añadir un `tipo` nuevo en el futuro no obligue a tocar el CSS.
+*/
+const bloques = programa.bloques.map((bloque) => ({
+  ...bloque,
+  variante: bloque.tipo === 'ponencia' ? 'ponencia' : 'secundaria',
+}));
+---
+
+<section class="programa" id="programa">
+  <div class="programa__inner">
+    <header class="programa__head">
+      <p class="programa__eyebrow" data-anim>Programa</p>
+      <h2 class="programa__titulo" data-anim>Un día completo, hora por hora</h2>
+      <p class="programa__lead" data-anim>
+        Un congreso de un solo día: seis conferencias de 30 minutos más 5 de
+        preguntas, un panel de expertos y un show de medio tiempo.
+      </p>
+    </header>
+
+    <ol class="timeline" role="list">
+      {bloques.map((bloque) => (
+        <li class="slot" data-variante={bloque.variante} data-anim>
+          <span class="slot__punto" aria-hidden="true"></span>
+
+          <div class="slot__caja">
+            <p class="slot__hora">{bloque.hora}</p>
+
+            <div class="slot__cuerpo">
+              <h3 class="slot__titulo">{bloque.titulo}</h3>
+
+              {/*
+                FASE 3: cuando exista la sección de ponentes, este nombre pasa a
+                ser un enlace a su ficha (algo como <a href={`#ponente-${id}`}>).
+                Hoy es texto plano a propósito: la sección no existe y un ancla
+                muerta no ayuda a nadie.
+              */}
+              {bloque.ponente && <p class="slot__ponente">{bloque.ponente}</p>}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+
+    <p class="programa__nota" data-anim>{programa.notaDuracion}</p>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.programa');
+
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      // Encabezado y nota final: una sola entrada escalonada.
+      const sueltos = seccion.querySelectorAll<HTMLElement>(
+        '.programa__head [data-anim], .programa__nota[data-anim]'
+      );
+
+      gsap.fromTo(
+        sueltos,
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: seccion, start: 'top 78%', once: true },
+        }
+      );
+
+      /*
+        Las filas llevan un trigger CADA UNA, en vez de un stagger único sobre
+        toda la lista. La agenda mide más que la ventana: con un solo trigger,
+        las filas de la tarde se animarían mientras siguen fuera de pantalla y
+        el usuario llegaría a ellas ya quietas. Fila a fila, la cascada la marca
+        el scroll real.
+
+        El desplazamiento es de 12px: menos que el gutter mínimo (20px), así que
+        no puede provocar scroll horizontal en 375px.
+      */
+      const filas = seccion.querySelectorAll<HTMLElement>('.slot[data-anim]');
+
+      filas.forEach((fila) => {
+        gsap.fromTo(
+          fila,
+          { opacity: 0, x: -12 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.6,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: fila, start: 'top 92%', once: true },
+          }
+        );
+      });
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .programa {
+    padding-block: var(--space-3xl);
+  }
+
+  .programa__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Encabezado ------------------------------------------------------------- */
+  .programa__head {
+    max-width: var(--container-narrow);
+  }
+
+  .programa__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .programa__titulo {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .programa__lead {
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  /* Timeline --------------------------------------------------------------- */
+  /*
+    --rail es la posición del carril vertical dentro de la lista. El punto se
+    centra sobre él y la fila se separa con padding, nunca con márgenes
+    negativos: así nada asoma fuera del contenedor y no hay scroll horizontal.
+  */
+  .timeline {
+    --rail: 5px;
+    --punto: 9px;
+
+    position: relative;
+    margin-block-start: var(--space-2xl);
+    list-style: none;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--rail);
+    width: 1px;
+    background-color: var(--border);
+  }
+
+  .slot {
+    position: relative;
+    padding-inline-start: var(--space-xl);
+  }
+
+  .slot + .slot {
+    margin-block-start: var(--space-sm);
+  }
+
+  .slot__punto {
+    position: absolute;
+    inset-block-start: 1.35em;
+    inset-inline-start: calc(var(--rail) - (var(--punto) / 2));
+    width: var(--punto);
+    height: var(--punto);
+    border-radius: 50%;
+    /* El punto tapa el carril: sin fondo propio la línea se vería cruzarlo. */
+    background-color: var(--bg);
+    box-shadow: 0 0 0 1px var(--border) inset;
+  }
+
+  .slot__caja {
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-card);
+  }
+
+  .slot__hora {
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: 0.02em;
+    /* La franja horaria no debe partirse en dos líneas por el guion. */
+    white-space: nowrap;
+  }
+
+  .slot__titulo {
+    font-size: var(--step-0);
+    font-weight: 500;
+    /* text-wrap: pretty evita la palabra huérfana en títulos largos; los
+       navegadores que no lo soportan simplemente lo ignoran. */
+    text-wrap: pretty;
+  }
+
+  .slot__ponente {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step--1);
+  }
+
+  /* Conferencias: la fila protagonista ------------------------------------- */
+  .slot[data-variante='ponencia'] .slot__punto {
+    background-color: var(--accent);
+    box-shadow: none;
+  }
+
+  .slot[data-variante='ponencia'] .slot__titulo {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .slot[data-variante='ponencia'] .slot__ponente {
+    color: var(--accent);
+  }
+
+  /* Pausas del programa: filas secundarias --------------------------------- */
+  .slot[data-variante='secundaria'] .slot__caja {
+    background-color: var(--surface-2);
+  }
+
+  .slot[data-variante='secundaria'] .slot__titulo {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Nota final ------------------------------------------------------------- */
+  .programa__nota {
+    max-width: var(--container-narrow);
+    margin-block-start: var(--space-xl);
+    padding-inline-start: var(--space-xl);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  /*
+    Desktop: la hora pasa a su propia columna, a la izquierda del contenido.
+    En móvil se queda encima, apilada — meter una columna de horas de ancho fijo
+    en 375px dejaría el título en una tira de texto ilegible.
+  */
+  @media (min-width: 48rem) {
+    .slot__caja {
+      display: grid;
+      grid-template-columns: 8.5rem 1fr;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .slot__hora {
+      /* Alinea la hora con la primera línea del título, no con la caja. */
+      padding-block-start: 0.15em;
+    }
+  }
+
+  @media (max-width: 47.99rem) {
+    .slot__cuerpo {
+      margin-block-start: var(--space-2xs);
+    }
+  }
+</style>

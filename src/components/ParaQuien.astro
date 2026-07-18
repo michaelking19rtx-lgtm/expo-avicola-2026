@@ -1,0 +1,291 @@
+---
+/*
+  ¿Para quién es? — cinco perfiles de asistente.
+
+  Los iconos son SVG inline dibujados a mano, trazo 1.5, sin relleno (la regla
+  global `svg { fill: none }` de global.css lo garantiza). Nada de librerías de
+  iconos y nada de emojis: convención 2 del CLAUDE.md.
+*/
+const publicos = [
+  {
+    titulo: 'Productores avícolas',
+    texto: 'Quien vive del rendimiento diario de su parvada.',
+    icono: 'huevo',
+  },
+  {
+    titulo: 'Médicos veterinarios',
+    texto: 'Para afinar criterio clínico y preventivo en campo.',
+    icono: 'estetoscopio',
+  },
+  {
+    titulo: 'Técnicos y encargados de granja',
+    texto: 'Quien opera, supervisa y toma decisiones al pie de la caseta.',
+    icono: 'portapapeles',
+  },
+  {
+    titulo: 'Estudiantes',
+    texto: 'Formación práctica con quienes ya están en el sector.',
+    icono: 'birrete',
+  },
+  {
+    titulo: 'Empresas y proveedores',
+    texto: 'Nutrición, sanidad, genética, equipos y tecnología.',
+    icono: 'maletin',
+  },
+];
+---
+
+<section class="publicos" id="para-quien">
+  <div class="publicos__inner">
+    <header class="publicos__head">
+      <p class="publicos__eyebrow" data-anim>¿Para quién es?</p>
+      <h2 class="publicos__titulo" data-anim>
+        Pensado para quien toma decisiones en la granja
+      </h2>
+    </header>
+
+    <ul class="publicos__lista" role="list">
+      {publicos.map((publico) => (
+        <li class="publico" data-anim>
+          <span class="publico__icono" aria-hidden="true">
+            {publico.icono === 'huevo' && (
+              <svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.5">
+                <path
+                  d="M12 3.2c3.2 0 5.9 4.1 5.9 8A5.9 5.9 0 0 1 12 20.8 5.9 5.9 0 0 1 6.1 11.2c0-3.9 2.7-8 5.9-8Z"
+                  stroke="currentColor"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            )}
+
+            {publico.icono === 'estetoscopio' && (
+              <svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.5">
+                <path
+                  d="M6.5 3.4v5.1a4 4 0 0 0 8 0V3.4"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M4.9 3.4h3.2M12.9 3.4h3.2"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M10.5 12.5v2.2a4.3 4.3 0 0 0 8.6 0v-1.4"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <circle cx="19.1" cy="11.3" r="2" stroke="currentColor" />
+              </svg>
+            )}
+
+            {publico.icono === 'portapapeles' && (
+              <svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.5">
+                <path
+                  d="M9 4.6H7.4A1.6 1.6 0 0 0 5.8 6.2v13.2A1.6 1.6 0 0 0 7.4 21h9.2a1.6 1.6 0 0 0 1.6-1.6V6.2A1.6 1.6 0 0 0 16.6 4.6H15"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <rect
+                  x="9"
+                  y="3"
+                  width="6"
+                  height="3.2"
+                  rx="1.1"
+                  stroke="currentColor"
+                />
+                <path
+                  d="m9.4 13.4 1.9 1.9 3.9-3.9"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            )}
+
+            {publico.icono === 'birrete' && (
+              <svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.5">
+                <path
+                  d="M2.8 9.2 12 5.1l9.2 4.1L12 13.3 2.8 9.2Z"
+                  stroke="currentColor"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M6.6 11v4.3c0 1.6 2.4 2.9 5.4 2.9s5.4-1.3 5.4-2.9V11"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <path d="M21.2 9.2v4.7" stroke="currentColor" stroke-linecap="round" />
+              </svg>
+            )}
+
+            {publico.icono === 'maletin' && (
+              <svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.5">
+                <rect
+                  x="3"
+                  y="7.4"
+                  width="18"
+                  height="12.6"
+                  rx="2"
+                  stroke="currentColor"
+                />
+                <path
+                  d="M9 7.4V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.4"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <path d="M3 12.6h18" stroke="currentColor" />
+              </svg>
+            )}
+          </span>
+
+          <h3 class="publico__titulo">{publico.titulo}</h3>
+          <p class="publico__texto">{publico.texto}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.publicos');
+
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      const elementos = seccion.querySelectorAll<HTMLElement>('[data-anim]');
+
+      gsap.fromTo(
+        elementos,
+        { opacity: 0, y: 28 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.09,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: seccion, start: 'top 78%', once: true },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .publicos {
+    padding-block: var(--space-3xl);
+  }
+
+  .publicos__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .publicos__head {
+    max-width: var(--container-narrow);
+  }
+
+  .publicos__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .publicos__titulo {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /* Tarjetas -------------------------------------------------------------- */
+  .publicos__lista {
+    display: grid;
+    gap: var(--space-md);
+    margin-block-start: var(--space-2xl);
+    list-style: none;
+  }
+
+  .publico {
+    padding: var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    transition:
+      transform var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      box-shadow var(--t-base) var(--ease-out);
+  }
+
+  .publico:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-bright);
+    /* Elevación mínima y difusa: da despegue sin ensuciar el fondo oscuro. */
+    box-shadow: var(--shadow-sm);
+  }
+
+  .publico__icono {
+    display: block;
+    color: var(--accent);
+  }
+
+  .publico__titulo {
+    margin-block-start: var(--space-md);
+    font-size: var(--step-0);
+    font-weight: 600;
+    text-wrap: pretty;
+  }
+
+  .publico__texto {
+    margin-block-start: var(--space-xs);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-wrap: pretty;
+  }
+
+  /*
+    Tablet: dos columnas. La quinta tarjeta ocupa el ancho completo en vez de
+    quedarse sola en media fila.
+  */
+  @media (min-width: 40rem) {
+    .publicos__lista {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .publico:nth-child(5) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /*
+    Desktop: rejilla de 6 columnas con tarjetas de 2 → 3 arriba y 2 abajo.
+    Las dos de la fila inferior arrancan en la columna 2 y 4, así quedan
+    CENTRADAS bajo las tres de arriba en vez de alineadas a la izquierda con un
+    hueco huérfano a la derecha.
+  */
+  @media (min-width: 62rem) {
+    .publicos__lista {
+      grid-template-columns: repeat(6, 1fr);
+      gap: var(--space-lg);
+    }
+
+    .publico {
+      grid-column: span 2;
+    }
+
+    .publico:nth-child(4) {
+      grid-column: 2 / span 2;
+    }
+
+    .publico:nth-child(5) {
+      grid-column: 4 / span 2;
+    }
+  }
+</style>

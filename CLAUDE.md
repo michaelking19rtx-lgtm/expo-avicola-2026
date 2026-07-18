@@ -46,8 +46,8 @@ expo-avicola-2026/
 │   ├── video/
 │   └── favicon.svg
 ├── src/
-│   ├── components/{Nav,Hero,VideoSection}.astro
-│   ├── data/site.json
+│   ├── components/{Nav,Hero,VideoSection,Pilares,Programa,ParaQuien}.astro
+│   ├── data/{site,programa}.json
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin}.astro
@@ -143,14 +143,22 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | :--- | :----------------------------------------------------------------------- | :------------- |
 | 1    | Cimientos: arquitectura, doble tema, `/admin` mínimo, deploy              | **COMPLETADA** |
 | 2    | Nav + hero + sección de video, con capa de movimiento (GSAP, Lenis)      | **COMPLETADA** |
-| 3    | Contenido: sobre el evento, programa/agenda, ponentes                     | Pendiente      |
-| 4    | Boletos: planes, precios, CTA de registro                                 | Pendiente      |
-| 5    | Patrocinadores, sede y ubicación, FAQ, footer                             | Pendiente      |
-| 6    | SEO, Open Graph, rendimiento, auditoría de accesibilidad, pulido          | Pendiente      |
-| 7    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
+| 3    | Ponentes: fichas con foto, cargo y sesión                                 | **POSPUESTA**  |
+| 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
+| 5    | Boletos: planes, precios, CTA de registro                                 | Pendiente      |
+| 6    | Patrocinadores, sede y ubicación, FAQ, footer                             | Pendiente      |
+| 7    | SEO, Open Graph, rendimiento, auditoría de accesibilidad, pulido          | Pendiente      |
+| 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
 
-> El alcance de las fases 2–7 es una propuesta; ajústalo con el cliente antes de
-> empezar cada una.
+> **La numeración cambió al empezar la Fase 4.** El plan original metía
+> «programa/agenda» y «ponentes» juntos en la Fase 3. Al posponerse ponentes por
+> falta de fotos, el resto del contenido se sacó a la Fase 4 y todo lo que venía
+> detrás corrió un número (boletos pasó de 4 a 5, y así). La Fase 3 se queda
+> reservada para ponentes: se construye cuando lleguen las fotos, sin importar
+> que para entonces existan fases con número mayor ya cerradas.
+
+> El alcance de las fases siguientes es una propuesta; ajústalo con el cliente
+> antes de empezar cada una.
 
 ---
 
@@ -158,24 +166,31 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
 
-### Las anclas de navegación no llevan a ningún sitio · ABIERTO
+### Anclas de navegación que no llevan a ningún sitio · ABIERTO (parcial)
 
-La landing sirve **12 enlaces de ancla que apuntan a secciones que todavía no
-existen**: `#ponentes` (2), `#programa` (3), `#sede` (2) y `#boletos` (5),
-repartidos entre la nav de escritorio, el menú móvil y los dos CTAs del hero.
-Los únicos `id` reales en la home son `#inicio`, `#congreso`, `#contenido` y
-`#menu-movil`.
+Estado tras la Fase 4:
 
-Consecuencia: hoy **la navegación completa y los dos botones del hero no hacen
-nada**. Un clic en «Comprar mi boleto» se queda donde está.
+| Ancla        | Enlaces | ¿Existe el destino? |
+| :----------- | ------: | :------------------ |
+| `#programa`  |       3 | **SÍ** — creado en la Fase 4 |
+| `#ponentes`  |       2 | NO — Fase 3, pospuesta |
+| `#sede`      |       2 | NO — Fase 6 |
+| `#boletos`   |       5 | NO — Fase 5 |
 
-**NO publicar el sitio promocionalmente —ni compartir la URL con el cliente
-como demo navegable— hasta cerrar las Fases 3, 4 y 5**, que son las que crean
-esas cuatro secciones. Hasta entonces el despliegue de Pages vale como vista
-previa técnica, no como material de difusión.
+Quedan **9 enlaces muertos de los 12 originales**. El más caro es `#boletos`:
+son los dos CTAs del hero más el botón de la nav, o sea los tres botones de
+conversión del sitio. Un clic en «Comprar mi boleto» se queda donde está.
 
-Al cerrar cada fase, comprueba que el `id` correspondiente ya existe y tacha
-la entrada de esta lista.
+`id` reales hoy en la home: `#inicio`, `#congreso`, `#pilares`, `#programa`,
+`#para-quien`, `#contenido` y `#menu-movil`.
+
+**NO publicar el sitio promocionalmente —ni compartir la URL como demo
+navegable— hasta que `#boletos` exista (Fase 5) como mínimo.** Hasta entonces
+el despliegue de Pages vale como vista previa técnica, no como material de
+difusión.
+
+Al cerrar cada fase, actualiza la tabla de arriba y tacha la entrada cuando no
+quede ningún ancla muerta.
 
 ---
 
@@ -341,3 +356,97 @@ horizontal; menú móvil ejercitado con clics y teclado; con
 **DATO PENDIENTE:** el recinto de la sede. `site.json` lo tiene como
 `"recinto": null` y el hero muestra solo "Tehuacán, Puebla". Cuando se confirme,
 rellena esa clave y decide dónde mostrarlo.
+
+---
+
+### Fase 3 — Ponentes · POSPUESTA
+
+No se construyó. Faltan las fotos de los ponentes, y una ficha de ponente sin
+retrato no es una ficha: es una lista de nombres, que es justo lo que ya da el
+programa.
+
+El hueco está preparado y señalizado:
+
+- `index.astro` lleva un comentario entre `<VideoSection />` y `<Pilares />`
+  marcando dónde va la sección.
+- `Programa.astro` lleva otro comentario donde hoy se pinta el nombre del
+  ponente en texto plano: ahí es donde pasarán a ser enlaces a su ficha.
+- Al construirla nace el `id="ponentes"`, que hoy es un ancla muerta.
+
+Nombres ya confirmados por el programa (fuente: `programa.json`): IAZ. José
+Ángel de la Cruz Hernández, Q.F.B. Edgar Oliva Ramírez (dos sesiones),
+M.V.Z. Miguel Ángel Castillo López e Ing. Alejandro Espinosa Arista. La sesión
+de inteligencia artificial sigue **por confirmar**.
+
+---
+
+### Fase 4 — Pilares + programa + ¿Para quién es? · COMPLETADA
+
+**Qué se hizo**
+
+- `programa.json`: la agenda completa del día, 13 bloques con `hora`, `titulo`,
+  `ponente` y `tipo`, más la nota de duración. **Única fuente de verdad de la
+  agenda**: el componente no tiene ni un horario escrito a mano.
+- `Pilares.astro`: los tres ejes (productividad, sanidad, tecnología) en tres
+  columnas, cada uno con su número 01/02/03 de marca de agua detrás del texto.
+- `Programa.astro`: timeline vertical con carril, punto por bloque y la hora en
+  columna propia en escritorio. Itera `programa.json`.
+- `ParaQuien.astro`: cinco tarjetas de perfil con icono SVG dibujado a mano.
+
+**Decisiones**
+
+- **Seis `tipo` en el JSON, dos variantes en el CSS.** El dato editorial
+  distingue `logistica`, `ponencia`, `break`, `show`, `panel` y `cierre`, pero
+  visualmente solo hay dos tratamientos: conferencia (protagonista) y pausa
+  (secundaria). La traducción se hace en el frontmatter, no repartiendo seis
+  selectores por la hoja de estilos; así añadir un `tipo` nuevo no obliga a
+  tocar el CSS.
+- **Un ScrollTrigger por fila del programa, no un stagger único.** La agenda
+  mide 1518px en escritorio y 2099px en móvil: con un solo trigger, las filas de
+  la tarde se animarían estando fuera de pantalla y el usuario llegaría a ellas
+  ya quietas. Fila a fila, la cascada la marca el scroll real.
+- **El desplazamiento de entrada de las filas es de 12px**, deliberadamente por
+  debajo del gutter mínimo (20px a 375px), para que un `translateX` no pueda
+  provocar scroll horizontal.
+- **El punto del timeline lleva `background-color: var(--bg)`.** Sin fondo
+  propio, el carril de 1px se vería cruzándolo por dentro.
+- **La hora se apila sobre el título por debajo de 48rem.** Meter una columna de
+  horas de ancho fijo en 375px dejaba el título en una tira de texto ilegible.
+  `white-space: nowrap` en la hora evita que la franja se parta por el guion.
+- **Las tarjetas de ¿Para quién es? van en una rejilla de 6 columnas con
+  tarjetas de 2.** Con `repeat(3, 1fr)` la cuarta y la quinta quedaban pegadas a
+  la izquierda con un hueco huérfano a la derecha; arrancándolas en las columnas
+  2 y 4 quedan centradas bajo las tres de arriba. En tablet (2 columnas) la
+  quinta ocupa el ancho completo en vez de quedarse sola en media fila.
+- **Token nuevo `--radius-card: 12px`** (regla 1: si falta un token, se agrega a
+  `tokens.css`). Coincide en valor con `--radius-media`, pero son cosas
+  distintas: si el reproductor cambia de radio, las tarjetas no deben seguirlo.
+- **Los nombres de los ponentes son texto plano.** Enlazarlos a una sección que
+  no existe sería un ancla muerta más. Se convierten en enlaces en la Fase 3.
+
+**Estado**
+
+`npm run build` y `npm run check` pasan con 0 errores, 0 warnings y 0 hints.
+
+Verificado en Chrome 150 headless conducido por CDP (sin añadir dependencias),
+no solo leyendo el código:
+
+- **La agenda renderizada se comparó campo por campo contra el encargo**: 13/13
+  filas idénticas en hora, título, ponente y tipo, en orden, y las 6 ponencias
+  marcadas como fila protagonista.
+- **Desbordamiento horizontal = 0 px** en 375, 768 y 1440, en los dos temas, sin
+  ningún elemento saliéndose del viewport.
+- **Contrato `[data-anim]`**: 41 elementos marcados; 32 arrancan invisibles bajo
+  el pliegue y, tras recorrer la página entera, **quedan 0 invisibles**. Es la
+  prueba que importa: un `data-anim` sin animación que lo revele deja contenido
+  invisible para siempre.
+- **`prefers-reduced-motion`**: `data-motion='off'`, Lenis no se inicializa y
+  ningún elemento queda oculto en ningún momento.
+- **Contraste** calculado sobre los tokens reales de ambos temas: el par más
+  ajustado es el borde de hover de las tarjetas (`--primary-bright` sobre
+  `--surface`) con 5.84:1 en verde y 3.88:1 en azul, ambos por encima del 3:1
+  que pide WCAG 1.4.11 para elementos no textuales. Todo el texto va de 6.66:1
+  para arriba.
+
+**Sin assets pendientes nuevos**: las tres secciones son tipografía, SVG inline
+y color. No necesitan ni una imagen.

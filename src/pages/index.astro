@@ -3,6 +3,9 @@ import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
 import VideoSection from '../components/VideoSection.astro';
+import Pilares from '../components/Pilares.astro';
+import Programa from '../components/Programa.astro';
+import ParaQuien from '../components/ParaQuien.astro';
 ---
 
 <Base>
@@ -12,5 +15,18 @@ import VideoSection from '../components/VideoSection.astro';
   <main id="contenido" tabindex="-1">
     <Hero />
     <VideoSection />
+
+    {/*
+      FASE 3 — Aquí va la sección de PONENTES, entre el video y los pilares.
+      Se pospuso a propósito por falta de las fotos de los ponentes; no es un
+      olvido. Al construirla, además de importarla aquí:
+        - creará el id="ponentes", que hoy es un ancla muerta en la nav;
+        - los nombres del programa pasarán de texto plano a enlaces a su ficha
+          (ver el comentario en Programa.astro).
+    */}
+
+    <Pilares />
+    <Programa />
+    <ParaQuien />
   </main>
 </Base>

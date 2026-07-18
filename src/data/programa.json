@@ -1,0 +1,83 @@
+{
+  "notaDuracion": "Cada conferencia incluye 30 minutos de exposición y 5 de preguntas.",
+  "bloques": [
+    {
+      "hora": "08:00 – 09:00",
+      "titulo": "Registro y networking inicial",
+      "ponente": null,
+      "tipo": "logistica"
+    },
+    {
+      "hora": "09:00 – 09:35",
+      "titulo": "Productividad en pollo y gallina: manejo, nutrición y resultados medibles",
+      "ponente": "IAZ. José Ángel de la Cruz Hernández",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "09:35 – 10:10",
+      "titulo": "Diagnóstico temprano en aves: señales que todo productor debe saber interpretar",
+      "ponente": "Q.F.B. Edgar Oliva Ramírez",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "10:10 – 10:45",
+      "titulo": "Mortalidad en granja: causas frecuentes y estrategias para reducir pérdidas",
+      "ponente": "M.V.Z. Miguel Ángel Castillo López",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "10:45 – 11:30",
+      "titulo": "Coffee break, networking y recorrido de stands",
+      "ponente": null,
+      "tipo": "break"
+    },
+    {
+      "hora": "11:30 – 12:00",
+      "titulo": "Show especial de medio tiempo",
+      "ponente": null,
+      "tipo": "show"
+    },
+    {
+      "hora": "12:00 – 12:35",
+      "titulo": "Bioseguridad inteligente: cómo proteger la granja antes de perder dinero",
+      "ponente": "Ing. Alejandro Espinosa Arista",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "12:35 – 13:10",
+      "titulo": "Vacunación y prevención: decisiones sanitarias que protegen la producción",
+      "ponente": "Q.F.B. Edgar Oliva Ramírez",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "13:10 – 13:45",
+      "titulo": "Inteligencia artificial en avicultura: herramientas para producir, vender y decidir mejor",
+      "ponente": "Por confirmar",
+      "tipo": "ponencia"
+    },
+    {
+      "hora": "13:45 – 14:45",
+      "titulo": "Comida para ponentes y networking libre",
+      "ponente": null,
+      "tipo": "logistica"
+    },
+    {
+      "hora": "14:45 – 15:30",
+      "titulo": "Panel de preguntas y respuestas",
+      "ponente": null,
+      "tipo": "panel"
+    },
+    {
+      "hora": "15:30 – 16:30",
+      "titulo": "Networking final y recorrido de stands",
+      "ponente": null,
+      "tipo": "logistica"
+    },
+    {
+      "hora": "16:30",
+      "titulo": "Clausura oficial",
+      "ponente": null,
+      "tipo": "cierre"
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+---
+/*
+  Los tres ejes temáticos del congreso. Es la sección que traduce «de qué va
+  esto» antes de que el usuario entre al programa detallado.
+
+  El número (01, 02, 03) es puramente gráfico: va detrás del texto, a opacidad
+  baja y marcado aria-hidden, porque no aporta nada a quien escucha la página.
+*/
+const pilares = [
+  {
+    numero: '01',
+    titulo: 'Productividad medible',
+    texto:
+      'Manejo, nutrición, ambiente y registros que se traducen en indicadores reales de granja, no en teoría.',
+  },
+  {
+    numero: '02',
+    titulo: 'Sanidad preventiva',
+    texto:
+      'Diagnóstico temprano, bioseguridad y vacunación para proteger la producción antes de perder dinero.',
+  },
+  {
+    numero: '03',
+    titulo: 'Tecnología aplicada',
+    texto:
+      'Herramientas digitales e inteligencia artificial para producir, vender y decidir mejor.',
+  },
+];
+---
+
+<section class="pilares" id="pilares">
+  <div class="pilares__inner">
+    <h2 class="pilares__titulo" data-anim>Tres frentes, un mismo resultado</h2>
+
+    <ul class="pilares__lista" role="list">
+      {pilares.map((pilar) => (
+        <li class="pilar" data-anim>
+          <span class="pilar__numero" aria-hidden="true">{pilar.numero}</span>
+          <h3 class="pilar__titulo">{pilar.titulo}</h3>
+          <p class="pilar__texto">{pilar.texto}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.pilares');
+
+  // Import dinámico, igual que en Nav, Hero y VideoSection: la capa de
+  // movimiento es mejora progresiva y no puede tumbar nada esencial.
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      const elementos = seccion.querySelectorAll<HTMLElement>('[data-anim]');
+
+      gsap.fromTo(
+        elementos,
+        { opacity: 0, y: 28 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.12,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: seccion,
+            start: 'top 78%',
+            once: true,
+          },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .pilares {
+    padding-block: var(--space-3xl);
+  }
+
+  .pilares__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .pilares__titulo {
+    max-width: 20ch;
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .pilares__lista {
+    display: grid;
+    gap: var(--space-xl);
+    margin-block-start: var(--space-2xl);
+  }
+
+  /* Cada pilar es su propio contexto de apilamiento para que el número quede
+     detrás del texto sin necesidad de z-index en los hijos. */
+  .pilar {
+    position: relative;
+    isolation: isolate;
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .pilar__numero {
+    position: absolute;
+    z-index: -1;
+    inset-block-start: 0;
+    inset-inline-start: -0.06em;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: var(--step-4);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    /* Marca de agua: presente como textura, nunca compitiendo con el texto. */
+    opacity: 0.07;
+    user-select: none;
+  }
+
+  .pilar__titulo {
+    font-size: var(--step-1);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .pilar__texto {
+    max-width: 42ch;
+    margin-block-start: var(--space-sm);
+    color: var(--text-muted);
+  }
+
+  /* Desktop: tres columnas. Por debajo se apilan en el orden natural del DOM. */
+  @media (min-width: 62rem) {
+    .pilares__lista {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2xl);
+    }
+
+    .pilar {
+      padding-block-start: var(--space-xl);
+    }
+  }
+</style>
