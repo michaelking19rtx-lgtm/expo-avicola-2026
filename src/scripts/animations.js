@@ -117,19 +117,40 @@ export function initMotion() {
     return motion;
   }
 
-  gsap.registerPlugin(ScrollTrigger);
+  /*
+    ARRANQUE PROTEGIDO. Dos líneas más arriba se puso motionReady='1', que
+    DESARMA el failsafe del <head> — el que devuelve data-motion a 'off' a los
+    3 s para que el contenido nunca se quede escondido.
 
-  const lenis = new Lenis({
-    duration: 1.1,
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    smoothWheel: true,
-  });
+    Si a partir de aquí algo revienta (registerPlugin, el constructor de
+    Lenis, una API que el navegador no trae), la excepción sube hasta el
+    `.catch()` de quien llamó, que en los once componentes está vacío a
+    propósito. Resultado sin este try: `motion` se queda en null, data-motion
+    se queda en 'on' y TODOS los [data-anim] de la página —72 solo en el
+    hero— se quedan en opacity 0 para siempre, sin nadie que los rescate.
 
-  // Lenis nace con autoRaf:false, así que el único reloj es el de GSAP. Un solo
-  // rAF para todo evita que scroll y animaciones vayan a destiempo.
-  lenis.on('scroll', ScrollTrigger.update);
-  gsap.ticker.add((time) => lenis.raf(time * 1000));
-  gsap.ticker.lagSmoothing(0);
+    Así que el rescate se hace aquí, que es el único sitio que se entera.
+  */
+  let lenis;
+  try {
+    gsap.registerPlugin(ScrollTrigger);
+
+    lenis = new Lenis({
+      duration: 1.1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+
+    // Lenis nace con autoRaf:false, así que el único reloj es el de GSAP. Un
+    // solo rAF para todo evita que scroll y animaciones vayan a destiempo.
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+  } catch {
+    root.dataset.motion = 'off';
+    motion = { gsap: null, lenis: null, reduced: true };
+    return motion;
+  }
 
   motion = { gsap, lenis, reduced: false };
 

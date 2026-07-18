@@ -14,8 +14,19 @@ import CtaFinal from '../components/CtaFinal.astro';
 import Footer from '../components/Footer.astro';
 ---
 
-{/* `evento`: la home es la única página que emite el JSON-LD del congreso. */}
-<Base evento>
+{/*
+  `evento`: la home es la única página que emite el JSON-LD del congreso.
+
+  `noindex` TEMPORAL. Mientras las etiquetas del hero lleven nombres
+  PLACEHOLDER, la home enseña caras reales de ponentes junto a «Ponente por
+  confirmar»; que un buscador indexe y cachee esa versión es peor que no
+  aparecer todavía. Ver el primer riesgo abierto de CLAUDE.md.
+
+  QUÉ QUITAR PARA PUBLICAR: solo el atributo `noindex` de esta línea. El
+  sitemap ya incluye la home y no depende de esto, así que la indexación se
+  reanuda sola en el siguiente rastreo.
+*/}
+<Base evento noindex>
   <Nav />
   {/* tabindex="-1": destino del enlace «Saltar al contenido». Sin él, un <main>
       no es focalizable y el salto movería el scroll pero no el foco. */}

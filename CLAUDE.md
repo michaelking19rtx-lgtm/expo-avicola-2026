@@ -157,6 +157,48 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
     > medirlo de verdad la diferencia estaba dentro del ruido. El comentario
     > se corrigió, pero de no haberse revisado habría quedado en el repo como
     > una justificación falsa de una decisión correcta por otro motivo.
+12. **No lanzar agentes de revisión que escriban en el árbol de trabajo
+    mientras hay una tarea en curso.** Los agentes de revisión leen; solo el
+    hilo principal escribe. Un agente pisó `hero-ponentes.json` y provocó 10
+    minutos de verificación contra datos falsos.
+
+    > Origen: en la Fase 2c se lanzó una revisión adversarial en paralelo
+    > mientras se seguía trabajando. Dos de sus agentes probaron casos límite
+    > MUTANDO `hero-ponentes.json` (array vacío, claves faltantes) y lo
+    > restauraron a un estado anterior, de 3 figuras. Toda la verificación
+    > siguiente —geometría, etiquetas, oclusión— corrió contra 3 figuras
+    > creyendo que eran 6, y hubo que repetirla entera. De paso, un tercer
+    > agente leyó el fichero a medio mutar y reportó como defecto real unas
+    > «claves faltantes» que nunca existieron.
+    >
+    > Si hay que probar casos límite del repo, va en un worktree aparte
+    > (`isolation: 'worktree'`) o lo hace el hilo principal.
+13. **El LCP puede cambiar de elemento de referencia entre dos versiones.
+    Cuando eso pasa, comparar el número es comparar cosas distintas.
+    Verificar siempre QUÉ elemento está midiendo antes de aceptar o rechazar
+    una optimización por su LCP.**
+
+    > Origen: en la Fase 2c se desacopló la entrada del hero del chunk de
+    > animación. El LCP en 4G lento pasó de 2484 a 2284 ms —solo 200 ms— y por
+    > el umbral acordado tocaba revertir. Pero el elemento LCP había cambiado:
+    > antes medía `ponente-02.webp` (116 081 px²) y después la línea del
+    > título (48 960 px²), que son dos cosas distintas. Midiendo cuándo el
+    > hero queda REALMENTE completo, la misma mejora valía **−834 ms**, y el
+    > texto legible **−1501 ms**. Revertir habría sido optimizar el medidor en
+    > vez de la página.
+    >
+    > La cadena de candidatos se saca con un `PerformanceObserver` de
+    > `largest-contentful-paint` **sin quedarse con la última entrada**:
+    > guardando todas se ve qué elemento gana, con qué área y en qué instante.
+    > Cuando el LCP no cuadre con lo que se ve, medir el tiempo hasta que el
+    > contenido está de verdad puesto y comparar ese.
+
+> **Nota sobre las convenciones 11, 12 y 13.** Son la misma falla con distinto
+> disfraz: un número que parece evidencia sin serlo. **11** = cifra escrita sin
+> medir. **12** = medida contra datos que otro proceso cambió. **13** = medida
+> correcta pero comparando dos elementos distintos. Ante cualquier número que
+> justifique una decisión, verificar cuál de los tres casos podría estar
+> ocurriendo.
 
 ## 6. Roadmap
 
@@ -165,6 +207,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 1    | Cimientos: arquitectura, doble tema, `/admin` mínimo, deploy              | **COMPLETADA** |
 | 2    | Nav + hero + sección de video, con capa de movimiento (GSAP, Lenis)      | **COMPLETADA** |
 | 2b   | Hero rediseñado: abanico de figuras individuales de ponentes              | **COMPLETADA** |
+| 2c   | Seis figuras en dos rangos, figura 78% más grande, entrada desacoplada    | **COMPLETADA** |
 | 3    | Ponentes: fichas con foto, cargo y sesión                                 | **POSPUESTA**  |
 | 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
@@ -194,8 +237,8 @@ Las etiquetas del hero llevan nombres PLACEHOLDER. NO publicar
 promocionalmente hasta sustituirlos por los nombres reales de cada ponente en
 `src/data/hero-ponentes.json`.
 
-Hoy las tres figuras dicen «Ponente por confirmar» / «Tema por confirmar», y
-sus `slug` son provisionales (`ponente-01`, `-02`, `-03`). Son marcadores
+Hoy las SEIS figuras dicen «Ponente por confirmar» / «Tema por confirmar», y
+sus `slug` son provisionales (`ponente-01` … `-06`). Son marcadores
 deliberados, no un dato que se haya perdido: el hero ya enseña las caras
 reales de tres ponentes, así que **una captura del hero circulando por redes
 mostraría personas identificables junto a una etiqueta vacía**. Es el único
@@ -205,6 +248,13 @@ foto sí es real.
 Al rellenarlo, los `slug` pasan a derivarse del nombre (minúsculas, sin
 acentos) y hay que actualizarlos a la vez en los dos sitios: ese `slug` es el
 ancla que consumirá la Fase 3.
+
+**LA HOME ESTÁ EN `noindex` POR ESTO.** `src/pages/index.astro` pasa `noindex`
+a `<Base>` desde la Fase 2c: que un buscador indexe y cachee una versión con
+caras reales junto a «Ponente por confirmar» es peor que no aparecer todavía.
+**Para publicar solo hay que quitar ese atributo**; el sitemap ya incluye la
+home y no depende de él, así que la indexación se reanuda en el siguiente
+rastreo.
 
 ### Anclas de navegación que no llevan a ningún sitio · CASI CERRADO
 
@@ -264,8 +314,8 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
 | 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera. Las 3 del hero ya están; faltan las de las fichas |
 | ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
-| 9b | **Nombres reales de las 3 figuras del hero** | `src/data/hero-ponentes.json` | «Ponente por confirmar». **Ver el primer riesgo abierto: bloquea la promoción** |
-| 9c | **Las otras 3 figuras del hero** | `public/img/hero/ponente-0{4,5,6}.webp` | El abanico funciona con 3; pasa a 6 solo con datos (ver Fase 2b) |
+| 9b | **Nombres reales de las 6 figuras del hero** | `src/data/hero-ponentes.json` | «Ponente por confirmar». **Ver el primer riesgo abierto: bloquea la promoción y mantiene la home en noindex** |
+| ~~9c~~ | ~~**Las otras 3 figuras del hero**~~ | ~~`public/img/hero/ponente-0{4,5,6}.webp`~~ | **RESUELTO** — entregadas e integradas en la Fase 2c |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
 | 12 | **Stripe**: producto, precio y checkout | `boletos.json` (`priceId`, `checkoutUrl`) | El botón avisa de que la venta abre pronto |
@@ -460,7 +510,12 @@ sistema está hecho para 6 sin tocar CSS ni JS.**
 - `animations.js`: `detenerMovimiento()` cambia `[data-hero-frame]` (que ya no
   existe) por `[data-fig-entrada], [data-fig-flota]`.
 
-#### CÓMO PASAR DE 3 A 6 FIGURAS
+#### CÓMO PASAR DE 3 A 6 FIGURAS · SUPERADA POR LA FASE 2c
+
+> Se ejecutó en la Fase 2c y el sistema cambió con ella: hoy son DOS RANGOS,
+> los WebP van a 672×900 (no 560×750) y el orden del array decide quién va al
+> fondo. **Para añadir o quitar figuras, usa la receta de la Fase 2c.** Lo que
+> sigue se conserva por el registro de cómo se verificó en su momento.
 
 **Solo se tocan datos e imágenes. Ni CSS ni JS.**
 
@@ -590,6 +645,167 @@ teclado), no leyendo el código:
 > pasos de mitad (un `drawImage` directo de 1792 a 560 deja aliasing en el pelo
 > y en los bordes de la ropa). Los originales viven en
 > `C:\dev\expo-avicola-2026-assets-originales\`, fuera de control de versiones.
+
+---
+
+### Fase 2c — Seis figuras en dos rangos + desacople de la entrada · COMPLETADA
+
+Entran las 3 figuras que faltaban y el hero pasa de fila única a **dos rangos
+de profundidad**. Además, la figura frontal casi DUPLICA su tamaño y la entrada
+del hero deja de depender del chunk de animación.
+
+**Qué se hizo**
+
+- 3 WebP nuevos y los 3 anteriores reconvertidos, todos a **672×900**.
+- `hero-ponentes.json` pasa a 6 objetos.
+- `Hero.astro`: sistema de dos rangos, dimensionado por alto, bandas de
+  puntero, etiqueta superpuesta y propiedad de la entrada.
+- `index.astro`: `noindex` TEMPORAL mientras los nombres sean placeholder.
+- `animations.js`: arranque protegido con try/catch (ver abajo).
+
+#### EL SISTEMA DE DOS RANGOS
+
+Todo se deriva de `hero-ponentes.json`: número de figuras, reparto por filas,
+posición, escala, opacidad, elevación, z-index, banda de puntero, orden de
+entrada y duraciones de flotación.
+
+| | Con **3** figuras o menos | Con **más de 3** |
+| :-- | :-- | :-- |
+| Filas | UNA | DOS rangos |
+| Reparto | todas al frente | frontal = `ceil(n/2)` forzado a IMPAR; el resto al fondo |
+| Fila de fondo | no existe | escala 0.82, opacidad 0.78, línea base elevada 0.186 altos, desplazada medio paso |
+| Huella | 2.0 anchos de figura | 2.16 anchos |
+| Figura a 1440px | 414 px de alto | **406 px de alto** |
+
+Que la huella la marque la fila FRONTAL es lo que permite el tamaño: seis
+figuras en una sola fila ocuparían 3.5 anchos y, como el tamaño lo limita el
+ancho disponible, cada una encogería.
+
+**Reparto con n=4, 5, 6, 7, 8:** `3+1`, `3+2`, `3+3`, `5+2`, `5+3`. La fila
+frontal se fuerza a impar porque `centrar()` coloca al destacado en
+`floor((total−1)/2)`, que en una fila PAR no es el centro sino la izquierda:
+con n=4 el destacado acababa en el borde izquierdo de la composición, con el
+mismo z-index que su vecina —que le pintaba encima— y entrando el tercero en
+la animación. Detectado por revisión adversarial, no en pantalla: con 3 y con
+6 no se manifiesta.
+
+> **CÓMO AÑADIR O QUITAR FIGURAS.** Sigue siendo solo datos e imágenes.
+> Recortar con el criterio de siempre (fondo transparente, persona centrada y
+> pegada al borde inferior, proporción 56:75), convertir a **WebP 672×900
+> calidad 90** y añadir o quitar objetos en `hero-ponentes.json`. Exactamente
+> uno lleva `destacado: true`.
+>
+> **EL ORDEN DEL ARRAY DECIDE QUIÉN VA AL FONDO:** tras el destacado, los
+> primeros del array completan la fila FRONTAL y el resto pasa al fondo. Es
+> deliberado, porque es lo que permite curar el reparto desde los datos.
+
+> **REGLA DE RECORTE, ampliada a dos rangos.** La regla del 1% entre laterales
+> se aplica a la fila FRONTAL, que es donde un escalón se ve. Con los seis
+> recortes actuales NO existe ningún reparto que la cumpla en las dos filas a
+> la vez: frontales 01/03 quedan a 0.09% y traseras 06/04 a 2.38%. Se comparó
+> en maqueta el reparto alternativo (frontales 06/02/04, traseras 01/03/05) y
+> ahí el escalón SÍ se veía, porque estaba en primera fila y a escala 1.
+> Coronillas medidas: 7.54 / 4.50 / 7.63 / 13.96 / 8.21 / 11.58 %.
+
+#### PROPIEDAD DE LA ENTRADA
+
+La entrada animada es mejora progresiva, no requisito. Hay **un único dueño**,
+decidido una sola vez y sin vuelta atrás:
+
+- **`gsap`** — el chunk llegó dentro del plazo. Corre el escalonado del centro
+  hacia afuera, exactamente igual que antes.
+- **`css`** — llegó tarde. Cada figura se revela en cuanto carga SU imagen, el
+  texto en cuanto vence el plazo, y GSAP al aparecer **renuncia** a la entrada:
+  solo engancha flotación y parallax, que parten del estado actual.
+
+**REGLA DE ORO: una figura ya visible no se re-anima jamás.** Un `fromTo`, un
+`from` o un `set` posterior la devolverían a opacity 0 con y=40 y el usuario
+vería la composición saltar hacia abajo y volver a subir.
+
+**El plazo son 700 ms desde el INICIO DE LA NAVEGACIÓN**, no desde que corre el
+script ni desde que carga la primera imagen. Con «la primera imagen» como
+disparador el CSS ganaría siempre: en red rápida las imágenes están listas a
+~43 ms y el módulo del hero corre a ~298 ms, así que `img.complete` ya es true
+al arrancar y el escalonado de GSAP no se vería nunca.
+
+**Decisiones**
+
+- **El «20% de solape» es de CUERPO y el paso es 0.5.** Los recortes traen
+  ~38% de margen transparente; con la silueta al 62% del lienzo,
+  `(0.62 − 0.5) / 0.62 = 0.194`.
+- **Dimensionado POR ALTO.** Se fija `--fig-alto` (ligado a `svh`) y de ahí
+  sale el ancho; solo si no cabe manda el `min(100%, …)`. Antes se repartía el
+  ancho y el alto salía de rebote: por eso la figura se quedaba en 228px dentro
+  de una columna de 598px, usando el 38% del alto disponible.
+- **El ancho extra sale del SANGRADO, nunca de la columna de texto.** El
+  conjunto se sale del padding del contenedor hacia el margen de la página. La
+  columna de texto no admite recortes: por debajo de ~510px «para el sector» se
+  parte al entrar la fuente display y reaparece el CLS.
+- **Etiqueta ENCIMA, no lateral.** Medido a 1440px: con etiqueta lateral la
+  figura frontal se queda en 295px; con la etiqueta encima llega a 423px. El
+  encargo pedía que el espacio de la etiqueta no restara tamaño a las figuras.
+- **Bandas verticales de puntero.** Los lienzos solapan un 50% y traen margen
+  transparente: con la caja entera como área sensible, de seis figuras solo
+  respondían dos, y al pasar el ratón por una se encendía otra. El conjunto se
+  reparte en bandas disjuntas que no dependen del z-index.
+- **La banda se estira 6rem hacia ARRIBA** para cubrir el hueco de la etiqueta:
+  sin eso, mover el ratón desde la cara hacia el nombre lo desvanecía justo al
+  intentar leerlo (WCAG 1.4.13).
+- **El ratón gana al foco.** `:focus` persiste tras un clic, así que al hacer
+  clic en una figura y pasar el ratón por otra quedaban dos etiquetas
+  encendidas. Se usa `:focus` y no `:focus-visible` porque en táctil un toque
+  no casa `:focus-visible` y no revelaría nada.
+- **El anillo de foco por teclado sube a z-index 200**, solo con
+  `:focus-visible`. Las vecinas se solapan y le partían el anillo.
+- **`ponente-02` a calidad 85, el resto a 90.** Tiene **3.08× la energía de
+  alta frecuencia** de la mediana (camisa a cuadros): 80.8 KB contra ~37 de
+  media. A 85 baja a 66.4 KB y a tamaño de render real es indistinguible,
+  comprobado también a 3× sobre la camisa.
+- **Arranque protegido en `animations.js`.** `motionReady='1'` desarma el
+  failsafe del `<head>` ANTES de `registerPlugin` y `new Lenis`. Si algo de eso
+  reventaba, la excepción subía al `.catch()` vacío de los once componentes,
+  `data-motion` se quedaba en `'on'` y TODOS los `[data-anim]` de la página
+  —72 solo en el hero— se quedaban invisibles para siempre. Ahora ese bloque
+  va en try/catch y él mismo pone `data-motion='off'`.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+Verificado en Chrome 150 headless por CDP con interacción real:
+
+| Métrica | 3 figuras (Fase 2b) | 6 en dos rangos |
+| :------ | ------------------: | --------------: |
+| Figura frontal a 1440px | 228 px | **406 px** |
+| Imágenes del hero | 126.7 KB (3) | **248.5 KB** (6) |
+| LCP sin limitar | 368 ms | **440 ms** |
+| CLS | 0 | **0** |
+| Hero completo en 4G | 3368 ms | **2534 ms** |
+| Texto legible en 4G | 3368 ms | **1867 ms** |
+
+- **0 px de desbordamiento** en 375 / 430 / 768 / 1024 / 1280 / 1440 / 1920,
+  con 3 figuras y con 6.
+- **Oclusión: 0.0% de las tres caras de fondo tapadas** por la fila frontal, en
+  los cinco anchos de composición.
+- **Saltos en red lenta: 0.** 349 muestras por `requestAnimationFrame` entre
+  582 y 6490 ms, umbral de 8px entre fotogramas consecutivos. 0 apagones. El
+  dueño de la entrada nunca cambia. *Nota metodológica: el primer detector daba
+  123 falsos positivos porque marcaba la FLOTACIÓN como salto; hay que comparar
+  fotogramas consecutivos, no contra el mínimo histórico.*
+- **Red rápida:** dueño `gsap`, escalonado monótono del centro hacia afuera a
+  367 / 467 / 552 / 635 / 734 / 818 ms.
+- **`animations.js` bloqueado del todo:** 14/14 elementos del hero visibles.
+- **Movimiento reducido:** 6 visibles y quietas, `transform: none`.
+- **Fallback por figura:** bloqueando solo `ponente-01`, esa pasa a `failed`
+  con su marco punteado y las otras cinco siguen en `loaded`.
+
+**Observación sobre el patrón `[data-anim]`.** A los 2 s en 4G, antes de que
+llegue GSAP, hay **60 de 72** elementos en `opacity: 0` — pero solo **2 caen
+dentro del primer viewport**, y los dos son del hero (comprobado también a
+1440×1440). El resto vive bajo el pliegue y lo revela ScrollTrigger al hacer
+scroll, cuando GSAP ya llegó. Por eso la maquinaria de propiedad de la entrada
+se quedó en `Hero.astro` y no se generalizó: **si algún día otra sección sube
+al primer viewport, el patrón está escrito ahí para copiarlo.**
 
 ---
 
