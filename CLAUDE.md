@@ -14,7 +14,7 @@ Landing de una sola página para una conferencia del sector avícola.
 | Fecha      | 7 de agosto de 2026              |
 | Sede       | Tehuacán, Puebla                 |
 | Tipo       | Landing de evento, estática      |
-| Producción | https://michaelking19rtx-lgtm.github.io/expo-avicola-2026 |
+| Producción | **https://expo.visionpecuariamx.com** (dominio propio, en la raíz) |
 
 Estética: **oscura, editorial, premium**. No es un sitio corporativo genérico ni
 un dashboard: es una pieza editorial con jerarquía tipográfica fuerte, mucho
@@ -33,8 +33,16 @@ aire y contraste medido.
   (`await import(...)`), nunca estática: pesan ~132 KB y ninguna función
   esencial puede depender de que ese chunk llegue.
 - Despliegue: GitHub Pages vía `withastro/action@v6` en cada push a `main`.
-- `base: '/expo-avicola-2026'` — en local el sitio vive en
-  `http://localhost:4321/expo-avicola-2026/`, no en la raíz.
+- **`base: '/'` y dominio propio.** El sitio vivió bajo el subpath
+  `/expo-avicola-2026` en `michaelking19rtx-lgtm.github.io` hasta que se
+  configuró `expo.visionpecuariamx.com`; ahora cuelga de la raíz, también en
+  local (`http://localhost:4321/`).
+- **El dominio lo sostiene Settings → Pages, NO `public/CNAME`.** Este repo
+  publica por workflow (artefacto + `actions/deploy-pages`), no desde una
+  rama, y en ese modo GitHub ignora el CNAME del artefacto. El archivo se
+  conserva como seguro por si algún día se vuelve a publicación por rama, pero
+  **no es lo que mantiene el dominio en pie**. Si hay que moverlo o
+  reconfigurarlo, se hace en el panel del repo.
 
 ## 3. Estructura de carpetas
 
@@ -134,11 +142,14 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
    ya definido), HTML semántico, roles ARIA correctos y navegación por teclado.
 7. **Sin dependencias nuevas** sin una razón escrita en este archivo.
    Las que hay: `@astrojs/check` + `typescript` (dev, para `npm run check`) y
-   **`@astrojs/sitemap`** (Fase 7). Esta última porque cada URL del sitemap
-   tiene que llevar el subpath `/expo-avicola-2026`: escribirlo a mano obligaba
-   a mantener una lista de rutas en paralelo al router, que es justo lo que
-   acaba desincronizándose. La integración lo deriva de `site` + `base` y no
-   añade nada al bundle: corre solo en build.
+   **`@astrojs/sitemap`** (Fase 7). Esta última porque escribir el sitemap a
+   mano obligaba a mantener una lista de rutas en paralelo al router, que es
+   justo lo que acaba desincronizándose. La integración lo deriva de `site` +
+   `base` y no añade nada al bundle: corre solo en build.
+
+   > Ese «derivarlo» se cobró solo al pasar a dominio propio: cambiar `site` y
+   > `base` en la config bastó para que TODAS las URLs del sitemap se
+   > reescribieran, sin tocar ninguna.
 8. **Español (México)** en todo el texto de cara al usuario. `lang="es-MX"`
    (era `es` hasta la Fase 7; el subtag de región ayuda a buscadores y lectores).
 9. Rutas a `/public` siempre a través del `base` de Astro
@@ -1183,6 +1194,102 @@ Con HTTP/2 el coste es bajo y el total son 10 KB, así que **no se tocó**:
 unificarlos obligaría a sacar el JS de los once componentes a un punto de
 entrada común y a perder la localidad que hace legible cada uno. Queda anotado
 por si algún día una auditoría de red lo señala.
+
+---
+
+### Dominio propio — de subpath a raíz
+
+El sitio pasa de `michaelking19rtx-lgtm.github.io/expo-avicola-2026/` a
+**`https://expo.visionpecuariamx.com/`**, de un subpath a la raíz.
+
+**Qué se tocó, y fue poco**
+
+| Archivo | Qué cambió |
+| :------ | :--------- |
+| `public/CNAME` | **NUEVO.** Una línea: `expo.visionpecuariamx.com` |
+| `astro.config.mjs` | `site` al dominio nuevo, `base` de `/expo-avicola-2026` a `/` |
+| `public/robots.txt` | La URL del `Sitemap:` |
+| `README.md`, `CLAUDE.md` | Referencias a producción y al subpath |
+| `src/scripts/paths.js` | Solo el comentario del helper |
+
+**Ni un componente.** El barrido no encontró una sola ruta escrita a mano en
+`src/`: todas pasan por `asset()` o por `import.meta.env.BASE_URL`. La
+convención 9 se pagó sola aquí — cambiar dos líneas de config reescribió las
+27 rutas de assets, el canonical, las Open Graph, las de Twitter, el sitemap
+entero y el JSON-LD.
+
+> **QUIÉN SOSTIENE EL DOMINIO — y una corrección.** El encargo pedía crear
+> `public/CNAME` «porque el deploy sobrescribe la rama del sitio y borraría el
+> CNAME que GitHub acaba de crear». **Esa justificación no aplica a este
+> repo** y se escribió en el código antes de comprobarla, que es exactamente
+> lo que prohíbe la convención 11.
+>
+> Lo verificado: no existe rama `gh-pages` —solo `main`—, el despliegue es por
+> ARTEFACTO (`withastro/action` + `actions/deploy-pages`), y en ese modo la
+> documentación de GitHub dice que no se crea ningún CNAME y que el del
+> artefacto se ignora. El CNAME manda solo publicando DESDE UNA RAMA, que es
+> de donde viene la costumbre.
+>
+> **El dominio lo sostiene el ajuste Custom domain de Settings → Pages.**
+> Comprobado contra producción: `michaelking19rtx-lgtm.github.io/expo-avicola-2026/`
+> responde **301 hacia el dominio nuevo**, redirección que GitHub solo emite
+> cuando ese ajuste está puesto, y el dominio sirve por HTTPS con certificado
+> válido.
+>
+> `public/CNAME` se conserva igualmente —26 bytes, y es el seguro si algún día
+> se vuelve a publicación por rama—, pero **no es lo que mantiene el dominio en
+> pie**. `dist/CNAME` sale con una línea exacta, sin protocolo ni barra final.
+
+> **El dominio está escrito a mano en CUATRO sitios**, no en uno: `site` de
+> `astro.config.mjs` (de donde se derivan canonical, OG y sitemap),
+> `public/CNAME`, la línea `Sitemap:` de `public/robots.txt`, y la
+> documentación (README y este archivo). La lista va dentro del propio
+> `robots.txt`, que es donde alguien la va a necesitar.
+
+**Verificado sobre el build compilado y sirviéndolo**
+
+- `canonical`, `og:url`, `og:image`, `twitter:image` → dominio nuevo.
+- JSON-LD: `url` y `organizer.url` al dominio nuevo; **`offers[0].url` sigue
+  apuntando a `buy.stripe.com`**, que es lo correcto. Cero `null`.
+- `sitemap-index.xml` y `sitemap-0.xml` → dominio nuevo, solo la home.
+- **`noindex` intacto**: sigue pendiente por los nombres placeholder.
+- Recorriendo home, `/404` y `/admin/`: **0 respuestas 4xx atribuibles a la
+  migración**. `/`, `/CNAME`, `/robots.txt`, los dos sitemaps, `/favicon.svg`
+  y los WebP del hero responden 200, y la ruta vieja `/expo-avicola-2026/` da
+  404, que es lo que debe dar.
+- Aparecen **dos 404 preexistentes**: `avipork.png` y `prosermat.png`. Son el
+  pendiente 7 —la carpeta `public/img/patrocinadores/` está vacía— y el
+  componente los cubre con su marco punteado. Comprobado en pantalla: los dos
+  en `data-state="failed"` con su nombre visible.
+
+#### TRAMPA ABIERTA — `.gitignore` bloquea assets que SÍ hay que publicar
+
+Salió al revisar la migración y **no es de la migración**: `.gitignore` ignora
+`public/img/**/*.{png,jpg,jpeg,…}` para que no se cuele un original sin
+optimizar, pero esa red barre también los entregables ya servibles.
+
+Comprobado con `git check-ignore -v`:
+
+| Archivo | Regla que lo bloquea |
+| :------ | :------------------- |
+| `public/img/og/og-expo-avicola.jpg` (pendiente 14) | `.gitignore:32` |
+| `public/img/patrocinadores/avipork.png` (pendiente 7) | `.gitignore:31` |
+
+**Y ya está ocurriendo.** `public/img/ponentes/` contiene seis fotos
+entregadas —`retrato-01.jpeg` … `retrato-06.jpeg`— y `git status` sobre esa
+carpeta devuelve **silencio**: están en disco, en la carpeta que se sirve,
+invisibles para git y sin aviso en ninguna parte. Como la Fase 3 está
+pospuesta todavía no rompen nada, pero el mecanismo es el de «funciona en
+local, falta en producción»: el runner compila solo lo commiteado.
+
+Las figuras del hero se salvaron por casualidad, no por diseño: son `.webp` y
+esa extensión no está en la lista.
+
+**Al integrar cualquiera de esos assets hay que añadir su excepción**
+(`!public/img/og/og-expo-avicola.jpg`, `!public/img/patrocinadores/*.png`,
+`!public/img/ponentes/*.jpeg`) o acotar la regla a la carpeta de originales, y
+comprobarlo con `git check-ignore -v` y `git ls-files` **antes** de dar la
+tarea por cerrada. No se tocó aquí para no mezclarlo con la migración.
 
 ---
 

@@ -4,7 +4,7 @@ Landing estática del evento **Expo Avícola Productiva 2026**.
 
 - **Fecha:** 7 de agosto de 2026
 - **Sede:** Tehuacán, Puebla
-- **Producción:** https://michaelking19rtx-lgtm.github.io/expo-avicola-2026
+- **Producción:** https://expo.visionpecuariamx.com
 
 ## Stack
 
@@ -23,8 +23,8 @@ Landing estática del evento **Expo Avícola Productiva 2026**.
 | `npm run preview`   | Previsualiza el build local               |
 | `npm run astro ...` | CLI de Astro (`astro add`, `astro check`) |
 
-> El sitio se sirve bajo el subpath `/expo-avicola-2026`, así que en local abre
-> `http://localhost:4321/expo-avicola-2026/`.
+> El sitio se sirve desde la raíz, así que en local abre
+> `http://localhost:4321/`.
 
 ## Temas
 

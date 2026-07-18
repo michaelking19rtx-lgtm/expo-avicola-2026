@@ -1,11 +1,18 @@
 # Expo Avícola Productiva 2026
-# Sitio estático en GitHub Pages bajo el subpath /expo-avicola-2026.
+# Sitio estático en GitHub Pages, servido desde la RAÍZ de su dominio propio.
 
 User-agent: *
 Allow: /
 
-# El sitemap lo genera @astrojs/sitemap en cada build, ya con el subpath.
-# La URL tiene que ser ABSOLUTA: robots.txt vive en la raíz del dominio
-# (michaelking19rtx-lgtm.github.io/robots.txt), no dentro del proyecto, así que
-# una ruta relativa apuntaría al sitio equivocado.
-Sitemap: https://michaelking19rtx-lgtm.github.io/expo-avicola-2026/sitemap-index.xml
+# El sitemap lo genera @astrojs/sitemap en cada build a partir de `site`.
+# La URL tiene que ser ABSOLUTA: robots.txt vive en la raíz del dominio y una
+# ruta relativa apuntaría al sitio equivocado.
+#
+# OJO: robots.txt es un archivo estático de public/, no pasa por Astro y no
+# puede leer `site`, así que este dominio está escrito a mano. Si cambia el
+# dominio hay que tocar CUATRO sitios, y este es solo uno:
+#   1. astro.config.mjs  → `site`   (de aquí se derivan canonical, OG y sitemap)
+#   2. public/CNAME                 (y el Custom domain en Settings → Pages)
+#   3. public/robots.txt → esta línea
+#   4. README.md y CLAUDE.md        (documentación)
+Sitemap: https://expo.visionpecuariamx.com/sitemap-index.xml
