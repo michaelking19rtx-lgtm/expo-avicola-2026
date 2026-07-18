@@ -1,0 +1,106 @@
+/* =============================================================================
+   TOKENS — Expo Avícola Productiva 2026
+   Única fuente de verdad del sistema visual.
+
+   REGLA: los componentes consumen SIEMPRE estas variables.
+   Jamás un hex directo fuera de este archivo.
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   1. Tema VERDE (por defecto)
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme='green'] {
+  --bg: #0a0f0d;
+  --surface: #121a16;
+  --surface-2: #0e1512;
+  --primary: #0e6b4f;
+  --primary-bright: #12a87c;
+  --accent: #b6e33b;
+  --accent-ink: #05110c;
+  --text: #f4f1ea;
+  --text-muted: #9db0a6;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+/* -----------------------------------------------------------------------------
+   2. Tema AZUL
+   -------------------------------------------------------------------------- */
+[data-theme='blue'] {
+  --bg: #0a1428;
+  --surface: #111e38;
+  --surface-2: #0c1730;
+  --primary: #1e5fa8;
+  --primary-bright: #2e7bd6;
+  --accent: #22d3ee;
+  --accent-ink: #06101f;
+  --text: #eaf2ff;
+  --text-muted: #8fa6c6;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+/* -----------------------------------------------------------------------------
+   3. Tokens independientes del tema
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+
+  /* Tipografía ------------------------------------------------------------- */
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque',
+    ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', ui-sans-serif, system-ui,
+    -apple-system, 'Segoe UI', sans-serif;
+
+  /* Escala fluida (clamp: móvil → desktop) */
+  --step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.9rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.5rem, 1.3rem + 1vw, 2.25rem);
+  --step-3: clamp(1.95rem, 1.6rem + 1.8vw, 3.5rem);
+  --step-4: clamp(2.5rem, 1.9rem + 3vw, 5.5rem);
+  --step-5: clamp(3rem, 2rem + 5vw, 8rem);
+
+  /* Ritmo espacial --------------------------------------------------------- */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6.5rem;
+
+  /* Radios ----------------------------------------------------------------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* Movimiento (curvas editoriales, sin rebotes) --------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-fast: 140ms;
+  --t-base: 260ms;
+  --t-slow: 480ms;
+
+  /* Layout ----------------------------------------------------------------- */
+  --container: 1200px;
+  --container-narrow: 760px;
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+
+  /* Elevación -------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.55);
+
+  /* Capas ------------------------------------------------------------------ */
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+
+  /* Muestras de tema (fijas: previsualizan cada tema, no el activo) --------- */
+  --swatch-green: #12a87c;
+  --swatch-blue: #2e7bd6;
+}

@@ -1,0 +1,200 @@
+---
+import Base from '../layouts/Base.astro';
+import site from '../data/site.json';
+
+const opciones = [
+  { value: 'green', label: 'Verde', swatch: 'var(--swatch-green)' },
+  { value: 'blue', label: 'Azul', swatch: 'var(--swatch-blue)' },
+] as const;
+---
+
+<Base title={`Panel de administración — ${site.nombre}`}>
+  <main class="admin">
+    <section class="panel" aria-labelledby="admin-title">
+      <p class="panel__eyebrow">{site.nombre}</p>
+      <h1 class="panel__title" id="admin-title">Panel de administración</h1>
+
+      <div class="field">
+        <p class="field__label" id="tema-label">Tema del sitio</p>
+        <div class="segment" role="radiogroup" aria-labelledby="tema-label">
+          <span class="segment__thumb" aria-hidden="true"></span>
+          {
+            opciones.map((opcion) => (
+              <button
+                type="button"
+                role="radio"
+                class="segment__option"
+                data-theme-option={opcion.value}
+                aria-checked={opcion.value === site.temaDefault ? 'true' : 'false'}
+                tabindex={opcion.value === site.temaDefault ? 0 : -1}
+              >
+                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="6.25"
+                    stroke="currentColor"
+                    stroke-width="1.25"
+                    opacity="0.4"
+                  />
+                  <circle cx="8" cy="8" r="3.25" fill={opcion.swatch} />
+                </svg>
+                <span>{opcion.label}</span>
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<script>
+  import { setTheme, getTheme, isTheme } from '../scripts/theme.js';
+
+  const options = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-theme-option]')
+  );
+
+  /** Refleja el tema activo en el grupo de radios. */
+  function sync() {
+    const active = getTheme();
+    options.forEach((option) => {
+      const selected = option.dataset.themeOption === active;
+      option.setAttribute('aria-checked', String(selected));
+      option.tabIndex = selected ? 0 : -1;
+    });
+  }
+
+  options.forEach((option, index) => {
+    option.addEventListener('click', () => {
+      const value = option.dataset.themeOption;
+      if (isTheme(value)) setTheme(value);
+    });
+
+    // Navegación con flechas, como espera un role="radiogroup".
+    option.addEventListener('keydown', (event) => {
+      const step =
+        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+            ? -1
+            : 0;
+      if (step === 0) return;
+      event.preventDefault();
+      const next = options[(index + step + options.length) % options.length];
+      next.focus();
+      next.click();
+    });
+  });
+
+  document.addEventListener('themechange', sync);
+  sync();
+</script>
+
+<style>
+  .admin {
+    display: grid;
+    min-height: 100svh;
+    place-items: center;
+    padding: var(--space-xl) var(--gutter);
+  }
+
+  .panel {
+    width: 100%;
+    max-width: 30rem;
+    padding: var(--space-xl);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .panel__eyebrow {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  .panel__title {
+    margin-block-start: var(--space-xs);
+    font-size: var(--step-2);
+  }
+
+  .field {
+    margin-block-start: var(--space-xl);
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .field__label {
+    margin-block-end: var(--space-sm);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* Segmento -------------------------------------------------------------- */
+  .segment {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-2);
+  }
+
+  .segment__thumb {
+    position: absolute;
+    inset-block: 4px;
+    inset-inline-start: 4px;
+    width: calc(50% - 6px);
+    border-radius: var(--radius-pill);
+    /*
+      Contraste: el relleno se queda en --primary (oscuro) porque la etiqueta
+      activa va encima en --text y así conserva 5.75:1 / 5.72:1 (AA). Pero
+      --primary sobre --surface-2 solo da 2.85:1 / 2.76:1, por debajo del 3:1
+      que pide WCAG 1.4.11 para indicar estado. El anillo de 1px en
+      --primary-bright (6.10:1 / 4.17:1 sobre el track) es lo que hace
+      identificable el borde del indicador.
+    */
+    background-color: var(--primary);
+    box-shadow:
+      inset 0 0 0 1px var(--primary-bright),
+      var(--shadow-sm);
+    transition: transform var(--t-base) var(--ease-out),
+      background-color var(--t-base) var(--ease-out);
+  }
+
+  :global([data-theme='blue']) .segment__thumb {
+    transform: translateX(calc(100% + 4px));
+  }
+
+  .segment__option {
+    z-index: var(--z-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding-block: var(--space-sm);
+    border-radius: var(--radius-pill);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    font-weight: 500;
+    transition: color var(--t-base) var(--ease-out);
+  }
+
+  .segment__option:hover {
+    color: var(--text);
+  }
+
+  /* Estado activo dirigido por el tema: sin destello ni dependencia de JS. */
+  :global([data-theme='green']) .segment__option[data-theme-option='green'],
+  :global([data-theme='blue']) .segment__option[data-theme-option='blue'] {
+    color: var(--text);
+  }
+</style>

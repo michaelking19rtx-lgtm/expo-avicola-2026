@@ -1,0 +1,99 @@
+---
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/inter';
+import '../styles/tokens.css';
+import '../styles/global.css';
+import site from '../data/site.json';
+import { STORAGE_KEY, THEMES } from '../scripts/theme.js';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const fechaLarga = new Intl.DateTimeFormat('es-MX', {
+  dateStyle: 'long',
+  timeZone: 'UTC',
+}).format(new Date(site.fecha));
+
+const {
+  title = site.nombre,
+  description = `${site.nombre}. ${fechaLarga} · ${site.ciudad}.`,
+} = Astro.props;
+
+/** Une el `base` de Astro con una ruta de /public sin duplicar barras. */
+const asset = (path: string): string =>
+  `${import.meta.env.BASE_URL}/${path}`.replace(/\/{2,}/g, '/');
+
+const canonical = Astro.site
+  ? new URL(Astro.url.pathname, Astro.site).href
+  : Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="es" data-theme={site.temaDefault}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    {/*
+      Anti-FOUC: aplica el tema guardado ANTES del primer pintado.
+      Debe ser inline y síncrono — no puede moverse a un módulo.
+
+      Va aquí, y no en theme.js, para que toda página quede sincronizada sin
+      cargar un bundle: la landing sigue sin JS de módulo.
+    */}
+    <script is:inline define:vars={{ storageKey: STORAGE_KEY, themes: THEMES }}>
+      (function () {
+        function aplicarTemaGuardado() {
+          try {
+            var stored = localStorage.getItem(storageKey);
+            if (
+              themes.indexOf(stored) !== -1 &&
+              document.documentElement.dataset.theme !== stored
+            ) {
+              document.documentElement.dataset.theme = stored;
+              document.dispatchEvent(
+                new CustomEvent('themechange', { detail: { theme: stored } })
+              );
+            }
+          } catch (error) {
+            /* localStorage bloqueado: se mantiene el tema por defecto. */
+          }
+        }
+
+        aplicarTemaGuardado();
+
+        // Al volver con «Atrás» el navegador restaura la página desde bfcache
+        // sin re-ejecutar el <head>: reviviría con el tema anterior.
+        window.addEventListener('pageshow', function (event) {
+          if (event.persisted) aplicarTemaGuardado();
+        });
+
+        // Otra pestaña cambió el tema.
+        window.addEventListener('storage', function (event) {
+          if (event.key === storageKey) aplicarTemaGuardado();
+        });
+      })();
+    </script>
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={asset('favicon.svg')} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_MX" />
+    <meta property="og:site_name" content={site.nombre} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <slot name="head" />
+  </head>
+
+  <body>
+    <slot />
+  </body>
+</html>
