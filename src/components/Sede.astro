@@ -65,23 +65,71 @@ const tituloMapa = `Mapa de la ubicación: ${site.recinto}, ${site.direccion}`;
     </div>
 
     <div class="sede__mapa" data-anim>
-      <div class="mapa__marco">
-        {/*
-          `loading="lazy"`: el mapa vive bajo el pliegue y Maps arrastra bastante
-          peso. Que no entre en la primera carga es lo que impide que toque el
-          LCP del hero.
+      {/*
+        MAPA BAJO DEMANDA.
 
-          El alto lo reserva `.mapa__marco` con aspect-ratio ANTES de que el
-          iframe cargue, así que el CLS no se mueve de 0.
-        */}
-        <iframe
-          class="mapa__iframe"
-          src={mapaEmbed}
-          title={tituloMapa}
-          loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade"
-          allowfullscreen
-        ></iframe>
+        El marco NO trae el iframe: trae una carátula propia con el recinto y
+        la dirección, y Maps solo entra cuando el usuario pulsa. Tres motivos:
+        el embed es blanco y era el único rectángulo claro de una página
+        oscura; alterarlo con filtros invertiría también el logo y la
+        atribución de Google; y así no se le entrega ni una petición —ni una
+        cookie— a un tercero hasta que alguien lo pide.
+
+        El alto lo reserva `.mapa__marco` con aspect-ratio, así que el iframe
+        entra en un hueco que ya medía lo mismo: ni al cargar la página ni al
+        pulsar hay CLS.
+      */}
+      <div class="mapa__marco" data-mapa data-mapa-src={mapaEmbed} data-mapa-titulo={tituloMapa}>
+        <div class="mapa__caratula">
+          <svg
+            class="mapa__pin mapa__pin--grande"
+            viewBox="0 0 24 24"
+            width="28"
+            height="28"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 21.2s6.8-5.7 6.8-11a6.8 6.8 0 1 0-13.6 0c0 5.3 6.8 11 6.8 11Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+              fill="none"
+            />
+            <circle cx="12" cy="10.2" r="2.6" stroke="currentColor" fill="none" />
+          </svg>
+
+          <p class="mapa__recinto">{site.recinto}</p>
+          <p class="mapa__direccion">{site.direccion}</p>
+
+          {/*
+            Con JS manda el botón, que carga el mapa aquí mismo.
+            SIN JS manda el enlace: un botón que no puede hacer nada es peor
+            que no ofrecerlo. Mismo reparto que el aviso de Boletos.
+
+            El aria-label nombra el recinto para que fuera de contexto se
+            entienda de qué mapa se trata, y EMPIEZA por el texto visible
+            («Ver mapa») porque el nombre accesible tiene que contenerlo
+            (WCAG 2.5.3).
+          */}
+          <button
+            class="mapa__accion mapa__accion--js"
+            type="button"
+            data-mapa-ver
+            aria-label={`Ver mapa de ${site.recinto}`}
+          >
+            Ver mapa
+          </button>
+
+          <a
+            class="mapa__accion mapa__accion--sinjs"
+            href={mapaComoLlegar}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ver mapa en Google Maps
+            <span class="sr-only">(abre en una pestaña nueva)</span>
+          </a>
+        </div>
       </div>
 
       <p class="mapa__pie">
@@ -118,6 +166,51 @@ const tituloMapa = `Mapa de la ubicación: ${site.recinto}, ${site.direccion}`;
 
 <script>
   const seccion = document.querySelector<HTMLElement>('.sede');
+
+  // -----------------------------------------------------------------------
+  // Mapa bajo demanda. Nada de esto depende de GSAP: si el chunk de
+  // animaciones no llega, el botón sigue funcionando.
+  // -----------------------------------------------------------------------
+  (() => {
+    const marco = document.querySelector<HTMLElement>('[data-mapa]');
+    const boton = marco?.querySelector<HTMLButtonElement>('[data-mapa-ver]');
+    const src = marco?.dataset.mapaSrc;
+    const titulo = marco?.dataset.mapaTitulo;
+    if (!marco || !boton || !src || !titulo) return;
+
+    boton.addEventListener(
+      'click',
+      () => {
+        const iframe = document.createElement('iframe');
+        iframe.className = 'mapa__iframe';
+        iframe.src = src;
+        iframe.title = titulo;
+        iframe.referrerPolicy = 'no-referrer-when-downgrade';
+        iframe.allowFullscreen = true;
+
+        marco.append(iframe);
+        // Oculta la carátula por CSS, no borrándola: si el iframe fuera
+        // bloqueado por una extensión, el marco no se queda en blanco hasta
+        // que confirmemos que cargó.
+        marco.dataset.estado = 'cargando';
+        iframe.addEventListener(
+          'load',
+          () => {
+            marco.dataset.estado = 'cargado';
+            /*
+              El foco estaba en un botón que acaba de desaparecer; sin esto se
+              caería al <body> y quien navega con teclado perdería el sitio.
+              Se lleva al propio mapa, que es lo que pidió, y cuyo `title` lo
+              anuncia.
+            */
+            iframe.focus();
+          },
+          { once: true }
+        );
+      },
+      { once: true }
+    );
+  })();
 
   import('../scripts/animations.js')
     .then(({ initMotion }) => {
@@ -235,7 +328,13 @@ const tituloMapa = `Mapa de la ubicación: ${site.recinto}, ${site.direccion}`;
     página daría un tirón justo al llegar scrolleando. Con aspect-ratio aquí,
     el CLS se queda en 0.
   */
+  /*
+    El marco mide lo mismo con carátula y con mapa: el aspect-ratio reserva la
+    caja desde el primer pintado y el iframe entra encima, en position
+    absolute, sin empujar nada. Por eso pulsar «Ver mapa» no mueve el layout.
+  */
   .mapa__marco {
+    position: relative;
     aspect-ratio: 4 / 3;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -243,11 +342,106 @@ const tituloMapa = `Mapa de la ubicación: ${site.recinto}, ${site.direccion}`;
     background-color: var(--surface);
   }
 
-  .mapa__iframe {
+  .mapa__caratula {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-xs);
+    block-size: 100%;
+    padding: var(--space-lg);
+    text-align: center;
+    /* Halo tenue detrás de la ficha, del mismo lenguaje que el del hero: evita
+       que la carátula se lea como un hueco vacío. */
+    background: radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, var(--primary) 22%, transparent) 0%,
+      transparent 62%
+    );
+  }
+
+  .mapa__recinto {
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .mapa__direccion {
+    max-width: 30ch;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    line-height: 1.45;
+  }
+
+  .mapa__accion {
+    margin-block-start: var(--space-sm);
+    padding: 0.6rem var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 600;
+    background-color: transparent;
+    cursor: pointer;
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      color var(--t-base) var(--ease-out);
+  }
+
+  .mapa__accion:hover {
+    border-color: var(--primary-bright);
+    color: var(--accent);
+  }
+
+  /*
+    Reparto JS / sin JS, el mismo del aviso de Boletos: con JS manda el botón,
+    que carga el mapa en el sitio; sin JS manda el enlace a Maps, porque un
+    botón que no puede hacer nada es peor que no ofrecerlo.
+  */
+  .mapa__accion--js {
+    display: none;
+  }
+
+  :global([data-js]) .mapa__accion--js {
+    display: inline-block;
+  }
+
+  :global([data-js]) .mapa__accion--sinjs {
+    display: none;
+  }
+
+  .mapa__pin--grande {
+    color: var(--accent);
+  }
+
+  /*
+    `:global` OBLIGATORIO: este iframe lo crea el JS con createElement, así que
+    NO lleva el atributo `data-astro-cid-*` con el que Astro acota los estilos
+    del componente. Sin `:global` ninguna de estas reglas le aplica y el mapa
+    sale como un iframe por defecto —`display:inline`, 304x154 px— dentro de un
+    marco de 504x378. Medido: el estado decía «cargado», había 1 iframe y el
+    foco aterrizaba en él; solo la captura enseñó que el marco estaba vacío.
+  */
+  .mapa__marco :global(.mapa__iframe) {
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;
     border: 0;
+    /* Aparece solo cuando confirma que cargó: si una extensión bloquea Maps,
+       la carátula sigue ahí en vez de dejar el marco en blanco. */
+    opacity: 0;
+    transition: opacity var(--t-base) var(--ease-out);
+  }
+
+  .mapa__marco[data-estado='cargado'] :global(.mapa__iframe) {
+    opacity: 1;
+  }
+
+  .mapa__marco[data-estado='cargado'] .mapa__caratula {
+    visibility: hidden;
   }
 
   .mapa__pie {

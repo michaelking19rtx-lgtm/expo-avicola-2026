@@ -1211,17 +1211,61 @@ Queda como dato por si hace falta para logística.
   como respaldo: es la misma pieza que cubriría un cambio de sede de última
   hora. Mientras el valor exista, no se ve.
 
-**PENDIENTE DE DECISIÓN — el mapa desentona.** El embed de Maps es blanco y es
-el único rectángulo claro de una página deliberadamente oscura: se lleva la
-atención y se lee como widget incrustado, no como parte del diseño. Se dejó
-**sin alterar** a la espera de decisión, porque las alternativas tienen coste:
+#### EL MAPA VA BAJO DEMANDA
 
-| Opción | Qué implica |
-| :----- | :---------- |
-| **1. Tal cual** (hoy) | Cumple los términos de Google al pie de la letra. Desentona. |
-| 2. `filter: invert + hue-rotate` | Integra bien, pero invierte también el logo y la atribución de Google — alterar esa presentación choca con sus términos. |
-| 3. Atenuar (`grayscale` + `brightness`) | Apenas cambia el golpe visual. Sigue siendo alteración. |
-| **4. Bajo demanda** | Marco oscuro propio con recinto y dirección, y Maps solo carga al pulsar «Ver mapa». Resuelve la estética sin alterar nada de Google, y además no deja cookies suyas hasta que el usuario lo pide. **Recomendada.** |
+El embed de Maps es blanco y era el único rectángulo claro de una página
+deliberadamente oscura: se llevaba la atención y se leía como widget
+incrustado. Se compararon cuatro salidas y se eligió la cuarta:
+
+| Opción | Qué implicaba |
+| :----- | :------------ |
+| 1. Tal cual | Cumple los términos de Google al pie de la letra. Desentonaba. |
+| 2. `filter: invert + hue-rotate` | Integraba bien, pero invierte también el logo y la atribución de Google — alterar esa presentación choca con sus términos. |
+| 3. Atenuar (`grayscale` + `brightness`) | Apenas cambiaba el golpe visual. Seguía siendo alteración. |
+| **4. Bajo demanda** ← elegida | Carátula oscura propia con recinto y dirección; Maps solo carga al pulsar. |
+
+**Cómo funciona.** `.mapa__marco` reserva la caja con `aspect-ratio: 4/3` y
+trae dentro una carátula con el pin, el recinto, la dirección y la acción. Al
+pulsar, el JS crea el iframe, lo mete en el mismo marco en `position:absolute`
+y, al confirmar `load`, pone `data-estado="cargado"`: aparece el mapa y la
+carátula se oculta con `visibility`. Si una extensión bloqueara Maps, el
+`load` no llega, la carátula sigue ahí y el marco no se queda en blanco.
+
+- **Sin JS manda el enlace, no el botón.** `.mapa__accion--js` nace en
+  `display:none` y solo `[data-js]` la enciende, apagando a la vez el enlace.
+  Un botón que no puede hacer nada es peor que no ofrecerlo — mismo reparto
+  que el aviso de Boletos.
+- **El foco se lleva al iframe tras cargar.** El botón que lo disparó
+  desaparece, así que sin esto el foco caería al `<body>` y quien navega con
+  teclado perdería el sitio. El `title` del iframe lo anuncia.
+- **`aria-label="Ver mapa de {recinto}"` EMPIEZA por el texto visible** («Ver
+  mapa»): el nombre accesible tiene que contener la etiqueta visible
+  (WCAG 2.5.3).
+
+> **TRAMPA DE ASTRO, y costó verla.** El iframe lo crea el JS con
+> `createElement`, así que **NO lleva el atributo `data-astro-cid-*`** con el
+> que Astro acota los estilos del componente: sin `:global()`, ninguna regla
+> de `.mapa__iframe` le aplica y el mapa sale como un iframe por defecto
+> —`display:inline`, 304×154— dentro de un marco de 504×378.
+>
+> Lo que hace esto digno de anotarse es cómo se escapó: la comprobación
+> numérica daba TODO correcto —`data-estado="cargado"`, 1 iframe en el DOM, 1
+> petición a Google, el foco aterrizando en el iframe— y el marco estaba
+> vacío. **Lo enseñó la captura.** Cualquier elemento que el JS inyecte en un
+> componente de Astro necesita `:global()` en su regla.
+
+**Verificado con clic y con teclado reales:**
+
+| | Antes de pulsar | Después |
+| :-- | --: | --: |
+| CLS | **0** | **0** |
+| Peticiones a Google | **0** | 1 |
+| `<iframe>` en el DOM | 0 | 1 |
+| Caja del marco | 504×378 | 504×378 |
+
+Recorriendo la página entera antes de pulsar: **cero peticiones a Google**. Con
+Tab real, el botón recibe anillo de foco (`:focus-visible`, 2px en `--accent`)
+y Enter carga el mapa dejando el foco dentro.
 
 ---
 
