@@ -1,0 +1,12 @@
+const PORT = process.argv[2];
+const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+console.log('TARGETS', JSON.stringify(targets.map(t=>({type:t.type,url:t.url}))));
+const page = targets.find((t) => t.type === 'page');
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((r) => (ws.onopen = r));
+ws.onmessage = (m) => { console.log('MSG', String(m.data).slice(0,300)); };
+let id=0;
+const send=(method,params={})=>{ ws.send(JSON.stringify({id:++id,method,params})); };
+send('Runtime.evaluate',{expression:'document.title + " | lenis=" + document.documentElement.className',returnByValue:true});
+await new Promise(r=>setTimeout(r,2500));
+process.exit(0);

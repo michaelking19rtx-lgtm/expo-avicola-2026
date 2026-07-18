@@ -74,6 +74,33 @@ const canonical = Astro.site
         window.addEventListener('storage', function (event) {
           if (event.key === storageKey) aplicarTemaGuardado();
         });
+
+        var root = document.documentElement;
+
+        // Hay JS: los componentes pueden ocultar cosas con la certeza de que
+        // algo las volverá a mostrar. Sin JS este atributo no existe y todo se
+        // ve en su estado final.
+        root.dataset.js = '1';
+
+        // Preferencia de movimiento, resuelta ANTES del primer pintado para que
+        // el estado previo a la animación no provoque destello.
+        try {
+          root.dataset.motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+            .matches
+            ? 'off'
+            : 'on';
+        } catch (error) {
+          root.dataset.motion = 'off';
+        }
+
+        // Failsafe: si el bundle de animación nunca llega (red caída, error de
+        // JS), lo que estaba oculto esperando a GSAP debe revelarse igualmente.
+        // animations.js marca motionReady en cuanto arranca.
+        setTimeout(function () {
+          if (root.dataset.motion === 'on' && root.dataset.motionReady !== '1') {
+            root.dataset.motion = 'off';
+          }
+        }, 3000);
       })();
     </script>
 

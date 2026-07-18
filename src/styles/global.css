@@ -177,7 +177,30 @@ ol[role='list'] {
 }
 
 /* -----------------------------------------------------------------------------
-   4. Accesibilidad de movimiento
+   4. Estados globales del documento
+   -------------------------------------------------------------------------- */
+
+/*
+  Estado previo a las animaciones de entrada.
+
+  Solo se oculta cuando hay JS Y el usuario acepta movimiento — el atributo
+  data-motion lo pone el script inline del <head>, que además lo devuelve a
+  'off' si el bundle de animación nunca llega. Sin JS, sin GSAP o con
+  movimiento reducido, el contenido se ve en su estado final y esta regla
+  jamás llega a aplicarse.
+*/
+[data-motion='on'] [data-anim] {
+  opacity: 0;
+}
+
+/* Menú móvil abierto: congela el scroll del documento. Complementa a
+   lenis.stop(), que solo existe cuando Lenis está activo. */
+[data-menu-open] {
+  overflow: hidden;
+}
+
+/* -----------------------------------------------------------------------------
+   5. Accesibilidad de movimiento
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {

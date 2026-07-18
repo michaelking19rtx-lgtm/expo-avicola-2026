@@ -1,0 +1,171 @@
+---
+/*
+  Sección de introducción al congreso.
+
+  El video todavía no existe. En su lugar va un placeholder con la misma caja
+  16:9, para que al sustituirlo no cambie el layout. El marcado definitivo
+  queda escrito abajo en un comentario de Astro (no llega al HTML servido).
+*/
+---
+
+<section class="intro" id="congreso">
+  <div class="intro__inner">
+    <header class="intro__head">
+      <p class="intro__eyebrow" data-anim>El congreso</p>
+      <h2 class="intro__title" data-anim>Un día, toda la operación avícola</h2>
+      <p class="intro__lead" data-anim>
+        Seis conferencias, un panel de expertos y un show de medio tiempo conectan
+        los tres frentes que deciden el resultado de una granja: productividad,
+        sanidad preventiva y tecnología aplicada. Entre sesiones, coffee break y
+        área comercial para ver equipo y hablar de frente con proveedores.
+      </p>
+    </header>
+
+    <div class="intro__player" data-anim>
+      {/*
+        SUSTITUIR este bloque .intro__placeholder por el reproductor real
+        cuando existan los archivos. Requiere importar `asset` desde
+        ../scripts/paths.js en el frontmatter:
+
+        <video
+          class="intro__media"
+          controls
+          preload="metadata"
+          poster={asset('img/hero/poster-congreso.jpg')}
+        >
+          <source src={asset('video/congreso.webm')} type="video/webm" />
+          <source src={asset('video/congreso.mp4')} type="video/mp4" />
+          Tu navegador no puede reproducir este video.
+        </video>
+      */}
+      <div class="intro__placeholder">
+        <span class="intro__play" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="1.5" />
+            <path
+              d="M20 17.2 32.4 24 20 30.8V17.2Z"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <p class="intro__soon">Video próximamente</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.intro');
+
+  // Import dinámico, igual que en Nav y Hero: la capa de movimiento es mejora
+  // progresiva y no debe poder tumbar nada esencial.
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      const elementos = seccion.querySelectorAll<HTMLElement>('[data-anim]');
+
+      gsap.fromTo(
+        elementos,
+        { opacity: 0, y: 32 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: seccion,
+            start: 'top 78%',
+            once: true,
+          },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .intro {
+    padding-block: var(--space-3xl);
+  }
+
+  .intro__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .intro__head {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    margin-block-end: var(--space-2xl);
+    text-align: center;
+  }
+
+  .intro__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .intro__title {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .intro__lead {
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  /* Reproductor ------------------------------------------------------------ */
+  .intro__player {
+    max-width: var(--media-max);
+    margin-inline: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-media);
+    overflow: hidden;
+  }
+
+  .intro__media,
+  .intro__placeholder {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+
+  .intro__placeholder {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-md);
+    background-color: var(--surface);
+  }
+
+  .intro__play {
+    display: block;
+    color: var(--text-muted);
+    transition: color var(--t-base) var(--ease-out);
+  }
+
+  .intro__placeholder:hover .intro__play {
+    color: var(--accent);
+  }
+
+  .intro__soon {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+</style>

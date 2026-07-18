@@ -87,6 +87,10 @@
   --container: 1200px;
   --container-narrow: 760px;
   --gutter: clamp(1.25rem, 5vw, 4rem);
+  --nav-h: 4.5rem;
+  --nav-blur: 14px;
+  --media-max: 980px;
+  --radius-media: 12px;
 
   /* Elevación -------------------------------------------------------------- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);

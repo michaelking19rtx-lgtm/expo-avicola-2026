@@ -1,0 +1,490 @@
+---
+import site from '../data/site.json';
+import { asset } from '../scripts/paths.js';
+
+/*
+  El título se parte a mano en líneas en vez de dejar que el navegador decida:
+  el ritmo de las cuatro líneas es parte del diseño, y la animación de entrada
+  las revela una por una. Una línea va en --accent para romper el bloque.
+*/
+const lineasTitulo = [
+  { texto: 'Innovación y', acento: false },
+  { texto: 'productividad', acento: true },
+  { texto: 'para el sector', acento: false },
+  { texto: 'avícola', acento: false },
+];
+
+const tagline =
+  'Donde productores, técnicos, veterinarios y empresas del sector avícola se ponen al día.';
+
+/*
+  Valores iniciales de la cuenta regresiva calculados en build.
+
+  Se pintan ya resueltos —en vez de ceros— para que no haya destello ni salto
+  de layout: el script los corrige en el primer tick. Como el sitio se
+  redespliega en cada push, en producción arrancan prácticamente al día.
+*/
+const restanteMs = Math.max(0, new Date(site.inicio).getTime() - Date.now());
+const totalSegundos = Math.floor(restanteMs / 1000);
+const dosDigitos = (n: number) => String(n).padStart(2, '0');
+
+const unidades = [
+  { clave: 'dias', etiqueta: 'Días', valor: dosDigitos(Math.floor(totalSegundos / 86400)) },
+  { clave: 'horas', etiqueta: 'Horas', valor: dosDigitos(Math.floor((totalSegundos % 86400) / 3600)) },
+  { clave: 'min', etiqueta: 'Min', valor: dosDigitos(Math.floor((totalSegundos % 3600) / 60)) },
+  { clave: 'seg', etiqueta: 'Seg', valor: dosDigitos(totalSegundos % 60) },
+];
+---
+
+<section class="hero" id="inicio">
+  <div class="hero__inner">
+    <div class="hero__content">
+      <p class="hero__eyebrow" data-anim>
+        {site.ciudad} · 7 de agosto 2026
+      </p>
+
+      <h1 class="hero__title">
+        {lineasTitulo.map((linea) => (
+          <span
+            class:list={['hero__line', linea.acento && 'hero__line--acento']}
+            data-anim
+          >
+            {linea.texto}
+          </span>
+        ))}
+      </h1>
+
+      <p class="hero__tagline" data-anim>{tagline}</p>
+
+      {/*
+        La cuenta regresiva es información derivada de una fecha que ya se
+        anuncia arriba en texto. Se marca decorativa para no bombardear a los
+        lectores de pantalla con una actualización cada segundo.
+      */}
+      <div class="countdown" data-anim aria-hidden="true">
+        {unidades.map((unidad) => (
+          <div class="countdown__unit">
+            <span class="countdown__value" data-cd={unidad.clave}>{unidad.valor}</span>
+            <span class="countdown__label">{unidad.etiqueta}</span>
+          </div>
+        ))}
+      </div>
+
+      <div class="hero__ctas" data-anim>
+        <a class="btn btn--primary" href="#boletos">Comprar mi boleto</a>
+        <a class="btn btn--ghost" href="#programa">Ver programa</a>
+      </div>
+    </div>
+
+    <div class="hero__media" data-hero-media>
+      <div class="hero__halo" aria-hidden="true"></div>
+
+      <div class="hero__float" data-hero-float>
+        <div class="hero__frame" data-hero-frame data-anim>
+          <img
+            class="hero__img"
+            src={asset('img/hero/ponentes.png')}
+            alt="Ponentes de la Expo Avícola Productiva 2026"
+            width="1200"
+            height="900"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+            data-hero-img
+          />
+          <div class="hero__placeholder">
+            <span>Imagen de ponentes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import site from '../data/site.json';
+
+  /*
+    Nada de esto depende de GSAP. La cuenta regresiva y el reemplazo de la
+    imagen se resuelven primero y sin imports pesados: si el chunk de
+    animaciones (~132 KB) no llega, el hero sigue siendo correcto.
+  */
+  const hero = document.querySelector<HTMLElement>('.hero');
+
+  // -----------------------------------------------------------------------
+  // Cuenta regresiva. Corre siempre, con o sin movimiento reducido.
+  // -----------------------------------------------------------------------
+  (() => {
+    const objetivo = new Date(site.inicio).getTime();
+    const campos = new Map<string, HTMLElement>();
+    for (const clave of ['dias', 'horas', 'min', 'seg']) {
+      const el = document.querySelector<HTMLElement>(`[data-cd="${clave}"]`);
+      if (el) campos.set(clave, el);
+    }
+    if (!campos.size) return;
+
+    const pinta = (clave: string, valor: number) => {
+      const el = campos.get(clave);
+      const texto = String(valor).padStart(2, '0');
+      // Solo se escribe si cambió: evita trabajo de layout cada segundo.
+      if (el && el.textContent !== texto) el.textContent = texto;
+    };
+
+    const tick = () => {
+      // Fecha inválida en site.json: ceros en vez de "NaN" en pantalla.
+      const restante = Number.isNaN(objetivo)
+        ? 0
+        : Math.max(0, objetivo - Date.now());
+      const seg = Math.floor(restante / 1000);
+
+      pinta('dias', Math.floor(seg / 86400));
+      pinta('horas', Math.floor((seg % 86400) / 3600));
+      pinta('min', Math.floor((seg % 3600) / 60));
+      pinta('seg', seg % 60);
+
+      return restante;
+    };
+
+    if (tick() === 0) return; // El evento ya pasó: ceros fijos, sin intervalo.
+    const id = setInterval(() => {
+      if (tick() === 0) clearInterval(id);
+    }, 1000);
+  })();
+
+  // -----------------------------------------------------------------------
+  // Imagen de ponentes: nunca debe verse un icono de imagen rota.
+  // El <img> arranca invisible (solo si hay JS) y únicamente se muestra al
+  // confirmar la carga; mientras tanto manda el placeholder.
+  // -----------------------------------------------------------------------
+  (() => {
+    const frame = document.querySelector<HTMLElement>('[data-hero-frame]');
+    const img = document.querySelector<HTMLImageElement>('[data-hero-img]');
+    if (!frame || !img) return;
+
+    const cargada = () => (frame.dataset.state = 'loaded');
+    const fallida = () => (frame.dataset.state = 'failed');
+
+    if (img.complete) {
+      // Ya resuelta antes de que corriera este script.
+      if (img.naturalWidth > 0) cargada();
+      else fallida();
+    } else {
+      img.addEventListener('load', cargada, { once: true });
+      img.addEventListener('error', fallida, { once: true });
+    }
+  })();
+
+  // -----------------------------------------------------------------------
+  // Movimiento: mejora progresiva. Nada corre con prefers-reduced-motion, ni
+  // si el chunk de animaciones falla al cargar.
+  // -----------------------------------------------------------------------
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !hero) return;
+
+    const media = hero.querySelector<HTMLElement>('[data-hero-media]');
+    const flotante = hero.querySelector<HTMLElement>('[data-hero-float]');
+    const frame = hero.querySelector<HTMLElement>('[data-hero-frame]');
+    const entradas = hero.querySelectorAll<HTMLElement>('.hero__content [data-anim]');
+
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+    // Eyebrow, cada línea del título, tagline, cuenta regresiva y botones.
+    tl.fromTo(
+      entradas,
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.8, stagger: 0.08 }
+    );
+
+    if (frame) {
+      tl.fromTo(
+        frame,
+        { opacity: 0, y: 40, scale: 0.97 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 1.2,
+          onComplete: () => {
+            if (!flotante) return;
+            /*
+              Flotación permanente: ±10px en 6s. Va en un elemento aparte del
+              reveal y del parallax para que las tres no se peleen por el mismo
+              transform.
+
+              Primero un tramo de entrada de 0 a -10: arrancar el ciclo
+              directamente en y:10 daría un salto seco de 10px justo al acabar
+              el reveal.
+            */
+            gsap.to(flotante, {
+              y: -10,
+              duration: 1.5,
+              ease: 'sine.out',
+              onComplete: () => {
+                gsap.fromTo(
+                  flotante,
+                  { y: -10 },
+                  {
+                    y: 10,
+                    duration: 3,
+                    ease: 'sine.inOut',
+                    yoyo: true,
+                    repeat: -1,
+                  }
+                );
+              },
+            });
+          },
+        },
+        0.2
+      );
+    }
+
+      // Parallax: la imagen se queda atrás respecto al texto al hacer scroll.
+      if (media) {
+        gsap.to(media, {
+          yPercent: 12,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 0.5,
+          },
+        });
+      }
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: el hero ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .hero {
+    display: flex;
+    min-height: 100svh;
+    align-items: center;
+    /* clip y no hidden: no crea contenedor de scroll y evita desbordes
+       horizontales del halo y del parallax. */
+    overflow: clip;
+    padding-block: calc(var(--nav-h) + var(--space-xl)) var(--space-2xl);
+  }
+
+  .hero__inner {
+    display: grid;
+    width: 100%;
+    max-width: var(--container);
+    align-items: center;
+    gap: var(--space-xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Columna de texto ------------------------------------------------------- */
+
+  /* min-width:0 anula el min-width:auto que traen los ítems de grid; sin esto
+     la palabra más larga del título define el ancho de la pista y el reparto
+     52/48 nunca llega a aplicarse. */
+  .hero__content {
+    min-width: 0;
+  }
+
+  .hero__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .hero__title {
+    margin-block-start: var(--space-md);
+    /*
+      Dos restricciones tiran en direcciones opuestas:
+      - El mínimo baja a 2.5rem (no 2.6) para que "para el sector" quepa sin
+        partirse en un viewport de 375px.
+      - El máximo baja a 5rem (no 6) porque a 6rem la palabra "productividad"
+        mide ~611px y NO cabe en el 52% de la columna: como los ítems de grid
+        tienen min-width:auto, el título ensanchaba su pista y el reparto real
+        acababa siendo 61/39 en vez del 52/48 pedido, robándole espacio a la
+        imagen de ponentes. A 5rem el reparto se respeta en todo el rango.
+    */
+    font-size: clamp(2.5rem, -0.75rem + 7.5vw, 5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  .hero__line {
+    display: block;
+  }
+
+  .hero__line--acento {
+    color: var(--accent);
+  }
+
+  .hero__tagline {
+    max-width: 46ch;
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  /* Cuenta regresiva ------------------------------------------------------- */
+  .countdown {
+    display: flex;
+    max-width: 25rem;
+    margin-block-start: var(--space-xl);
+  }
+
+  .countdown__unit {
+    flex: 1 1 0;
+    padding-inline: var(--space-sm);
+    text-align: center;
+  }
+
+  .countdown__unit + .countdown__unit {
+    border-inline-start: 1px solid var(--border);
+  }
+
+  .countdown__value {
+    display: block;
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 1.25rem + 2vw, 2.75rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .countdown__label {
+    display: block;
+    margin-block-start: var(--space-xs);
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* Botones ---------------------------------------------------------------- */
+  .hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-xl);
+  }
+
+  .btn {
+    padding: 0.85rem var(--space-lg);
+    border-radius: var(--radius-pill);
+    font-size: var(--step--1);
+    font-weight: 600;
+    transition:
+      transform var(--t-fast) var(--ease-out),
+      background-color var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      filter var(--t-fast) var(--ease-out);
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn--primary {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .btn--primary:hover {
+    filter: brightness(1.08);
+  }
+
+  .btn--ghost {
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .btn--ghost:hover {
+    border-color: var(--primary-bright);
+  }
+
+  /* Columna de imagen ------------------------------------------------------ */
+  /* En móvil el orden natural del DOM ya es el correcto: texto arriba,
+     imagen abajo. En desktop, columnas 52/48 en ese mismo orden. */
+  .hero__media {
+    position: relative;
+  }
+
+  .hero__halo {
+    position: absolute;
+    inset: 0;
+    width: 80%;
+    aspect-ratio: 1;
+    margin: auto;
+    border-radius: 50%;
+    /* Sutil a propósito: solo evita que el recorte flote sobre un plano vacío. */
+    background: radial-gradient(circle, var(--primary) 0%, transparent 68%);
+    opacity: 0.3;
+    filter: blur(56px);
+    pointer-events: none;
+  }
+
+  .hero__frame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+  }
+
+  .hero__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .hero__placeholder {
+    position: absolute;
+    inset: 0;
+    display: none;
+    place-items: center;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-media);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+  }
+
+  /*
+    Reparto de responsabilidades entre CSS y JS:
+    - Sin JS ([data-js] ausente): se ve la imagen, nunca el placeholder.
+    - Con JS: manda el placeholder y la imagen espera invisible; solo aparece
+      al confirmarse la carga. Así jamás se ve el icono de imagen rota.
+  */
+  :global([data-js]) .hero__placeholder {
+    display: grid;
+  }
+
+  :global([data-js]) .hero__img {
+    opacity: 0;
+    transition: opacity var(--t-slow) var(--ease-out);
+  }
+
+  :global([data-js]) .hero__frame[data-state='loaded'] .hero__img {
+    opacity: 1;
+  }
+
+  :global([data-js]) .hero__frame[data-state='loaded'] .hero__placeholder {
+    display: none;
+  }
+
+  :global([data-js]) .hero__frame[data-state='failed'] .hero__img {
+    display: none;
+  }
+
+  /* Desktop ---------------------------------------------------------------- */
+  @media (min-width: 62rem) {
+    .hero__inner {
+      grid-template-columns: 52fr 48fr;
+      gap: var(--space-2xl);
+    }
+  }
+</style>

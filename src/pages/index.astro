@@ -1,39 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import VideoSection from '../components/VideoSection.astro';
 ---
 
 <Base>
-  <main class="placeholder">
-    <h1 class="placeholder__title">Expo Avícola Productiva 2026</h1>
-    <p class="placeholder__note">Sitio en construcción</p>
+  <Nav />
+  {/* tabindex="-1": destino del enlace «Saltar al contenido». Sin él, un <main>
+      no es focalizable y el salto movería el scroll pero no el foco. */}
+  <main id="contenido" tabindex="-1">
+    <Hero />
+    <VideoSection />
   </main>
 </Base>
-
-<style>
-  .placeholder {
-    display: flex;
-    min-height: 100svh;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-md);
-    padding-inline: var(--gutter);
-    text-align: center;
-  }
-
-  .placeholder__title {
-    max-width: 14ch;
-    font-family: var(--font-display);
-    font-size: var(--step-4);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: -0.03em;
-  }
-
-  .placeholder__note {
-    color: var(--text-muted);
-    font-size: var(--step-0);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-</style>

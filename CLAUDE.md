@@ -28,7 +28,10 @@ aire y contraste medido.
 - Fuentes autoalojadas con `@fontsource-variable`:
   - display → `Bricolage Grotesque Variable` → `--font-display`
   - cuerpo → `Inter Variable` → `--font-body`
-- **GSAP** y **Lenis** entran en la Fase 2, no antes.
+- **GSAP** (+ ScrollTrigger) y **Lenis**, desde la Fase 2. Viven en
+  `src/scripts/animations.js` y **siempre se importan de forma dinámica**
+  (`await import(...)`), nunca estática: pesan ~132 KB y ninguna función
+  esencial puede depender de que ese chunk llegue.
 - Despliegue: GitHub Pages vía `withastro/action@v6` en cada push a `main`.
 - `base: '/expo-avicola-2026'` — en local el sitio vive en
   `http://localhost:4321/expo-avicola-2026/`, no en la raíz.
@@ -43,11 +46,12 @@ expo-avicola-2026/
 │   ├── video/
 │   └── favicon.svg
 ├── src/
-│   ├── components/
+│   ├── components/{Nav,Hero,VideoSection}.astro
 │   ├── data/site.json
+│   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin}.astro
-│   ├── scripts/theme.js
+│   ├── scripts/{theme,animations,paths}.js
 │   └── styles/{tokens,global}.css
 ├── astro.config.mjs
 ├── CLAUDE.md
@@ -134,7 +138,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | Fase | Alcance                                                                  | Estado         |
 | :--- | :----------------------------------------------------------------------- | :------------- |
 | 1    | Cimientos: arquitectura, doble tema, `/admin` mínimo, deploy              | **COMPLETADA** |
-| 2    | Hero + navegación + capa de movimiento (GSAP, Lenis)                      | Pendiente      |
+| 2    | Nav + hero + sección de video, con capa de movimiento (GSAP, Lenis)      | **COMPLETADA** |
 | 3    | Contenido: sobre el evento, programa/agenda, ponentes                     | Pendiente      |
 | 4    | Boletos: planes, precios, CTA de registro                                 | Pendiente      |
 | 5    | Patrocinadores, sede y ubicación, FAQ, footer                             | Pendiente      |
@@ -220,3 +224,91 @@ Actions», o `gh api -X POST repos/OWNER/REPO/pages -f build_type=workflow`) o e
 job `deploy` falla mientras `build` pasa.
 
 Fase 1 cerrada por completo.
+
+---
+
+### Fase 2 — Nav + hero + video · COMPLETADA
+
+**Qué se hizo**
+
+- `animations.js`: arranque único de Lenis + GSAP/ScrollTrigger. Un solo reloj
+  (`gsap.ticker` mueve `lenis.raf`), anclas con offset de nav, y deep-link por
+  hash. Idempotente: los tres componentes la llaman sin coordinarse.
+- `Nav.astro`: barra fija que gana fondo, blur y borde al pasar 80px; wordmark,
+  cuatro anclas, CTA, y panel móvil a pantalla completa con hamburguesa SVG que
+  se convierte en X.
+- `Hero.astro`: split 52/48, título de cuatro líneas con una en `--accent`,
+  cuenta regresiva en vivo, dos CTAs, imagen de ponentes con halo y fallback,
+  reveal escalonado, flotación permanente y parallax por scroll.
+- `VideoSection.astro`: intro al congreso y reproductor 16:9 en placeholder,
+  con el marcado del `<video>` real ya escrito en un comentario.
+- `paths.js` con `asset()`, la única forma correcta de construir rutas a
+  `/public` respetando el `base`.
+
+**Contratos nuevos (respétalos en las fases siguientes)**
+
+- `<html>` lleva tres banderas que pone el script inline del `<head>`:
+  `data-js` (hay JavaScript), `data-motion` (`on`/`off`) y `data-motion-ready`.
+- **`[data-anim]`**: marca un elemento como "oculto hasta que lo animen".
+  `global.css` lo pone a `opacity: 0` **solo** bajo `[data-motion='on']`. Si
+  añades `data-anim` a algo, DEBES animarlo con GSAP o quedará invisible.
+- Un failsafe de 3 s en el `<head>` devuelve `data-motion` a `off` si el chunk
+  de animaciones no llegó, para que el contenido nunca se quede invisible.
+  `initMotion()` detecta que el failsafe ya saltó y entonces renuncia a animar,
+  en vez de esconder de golpe algo que el usuario ya estaba viendo.
+- La imagen del hero: sin JS manda el `<img>`; con JS manda el placeholder y la
+  imagen solo aparece al confirmarse la carga. Así nunca se ve el icono de
+  imagen rota.
+
+**Decisiones**
+
+- **Import dinámico obligatorio de `animations.js`.** Con import estático, un
+  fallo de red al traer los 132 KB de GSAP+Lenis tumbaba también la cuenta
+  regresiva, el fallback de imagen, el menú móvil y el estado de la nav. Ahora
+  lo esencial corre primero y sin dependencias; el movimiento es mejora
+  progresiva con `.catch()`.
+- **Título a `clamp(2.5rem, -0.75rem + 7.5vw, 5rem)`, no hasta 6rem.** El
+  encargo pedía a la vez columnas ≈52/48 y un título de hasta 6rem, y las dos
+  cosas no caben: a 6rem la palabra "productividad" mide ~611px y, como los
+  ítems de grid traen `min-width: auto`, ensanchaba su pista hasta dejar el
+  reparto real en 61/39. Con 5rem + `min-width: 0` el reparto medido es
+  exactamente 524/484 px (52/48) y la imagen recupera ~90px de ancho.
+- **La nav sube a `--z-modal` con el menú abierto.** El panel es opaco y a
+  `--z-overlay` tapaba la propia barra, dejando la X de cerrar invisible e
+  intocable en táctil (con teclado sí cerraba con Escape, por eso costó verlo).
+- **`@supports` del fondo de la nav comprueba también `color-mix`.** Como el
+  valor lleva `var()`, un navegador sin `color-mix` no descarta la declaración
+  al parsear sino en tiempo de cómputo, y `background-color` caía a
+  `transparent` en vez de al `var(--bg)` de respaldo: nav sin fondo y texto
+  ilegible en Chrome 76–110 y Safari ≤15.
+- **Las anclas mueven el foco, no solo el scroll.** Al hacer `preventDefault()`
+  se pierde el traslado de foco nativo, lo que dejaba «Saltar al contenido»
+  sin efecto para quien navega con teclado. `<main>` lleva `tabindex="-1"`.
+- **La cuenta regresiva se marca `aria-hidden`**: es información derivada de una
+  fecha que el eyebrow ya anuncia, y un lector de pantalla no debe recibir una
+  actualización por segundo. Sus valores iniciales se calculan en build para que
+  no haya destello ni salto de layout; el cliente los corrige en el primer tick.
+- **El panel móvil es `role="dialog" aria-modal="true"` y pone `inert` en
+  `<main>`**, para que el lector de pantalla no siga recorriendo el hero por
+  detrás. Se centra con márgenes automáticos, no con `justify-content: center`,
+  porque este último recorta por arriba —sin posibilidad de scroll— cuando el
+  contenido no cabe en pantallas bajas.
+
+**Estado**
+
+`npm run build` y `npm run check` pasan con 0 errores. Verificado en Chrome 150
+real: capturas correctas a 1440, 768 y 375 px en ambos temas, sin desbordamiento
+horizontal; menú móvil ejercitado con clics y teclado; con
+`prefers-reduced-motion` no se inicializa Lenis y todo queda visible.
+
+**ASSETS PENDIENTES — los sube el usuario**
+
+| Archivo | Para qué | Notas |
+| :------ | :------- | :---- |
+| `public/img/hero/ponentes.png` | Imagen de ponentes del hero | PNG con fondo transparente, todos juntos. El marco es **4:3** y usa `object-fit: contain`; si la proporción es muy distinta quedarán franjas vacías — ajusta el `aspect-ratio` de `.hero__frame`. Hasta que exista, se ve el placeholder punteado (y hay un 404 en consola). |
+| `public/video/congreso.mp4` y `.webm` | Video de la sección "El congreso" | Sustituir el bloque `.intro__placeholder` por el marcado ya escrito en el comentario de `VideoSection.astro`. |
+| `public/img/hero/poster-congreso.jpg` | Póster del video | Mismo 16:9 del reproductor. |
+
+**DATO PENDIENTE:** el recinto de la sede. `site.json` lo tiene como
+`"recinto": null` y el hero muestra solo "Tehuacán, Puebla". Cuando se confirme,
+rellena esa clave y decide dónde mostrarlo.

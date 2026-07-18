@@ -1,0 +1,433 @@
+---
+import { asset } from '../scripts/paths.js';
+
+const enlaces = [
+  { href: '#ponentes', label: 'Ponentes' },
+  { href: '#programa', label: 'Programa' },
+  { href: '#sede', label: 'Sede' },
+  { href: '#boletos', label: 'Boletos' },
+];
+---
+
+<a class="skip" href="#contenido" data-anchor-immediate>Saltar al contenido</a>
+
+<header class="nav" data-nav>
+  <div class="nav__inner">
+    <a class="nav__brand" href={asset('')} aria-label="Expo Avícola Productiva 2026, inicio">
+      Expo Avícola Productiva
+    </a>
+
+    <nav class="nav__links" aria-label="Secciones del sitio">
+      {enlaces.map((enlace) => (
+        <a class="nav__link" href={enlace.href}>{enlace.label}</a>
+      ))}
+    </nav>
+
+    <div class="nav__actions">
+      <a class="nav__cta" href="#boletos">Comprar boleto</a>
+
+      <button
+        class="nav__toggle"
+        type="button"
+        aria-label="Abrir menú"
+        aria-expanded="false"
+        aria-controls="menu-movil"
+        data-menu-toggle
+      >
+        <svg class="nav__icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <line class="nav__icon-line nav__icon-line--top" x1="3.5" y1="9" x2="20.5" y2="9" />
+          <line class="nav__icon-line nav__icon-line--bottom" x1="3.5" y1="15" x2="20.5" y2="15" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div
+  class="menu"
+  id="menu-movil"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Menú principal"
+  data-menu
+  data-lenis-prevent
+  hidden
+>
+  <nav class="menu__links" aria-label="Secciones">
+    {enlaces.map((enlace) => (
+      <a class="menu__link" href={enlace.href} data-menu-link>{enlace.label}</a>
+    ))}
+  </nav>
+  <a class="menu__cta" href="#boletos" data-menu-link>Comprar boleto</a>
+</div>
+
+<script>
+  import type { getLenis as GetLenis } from '../scripts/animations.js';
+
+  /*
+    La capa de movimiento se carga de forma DINÁMICA y al final.
+
+    animations.js arrastra GSAP + Lenis (~132 KB). Con un import estático,
+    cualquier fallo de red al traer ese chunk tumbaría también el menú móvil y
+    el estado de la nav, que son navegación básica. Cargándolo aparte, lo
+    esencial funciona siempre y el movimiento es mejora progresiva.
+  */
+  let lenis: ReturnType<typeof GetLenis> = null;
+
+  const nav = document.querySelector<HTMLElement>('[data-nav]');
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const menu = document.querySelector<HTMLElement>('[data-menu]');
+
+  // ---------------------------------------------------------------------
+  // Estado "scrolled" de la nav.
+  // Va con un listener nativo, no con ScrollTrigger: es un cambio de estado,
+  // no una animación, y debe funcionar también con movimiento reducido.
+  // ---------------------------------------------------------------------
+  if (nav) {
+    let scrolled = false;
+    const sync = () => {
+      const ahora = window.scrollY > 80;
+      if (ahora === scrolled) return;
+      scrolled = ahora;
+      nav.dataset.scrolled = String(ahora);
+    };
+    sync();
+    window.addEventListener('scroll', sync, { passive: true });
+  }
+
+  // ---------------------------------------------------------------------
+  // Menú móvil
+  // ---------------------------------------------------------------------
+  if (toggle && menu) {
+    const root = document.documentElement;
+    let abierto = false;
+
+    const focusables = () =>
+      Array.from(
+        menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
+      );
+
+    // Arrow asignada a const (no `function`): así TypeScript conserva dentro
+    // del closure el narrowing de toggle/menu que hizo el if de arriba.
+    const setMenu = (next: boolean) => {
+      if (next === abierto) return;
+      abierto = next;
+
+      menu.hidden = !next;
+      toggle.setAttribute('aria-expanded', String(next));
+      toggle.setAttribute('aria-label', next ? 'Cerrar menú' : 'Abrir menú');
+      root.toggleAttribute('data-menu-open', next);
+
+      // Congela el scroll suave además del nativo; si no hay Lenis (movimiento
+      // reducido o bundle no cargado), el overflow del atributo en <html> basta.
+      if (next) lenis?.stop();
+      else lenis?.start();
+
+      // Saca el resto de la página del árbol de accesibilidad: sin esto, un
+      // lector de pantalla sigue recorriendo el hero por detrás del panel.
+      const principal = document.querySelector('main');
+      if (principal) principal.toggleAttribute('inert', next);
+
+      if (next) focusables()[0]?.focus();
+      else toggle.focus();
+    };
+
+    toggle.addEventListener('click', () => setMenu(!abierto));
+
+    // Navegar cierra el menú.
+    menu.querySelectorAll('[data-menu-link]').forEach((link) => {
+      link.addEventListener('click', () => setMenu(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (!abierto) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMenu(false);
+        return;
+      }
+
+      // Foco atrapado dentro del panel mientras está abierto.
+      if (event.key !== 'Tab') return;
+      const items = focusables();
+      if (!items.length) return;
+
+      const primero = items[0];
+      const ultimo = items[items.length - 1];
+      const activo = document.activeElement;
+
+      if (event.shiftKey && activo === primero) {
+        event.preventDefault();
+        ultimo.focus();
+      } else if (!event.shiftKey && activo === ultimo) {
+        event.preventDefault();
+        primero.focus();
+      }
+    });
+
+    // Al pasar a desktop el panel deja de tener sentido.
+    const desktop = window.matchMedia('(min-width: 62rem)');
+    desktop.addEventListener('change', (event) => {
+      if (event.matches) setMenu(false);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Mejora progresiva: smooth scroll y anclas. Si el chunk no llega, todo lo
+  // de arriba sigue funcionando y el navegador se encarga del scroll nativo.
+  // ---------------------------------------------------------------------
+  import('../scripts/animations.js')
+    .then(({ initMotion, getLenis, bindAnchors }) => {
+      initMotion();
+      bindAnchors();
+      lenis = getLenis();
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: el sitio funciona igual, sin scroll suave. */
+    });
+</script>
+
+<style>
+  /* Salto al contenido ----------------------------------------------------- */
+  .skip {
+    position: absolute;
+    z-index: var(--z-modal);
+    inset-block-start: var(--space-xs);
+    inset-inline-start: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step--1);
+    font-weight: 600;
+    transform: translateY(-200%);
+    transition: transform var(--t-fast) var(--ease-out);
+  }
+
+  .skip:focus-visible {
+    transform: translateY(0);
+  }
+
+  /* Barra ------------------------------------------------------------------ */
+  .nav {
+    position: fixed;
+    z-index: var(--z-nav);
+    inset-block-start: 0;
+    inset-inline: 0;
+    border-block-end: 1px solid transparent;
+    transition:
+      background-color var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      backdrop-filter var(--t-base) var(--ease-out);
+  }
+
+  .nav[data-scrolled='true'] {
+    border-block-end-color: var(--border);
+    background-color: var(--bg);
+    backdrop-filter: blur(var(--nav-blur));
+  }
+
+  /*
+    Con el menú abierto la nav debe quedar POR ENCIMA del panel: es donde vive
+    el botón de cerrar. El panel ya reserva --nav-h de padding superior para
+    esa franja.
+  */
+  :global([data-menu-open]) .nav {
+    z-index: var(--z-modal);
+  }
+
+  /*
+    Cuando el navegador soporta blur, el fondo puede ser algo translúcido.
+
+    El @supports comprueba TAMBIÉN color-mix, y no es un detalle: como el valor
+    contiene var(), un navegador que no entienda color-mix no descarta la
+    declaración al parsear, sino que la vuelve inválida en tiempo de cómputo, y
+    background-color cae a `transparent` en lugar de al var(--bg) de la regla
+    anterior. Resultado: nav sin fondo y texto ilegible sobre el hero en
+    Chrome 76-110 y Safari ≤15, que sí soportan backdrop-filter.
+  */
+  @supports (backdrop-filter: blur(1px)) and
+    (background-color: color-mix(in srgb, red 50%, transparent)) {
+    .nav[data-scrolled='true'] {
+      background-color: color-mix(in srgb, var(--bg) 82%, transparent);
+    }
+  }
+
+  .nav__inner {
+    display: flex;
+    max-width: var(--container);
+    height: var(--nav-h);
+    align-items: center;
+    justify-content: space-between;
+    margin-inline: auto;
+    gap: var(--space-lg);
+    padding-inline: var(--gutter);
+  }
+
+  .nav__brand {
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.1;
+    /* Cabe en una línea incluso a 320px (~196px de ancho frente a ~224px
+       disponibles junto a la hamburguesa), así que no se fuerza el corte. */
+    white-space: nowrap;
+  }
+
+  .nav__links {
+    display: none;
+    gap: var(--space-lg);
+  }
+
+  .nav__link {
+    position: relative;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    transition: color var(--t-fast) var(--ease-out);
+  }
+
+  .nav__link::after {
+    content: '';
+    position: absolute;
+    inset-block-end: -6px;
+    inset-inline-start: 0;
+    width: 100%;
+    height: 1px;
+    background-color: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--t-base) var(--ease-out);
+  }
+
+  .nav__link:hover {
+    color: var(--text);
+  }
+
+  .nav__link:hover::after {
+    transform: scaleX(1);
+  }
+
+  .nav__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .nav__cta {
+    display: none;
+    padding: 0.6rem var(--space-md);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step--1);
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      transform var(--t-fast) var(--ease-out),
+      filter var(--t-fast) var(--ease-out);
+  }
+
+  .nav__cta:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  /* Hamburguesa ------------------------------------------------------------ */
+  .nav__toggle {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    margin-inline-end: calc(var(--space-sm) * -1);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+  }
+
+  .nav__icon-line {
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    transform-box: view-box;
+    transform-origin: center;
+    transition: transform var(--t-base) var(--ease-out);
+  }
+
+  [aria-expanded='true'] .nav__icon-line--top {
+    transform: rotate(45deg) translateY(3px);
+  }
+
+  [aria-expanded='true'] .nav__icon-line--bottom {
+    transform: rotate(-45deg) translateY(-3px);
+  }
+
+  /* Panel móvil ------------------------------------------------------------ */
+  .menu {
+    position: fixed;
+    z-index: var(--z-overlay);
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding: var(--nav-h) var(--gutter) var(--space-2xl);
+    background-color: var(--bg);
+    /* En pantallas bajas (móvil en horizontal) el contenido no cabe: debe
+       poder desplazarse en vez de recortarse. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .menu[hidden] {
+    display: none;
+  }
+
+  /*
+    Centrado "seguro" con márgenes automáticos en lugar de justify-content:
+    center. Con centrado normal, si el contenido supera la altura disponible se
+    desborda por ARRIBA y esa parte queda inalcanzable al hacer scroll. Los
+    márgenes auto centran cuando sobra sitio y se colapsan a 0 cuando falta.
+  */
+  .menu__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    margin-block-start: auto;
+  }
+
+  .menu__link {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    transition: color var(--t-fast) var(--ease-out);
+  }
+
+  .menu__link:hover {
+    color: var(--accent);
+  }
+
+  .menu__cta {
+    /* Segunda mitad del centrado seguro (ver .menu__links). */
+    margin-block-end: auto;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /* Desktop ---------------------------------------------------------------- */
+  @media (min-width: 62rem) {
+    .nav__links,
+    .nav__cta {
+      display: flex;
+    }
+
+    .nav__toggle {
+      display: none;
+    }
+  }
+</style>
