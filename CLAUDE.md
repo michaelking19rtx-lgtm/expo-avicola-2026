@@ -212,6 +212,11 @@ No se construyó ninguna sección visual del evento — eso empieza en la Fase 2
 `michaelking19rtx-lgtm` (no `michaelking19`, que fue una suposición inicial a
 partir del email de git). De ahí sale el `site` de `astro.config.mjs`.
 
-**Único paso manual pendiente:** en *Settings → Pages*, elegir **GitHub
-Actions** como source. El workflow no habilita Pages por sí solo, así que hasta
-hacerlo el job `deploy` falla y la URL de producción responde 404.
+Pages ya está habilitado con `build_type: workflow`, y el despliegue quedó
+verificado en producción (`/`, `/admin/` y `/favicon.svg` responden 200). Nota
+para el futuro: el workflow **no** habilita Pages por sí solo — si algún día se
+recrea el repo, hay que activarlo antes (*Settings → Pages* → source «GitHub
+Actions», o `gh api -X POST repos/OWNER/REPO/pages -f build_type=workflow`) o el
+job `deploy` falla mientras `build` pasa.
+
+Fase 1 cerrada por completo.
