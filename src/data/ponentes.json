@@ -1,0 +1,143 @@
+{
+  "_nota": "Fichas de ponentes para la seccion de Ponentes. bioCorta se usa en la tarjeta; el resto en el modal. Los slugs son los anclas #ponente-{slug}. El numero de retrato corresponde a la misma persona en img/hero/ponente-NN.webp",
+  "ponentes": [
+    {
+      "id": "01",
+      "slug": "edgar-oliva-ramirez",
+      "nombre": "Q.F.B. Edgar Oliva Ramírez",
+      "credencial": "Químico Farmacobiólogo · Educador técnico en producción avícola",
+      "retrato": "img/ponentes/retrato-01.webp",
+      "destacado": true,
+      "ponencias": [
+        "Diagnóstico temprano en aves: señales que todo productor debe saber interpretar",
+        "Vacunación y prevención: decisiones sanitarias que protegen la producción"
+      ],
+      "bioCorta": "Especialista en capacitación y asesoría en incubación, manejo preventivo y operación de procesos productivos. Acompaña a productores, emprendedores y equipos operativos en prevención, vacunación y bioseguridad con enfoque productivo.",
+      "formacion": "Químico Farmacobiólogo por la Universidad de Guadalajara (CUCEI). Fundador y director de Incubadora Guadalajara / EOR Consultores desde 2018.",
+      "trayectoria": "Su experiencia integra industria farmacéutica, alimentaria y avícola, con enfoque en control de calidad, formulación, mejora de procesos y consultoría técnica. Antes trabajó en gestión de calidad en Grupo Collins y como líder de asistencia técnica en PISA Farmacéutica.",
+      "especialidades": [
+        "Incubación: manejo, control de procesos y lectura de resultados",
+        "Plantas de incubación: operación, organización y optimización",
+        "Asesoría de caseta y manejo productivo en granjas",
+        "Granjas experimentales y desarrollo de proyectos avícolas",
+        "Prevención, vacunación y bioseguridad con enfoque productivo",
+        "Capacitación a productores, emprendedores y personal operativo"
+      ],
+      "enfoque": "Presenta la vacunación y la prevención como herramientas estratégicas para proteger la producción, no como un gasto obligatorio. Es el perfil más orientado a enseñar de todo el panel: se dedica profesionalmente a traducir el tema para quien apenas empieza.",
+      "queSeLleva": "Claridad sobre lo que sí depende del productor. Muchos creen que la sanidad es asunto exclusivo del veterinario; esta ponencia les devuelve las decisiones que están en sus manos y los errores que cometen sin saberlo."
+    },
+    {
+      "id": "02",
+      "slug": "alejandro-espinosa-arista",
+      "nombre": "Ing. Alejandro Espinosa Arista",
+      "credencial": "Ingeniero Industrial (IPN) · Socio fundador de Agroindustria Control",
+      "retrato": "img/ponentes/retrato-02.webp",
+      "destacado": false,
+      "ponencias": [
+        "Bioseguridad inteligente: cómo proteger la granja antes de perder dinero"
+      ],
+      "bioCorta": "Más de 20 años en bioseguridad agroindustrial y 12 especializado en control de fauna nociva e inocuidad alimentaria. Ex Gerente Nacional de Proyectos Especiales en Terminix. Ha desarrollado programas preventivos en granjas avícolas y porcícolas de once estados del país.",
+      "formacion": "Ingeniero Industrial por la UPIICSA del Instituto Politécnico Nacional, con formación técnica en bioseguridad agroindustrial, control de fauna nociva e inocuidad alimentaria.",
+      "trayectoria": "Socio fundador de Agroindustria Control desde 2021. Antes fue Gerente Nacional de Proyectos Especiales y Gerente de Servicios del Área Operativa en Terminix International, y encargado de infraestructura de plantas en Brightstar de México.",
+      "especialidades": [
+        "Bioseguridad en unidades pecuarias",
+        "Control integral de roedores, moscas y aves de importancia sanitaria",
+        "Prevención de enfermedades de transmisión mecánica",
+        "Inocuidad alimentaria aplicada al sector agropecuario",
+        "Diseño de programas de control de fauna nociva",
+        "Capacitación técnica a productores y personal operativo"
+      ],
+      "enfoque": "Su formación como ingeniero industrial le imprime un enfoque distinto: aborda la bioseguridad como un sistema de procesos y prevención de pérdidas, no como una lista de recomendaciones sueltas. Mide, documenta y traduce cada riesgo sanitario a su impacto económico real.",
+      "queSeLleva": "Criterios prácticos para auditar su propia granja: dónde están las brechas reales, qué medidas priorizar según presupuesto, y cómo montar un programa de control de fauna nociva sostenible. Aplicable a traspatio y a unidades tecnificadas."
+    },
+    {
+      "id": "03",
+      "slug": "jose-angel-de-la-cruz-hernandez",
+      "nombre": "IAZ. José Ángel de la Cruz Hernández",
+      "credencial": "Ing. Agrónomo Zootecnista · UACh, generación 1989",
+      "retrato": "img/ponentes/retrato-03.webp",
+      "destacado": false,
+      "ponencias": [
+        "Productividad en pollo y gallina: manejo, nutrición y resultados medibles"
+      ],
+      "bioCorta": "25 años en producción avícola —reproductoras, pollo de engorda, huevo para plato y planta de alimento— y 15 años en producción agrícola, incluyendo forraje verde hidropónico para aves. Asesor de proyectos de traspatio e instructor agropecuario.",
+      "formacion": "Ingeniero Agrónomo Zootecnista por la Universidad Autónoma Chapingo, generación 1989.",
+      "trayectoria": "Ha trabajado prácticamente todos los eslabones de la cadena avícola: reproductoras, pollo de engorda, huevo para plato, crianzas y planta de alimento. Suma 15 años en el área agrícola con siembra de maíz de riego y temporal, hortalizas, invernaderos e hidroponía.",
+      "especialidades": [
+        "Manejo y producción avícola en todos los eslabones",
+        "Nutrición y elaboración de alimento",
+        "Producción de forraje verde hidropónico para aves",
+        "Indicadores productivos y evaluación de resultados",
+        "Asesoría a proyectos de aves de traspatio",
+        "Formación técnica agropecuaria"
+      ],
+      "enfoque": "Su cruce entre lo agrícola y lo pecuario permite atacar el costo de alimentación —el rubro más pesado de cualquier operación avícola— desde su origen y no solo desde la compra. Entiende lo que pasa dentro de la caseta y lo que ocurre aguas arriba, en la formulación del alimento.",
+      "queSeLleva": "Criterios concretos para revisar su operación: qué medir, cada cuándo medirlo y qué decisión tomar cuando los números no dan. Aplicable lo mismo para un traspatio que para una granja tecnificada."
+    },
+    {
+      "id": "04",
+      "slug": "ricardo",
+      "nombre": "Ricardo",
+      "credencial": "PENDIENTE — falta nombre completo y credenciales",
+      "retrato": "img/ponentes/retrato-04.webp",
+      "destacado": false,
+      "ponencias": [
+        "Inteligencia artificial en avicultura: herramientas para producir, vender y decidir mejor"
+      ],
+      "bioCorta": "PENDIENTE — semblanza por entregar.",
+      "formacion": "PENDIENTE",
+      "trayectoria": "PENDIENTE",
+      "especialidades": [],
+      "enfoque": "PENDIENTE",
+      "queSeLleva": "PENDIENTE"
+    },
+    {
+      "id": "05",
+      "slug": "miguel-angel-castillo-lopez",
+      "nombre": "M.V.Z. Miguel Ángel Castillo López",
+      "credencial": "Médico Veterinario Zootecnista · BUAP, especialidad UNAM",
+      "retrato": "img/ponentes/retrato-05.webp",
+      "destacado": false,
+      "ponencias": [
+        "Mortalidad en granja: causas frecuentes y estrategias para reducir pérdidas"
+      ],
+      "bioCorta": "Trayectoria en producción avícola en empresas de Puebla y Chiapas, en pollo de engorda y postura comercial. Especializado en manejo operativo de granjas, seguimiento de parámetros productivos y buenas prácticas de manejo y bioseguridad.",
+      "formacion": "Médico Veterinario Zootecnista por la Benemérita Universidad Autónoma de Puebla, con especialidad por la Universidad Nacional Autónoma de México.",
+      "trayectoria": "Su trayectoria está construida enteramente dentro del área de producción, en empresas avícolas de Puebla y Chiapas, en pollo de engorda y postura comercial. Actualmente se desempeña en la industria avícola privada.",
+      "especialidades": [
+        "Producción de pollo de engorda",
+        "Producción de postura comercial",
+        "Manejo operativo en granjas avícolas",
+        "Seguimiento de parámetros productivos",
+        "Buenas prácticas de manejo y bioseguridad",
+        "Organización y supervisión de procesos productivos"
+      ],
+      "enfoque": "Conoce de manera directa los retos operativos reales de una granja: los que aparecen a las cinco de la mañana, no los del manual. Ha vivido el manejo técnico desde adentro, con las restricciones de personal, presupuesto y tiempo con las que de verdad se opera.",
+      "queSeLleva": "Un método para leer su propia mortalidad: qué es normal y qué no, cómo distinguir una pérdida por manejo de una por enfermedad, qué señales anticipan un problema antes de que se dispare la curva, y qué hacer con esa información."
+    },
+    {
+      "id": "06",
+      "slug": "esteban-fructuoso-alducin",
+      "nombre": "IBQ. Esteban Fructuoso Alducin",
+      "credencial": "Ing. Bioquímico · Profesional Autorizado SENASICA · Sanfer Salud Animal",
+      "retrato": "img/ponentes/retrato-06.webp",
+      "destacado": false,
+      "ponencias": [
+        "PENDIENTE — ponencia por asignar"
+      ],
+      "bioCorta": "Doce años en el laboratorio de control de calidad de biológicos veterinarios: titulación de vacunas contra Newcastle, Gumboro, Marek e Influenza aviar, serología y aislamiento viral. Capacitado en titulación de Marek en Merial Select (Georgia, EUA) y cultivo celular avanzado en el IBt-UNAM.",
+      "formacion": "Ingeniero Bioquímico por el Instituto Tecnológico de Tehuacán (TecNM), con especialidad en Ingeniería en Alimentos. Profesional Autorizado por SENASICA en Laboratorio de Constatación para el Control de Calidad Interno en Biológicos.",
+      "trayectoria": "Analista de Cultivos Celulares en Sanfer Salud Animal desde 2014, trabajando bajo ISO 9001 y NMX-EC-17025-IMNC. Previamente fue Analista de Investigación en IASA, en desarrollo de nuevos productos.",
+      "especialidades": [
+        "Titulación de vacunas liofilizadas y congeladas para aves",
+        "Serología: micro virus suero-neutralización y ELISA",
+        "Aislamiento y propagación de virus aviares",
+        "Cultivos celulares primarios a partir de huevo embrionado",
+        "Mantenimiento y criopreservación de líneas celulares",
+        "Evaluación de toxicidad de antibióticos en sinergia con vacunas"
+      ],
+      "enfoque": "Es el único perfil del panel que viene desde el laboratorio y no desde la caseta. El productor compra vacunas y confía en que funcionan, pero rara vez sabe qué determina que un biológico proteja o no. Esteban vive del otro lado de esa pregunta: mide el título viral, verifica la potencia y detecta cuando algo salió mal.",
+      "queSeLleva": "PENDIENTE — depende de la ponencia que se le asigne."
+    }
+  ]
+}

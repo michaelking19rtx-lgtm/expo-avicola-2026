@@ -305,10 +305,17 @@ credencial:
 | 05 | `miguel-angel-castillo-lopez` |
 | 06 | `esteban-fructuoso-alducin` |
 
-**`src/data/ponentes.json` YA EXISTE** —fichas completas para la Fase 3, sin
-rastrear todavía y sin que ningún componente lo importe— y los seis slugs se
-cotejaron uno a uno contra él: **coinciden los seis**, igual que el destacado
-(Edgar en los dos archivos).
+**`src/data/ponentes.json` YA ESTÁ EN EL REPO** —fichas completas para la Fase
+3: credencial, bio, formación, trayectoria, especialidades y qué se lleva el
+asistente, con marcadores `PENDIENTE` donde falta dato. **Ningún componente lo
+importa todavía**; entra en juego con la Fase 3.
+
+Se commiteó con sus `PENDIENTE` a propósito: un archivo que existe en disco y
+que git no ve es el mismo fallo silencioso que se cerró en `.gitignore`, y los
+marcadores son información visible, no basura.
+
+Los seis slugs se cotejaron uno a uno contra él: **coinciden los seis**, igual
+que el destacado (Edgar en los dos archivos).
 
 El de `04` es `ricardo` en ambos, provisional en ambos: en `ponentes.json` su
 credencial dice «PENDIENTE — falta nombre completo». **Cuando llegue el nombre
@@ -1346,22 +1353,33 @@ ninguna etiqueta se sale del viewport, ninguna tapa una cara** y el nombre no
 pasa de dos líneas en ningún ancho. La etiqueta más alta son 90px en
 escritorio y 68px en la rejilla de móvil.
 
-> **EFECTO SECUNDARIO DEL CAMBIO DE DESTACADO, y va contra la regla de
-> recorte.** Con Edgar (`01`, coronilla 7.54%) en el centro, las laterales
-> pasan a ser `02` (4.50%) y `03` (7.63%): **3.13% de diferencia**, cuando la
-> regla pide 1%. Antes las laterales eran `01` y `03` —0.09%— y la de
-> coronilla más alta, `02`, iba al centro, que es justo donde la regla la
-> permite.
->
-> Medido en pantalla a 1440: la coronilla de Alejandro queda **12px por encima**
-> de la de Edgar, que es el destacado, y el sombrero acentúa la diferencia. El
-> arco se invierte por el lado izquierdo y el centro deja de leerse como el
-> protagonista.
->
-> **Se dejó así porque el reparto lo fija el encargo.** La salida, si algún día
-> molesta, es una línea de datos: reordenar `hero-ponentes.json` para que tras
-> el destacado vayan `03` y `05` (laterales a 0.58%), lo que manda a Alejandro
-> a la fila de fondo. Es una decisión editorial —quién va delante—, no técnica.
+#### EL ORDEN DEL ARRAY, y por qué es el que es
+
+`01 · 03 · 05 · 06 · 02 · 04`, con `01` destacado. **No es arbitrario: lo fija
+la regla de recorte.**
+
+| | Fila frontal (izq→der) | Coronillas | Diferencia entre laterales |
+| :-- | :-- | :-- | :-- |
+| Primer intento | `02` · **01** · `03` | 4.50 / 7.54 / 7.63 | **3.13%** ✗ |
+| Definitivo | `03` · **01** · `05` | 7.63 / 7.54 / 8.21 | **0.58%** ✓ |
+
+Al pasar el destacado a Edgar (`01`) conservando el orden anterior, las
+laterales quedaban a 3.13% —la regla pide 1%— y, peor, **el centro dejaba de
+ser el más alto**: medido en pantalla a 1440 con las figuras quietas, la
+coronilla de Alejandro quedaba 12px por encima de la del destacado, y el
+sombrero lo acentuaba. El arco se invertía por la izquierda y el protagonista
+dejaba de leerse como tal, que es justo lo contrario de destacar a alguien.
+
+Con el orden definitivo las tres cabezas frontales quedan **dentro de 2px** y
+Alejandro pasa a la fila de fondo, donde su altura asoma entre hombros sin
+competir. La fila de fondo queda `06 · 02 · 04` —laterales a 2.38%, y el más
+alto en el centro— repitiendo la misma lógica en pequeño.
+
+> **Al medir coronillas en pantalla, hay que apagar el movimiento.** La primera
+> medida daba 12-14px de desnivel entre las tres frontales *después* del
+> arreglo, y era la FLOTACIÓN: cada figura oscila ±10px con fase distinta. Con
+> `prefers-reduced-motion` quedan quietas y la medida es del recorte, no de la
+> animación.
 
 ---
 

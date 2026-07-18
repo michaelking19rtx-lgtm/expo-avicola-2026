@@ -8,19 +8,19 @@
     "destacado": true
   },
   {
-    "id": "02",
-    "slug": "alejandro-espinosa-arista",
-    "nombre": "Ing. Alejandro Espinosa Arista",
-    "tema": "Bioseguridad inteligente",
-    "img": "img/hero/ponente-02.webp",
-    "destacado": false
-  },
-  {
     "id": "03",
     "slug": "jose-angel-de-la-cruz-hernandez",
     "nombre": "IAZ. José Ángel de la Cruz Hernández",
     "tema": "Productividad en pollo y gallina",
     "img": "img/hero/ponente-03.webp",
+    "destacado": false
+  },
+  {
+    "id": "05",
+    "slug": "miguel-angel-castillo-lopez",
+    "nombre": "M.V.Z. Miguel Ángel Castillo López",
+    "tema": "Mortalidad en granja",
+    "img": "img/hero/ponente-05.webp",
     "destacado": false
   },
   {
@@ -33,11 +33,11 @@
     "destacado": false
   },
   {
-    "id": "05",
-    "slug": "miguel-angel-castillo-lopez",
-    "nombre": "M.V.Z. Miguel Ángel Castillo López",
-    "tema": "Mortalidad en granja",
-    "img": "img/hero/ponente-05.webp",
+    "id": "02",
+    "slug": "alejandro-espinosa-arista",
+    "nombre": "Ing. Alejandro Espinosa Arista",
+    "tema": "Bioseguridad inteligente",
+    "img": "img/hero/ponente-02.webp",
     "destacado": false
   },
   {
