@@ -192,6 +192,29 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
     > guardando todas se ve qué elemento gana, con qué área y en qué instante.
     > Cuando el LCP no cuadre con lo que se ve, medir el tiempo hasta que el
     > contenido está de verdad puesto y comparar ese.
+14. **Un aserto que pasa no prueba que se vea bien.** Los asertos verifican
+    existencia y estado (hay iframe, hay atributo, hubo petición); no verifican
+    apariencia. **Toda tarea con resultado visual se cierra mirando la captura,
+    no solo leyendo los números.** En este proyecto tres fallos reales pasaron
+    todas las comprobaciones numéricas.
+
+    > **Los tres casos.** (1) *Fase 2b* — la etiqueta de la figura central
+    > aterrizaba sobre la cara de la vecina. Estaba dentro del viewport y no
+    > pisaba la columna de texto, que era todo lo que se comprobaba. (2) *Fase
+    > 2c* — la etiqueta se pintaba encima de los CTAs entre 700 y 991px; la
+    > comprobación buscaba colisión con la columna de texto, que en ese tramo
+    > no existe porque el hero es de una sola columna. (3) *Sede* — el mapa
+    > bajo demanda cargaba en un marco vacío mientras `data-estado` decía
+    > «cargado», había 1 iframe en el DOM, se registraba 1 petición a Google y
+    > el foco aterrizaba en el iframe. Los cuatro asertos, correctos.
+    >
+    > **La causa del tercero, que además es una trampa de Astro que volverá a
+    > aparecer:** un elemento inyectado por JS con `createElement` **no lleva
+    > el atributo `data-astro-cid-*`** con el que Astro acota los estilos del
+    > componente, así que ninguna regla del `<style>` le aplica. El iframe
+    > salía con los valores por defecto —`display:inline`, 304×154— dentro de
+    > un marco de 504×378. **Todo lo que el JS inyecte necesita `:global()` en
+    > su regla.**
 
 > **Nota sobre las convenciones 11, 12 y 13.** Son la misma falla con distinto
 > disfraz: un número que parece evidencia sin serlo. **11** = cifra escrita sin
