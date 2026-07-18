@@ -265,45 +265,41 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
 
-### Falta UN nombre en el hero · ABIERTO · MANTIENE EL `noindex`
+### Los nombres del hero · CERRADO · EL `noindex` SE RETIRÓ
 
-**Cinco de seis ponentes ya llevan su nombre real.** Queda uno:
-`ponente-04`, cuya ponencia sí está confirmada —«Inteligencia artificial en
-avicultura»— pero cuyo nombre no. Su etiqueta dice «Ponente por confirmar» a
-propósito.
+**Los seis ponentes llevan ya su nombre real y su tema real.** Llegaron los dos
+datos que faltaban: el nombre de `ponente-04` (Ing. Ricardo Olmos Rivera) y la
+ponencia de `ponente-06` (Esteban), que hasta entonces enseñaba su credencial
+por no tener tema asignado.
 
-**CONDICIÓN EXACTA PARA RETIRAR EL `noindex`**, y son las tres a la vez:
+Con eso se cumplieron las tres condiciones que se habían anotado aquí y **la
+home salió de `noindex`**: `src/pages/index.astro` pasa `<Base evento>` a secas.
+El sitemap ya incluía la home y no dependía del atributo, así que la indexación
+se reanuda sola en el siguiente rastreo.
 
-1. `ponente-04` tiene su nombre real en `hero-ponentes.json`.
-2. Su `slug` deja de ser el provisional `ponente-04` y pasa a derivarse del
-   nombre; se borra la clave `slugProvisional`.
-3. Se quita el atributo `noindex` de `<Base>` en `src/pages/index.astro`.
+**Se levanta también el veto de publicación promocional.** El riesgo era que un
+buscador cacheara —o que una campaña difundiera— una versión con caras reales
+junto a «Ponente por confirmar». Ya no existe esa versión.
 
-Mientras tanto **la home sigue fuera de buscadores**: el hero enseña seis caras
-reales y una de ellas iría acompañada de una etiqueta vacía. Es el único punto
-del sitio donde un dato pendiente no se degrada con dignidad, porque la foto sí
-es real. Con cinco de seis el riesgo baja mucho —una sola cara sin nombre entre
-cinco identificadas se lee como «falta este», no como «esto está sin
-terminar»—, pero no desaparece.
-
-> **`ponente-06` NO es un placeholder.** IBQ. Esteban Fructuoso Alducin lleva
-> su credencial real —«Profesional Autorizado SENASICA»— en la segunda línea
-> porque su ponencia todavía no está asignada. Es dato verdadero: no hay que
-> «arreglarlo», y cuando se le asigne tema, se sustituye.
+> **SI VUELVE A ENTRAR UN PLACEHOLDER EN EL HERO**, vuelve a poner `noindex` en
+> `index.astro` antes de que se rastree. Es un atributo booleano de `<Base>` y
+> nada más depende de él. La comprobación barata es sobre el HTML COMPILADO, no
+> sobre el fuente: `grep -i "por confirmar" dist/index.html` tiene que dar cero.
 
 #### Los `slug` son ya los definitivos, y NO hay dónde contrastarlos
 
-Los cinco confirmados usan su nombre en minúsculas y sin acentos, sin la
-credencial:
+Los seis usan su nombre en minúsculas y sin acentos, sin la credencial:
 
 | id | slug |
 | :- | :--- |
 | 01 | `edgar-oliva-ramirez` |
 | 02 | `alejandro-espinosa-arista` |
 | 03 | `jose-angel-de-la-cruz-hernandez` |
-| 04 | `ricardo` ← **provisional**, marcado con `slugProvisional: true` |
+| 04 | `ricardo-olmos-rivera` |
 | 05 | `miguel-angel-castillo-lopez` |
 | 06 | `esteban-fructuoso-alducin` |
+
+Ya no queda ninguno con `slugProvisional`.
 
 **`src/data/ponentes.json` YA ESTÁ EN EL REPO** —fichas completas para la Fase
 3: credencial, bio, formación, trayectoria, especialidades y qué se lleva el
@@ -317,17 +313,15 @@ marcadores son información visible, no basura.
 Los seis slugs se cotejaron uno a uno contra él: **coinciden los seis**, igual
 que el destacado (Edgar en los dos archivos).
 
-El de `04` es `ricardo` en ambos, provisional en ambos: en `ponentes.json` su
-credencial dice «PENDIENTE — falta nombre completo». **Cuando llegue el nombre
-completo hay que cambiarlo en los DOS ficheros a la vez**, porque de ese slug
-cuelga el ancla `#ponente-{slug}` que enlazará el hero con la ficha.
+**Ya no queda ningún `PENDIENTE` en el archivo**: la ficha de Ricardo se rellenó
+entera (credencial, ponencia, bio, trayectoria, seis especialidades, enfoque y
+qué se lleva) y a Esteban se le puso su ponencia y su `queSeLleva`.
 
-**LA HOME ESTÁ EN `noindex` POR ESTO.** `src/pages/index.astro` pasa `noindex`
-a `<Base>` desde la Fase 2c: que un buscador indexe y cachee una versión con
-caras reales junto a «Ponente por confirmar» es peor que no aparecer todavía.
-**Para publicar solo hay que quitar ese atributo**; el sitemap ya incluye la
-home y no depende de él, así que la indexación se reanuda en el siguiente
-rastreo.
+**El `slug` de un ponente vive en DOS ficheros y hay que cambiarlo en los dos a
+la vez**, porque de él cuelga el ancla `#ponente-{slug}` que enlazará el hero
+con la ficha en la Fase 3. Un script de verificación coteja los seis por `id`,
+comparando `slug` Y `nombre`; conviene volver a pasarlo tras tocar cualquiera
+de los dos archivos.
 
 ### Anclas de navegación que no llevan a ningún sitio · CASI CERRADO
 
@@ -386,16 +380,37 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
 | 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera. Las 3 del hero ya están; faltan las de las fichas |
 | ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
-| 9b | **Nombre real de UNA figura del hero** (`ponente-04`) | `src/data/hero-ponentes.json` | «Ponente por confirmar» en una de seis. **Ver el primer riesgo abierto: mantiene la home en `noindex`** |
+| ~~9b~~ | ~~**Nombre real de UNA figura del hero**~~ | ~~`hero-ponentes.json`~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera. Con él se retiró el `noindex` |
 | ~~9c~~ | ~~**Las otras 3 figuras del hero**~~ | ~~`public/img/hero/ponente-0{4,5,6}.webp`~~ | **RESUELTO** — entregadas e integradas en la Fase 2c |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
-| 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
+| ~~11~~ | ~~**Ponente de la sesión de IA**~~ | ~~`programa.json`, bloque 13:10~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera |
+| 15 | **Hueco en la agenda para la 7ª ponencia** (Esteban) | `programa.json` | Su sesión sale en el hero y en el JSON-LD, pero **no aparece en la agenda**. Ver el riesgo abierto de abajo |
 | ~~12~~ | ~~**Stripe**: producto, precio y checkout~~ | ~~`boletos.json`~~ | **RESUELTO** — Payment Link conectado en `checkoutUrl` |
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
 | 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
 
-El que más pesa ahora es el **9b**, que mantiene la home en `noindex` y por
-tanto fuera de buscadores. El 8 sigue bloqueando la Fase 3.
+El que más pesa ahora es el **15**: hay siete ponentes anunciados y la agenda
+solo enseña seis sesiones. El 8 sigue bloqueando la Fase 3.
+
+### La séptima ponencia no tiene hueco en la agenda · ABIERTO · decide el cliente
+
+`programa.json` tiene **6 ponencias y hay 7 ponentes**. La de Esteban —«Detrás
+de la vacuna: qué determina que un biológico proteja tu parvada»— está en el
+hero, en su ficha y en el JSON-LD, pero **no tiene horario**.
+
+**El día está lleno al minuto:** 08:00–16:30 son 510 min y los bloques actuales
+suman 510. Meter una ponencia de 35 min obliga a quitar 35 de otro sitio. Se le
+pasaron tres opciones al cliente con su coste (ver la bitácora, «Los dos datos
+que faltaban»); **no se tocó ningún horario a la espera de su decisión.**
+
+Mientras tanto la incoherencia es visible para quien compare el hero con la
+agenda. No es un fallo de código: es un dato que falta.
+
+> **`ponentes()` de `schema.js` ya lo cubre.** Une agenda Y hero justamente para
+> este caso: un ponente confirmado y anunciado que todavía no tiene hueco. Por
+> eso el JSON-LD declara los seis del hero aunque la agenda solo liste cinco
+> nombres. Si algún día toda la agenda estuviera completa, la unión seguiría
+> siendo correcta, solo que redundante.
 
 ---
 
@@ -1762,6 +1777,92 @@ carátula se oculta con `visibility`. Si una extensión bloqueara Maps, el
 Recorriendo la página entera antes de pulsar: **cero peticiones a Google**. Con
 Tab real, el botón recibe anillo de foco (`:focus-visible`, 2px en `--accent`)
 y Enter carga el mapa dejando el foco dentro.
+
+---
+
+### Los dos datos que faltaban — el sitio sale a buscadores
+
+Llegan el nombre de `ponente-04` y la ponencia de `ponente-06`, los dos últimos
+huecos del hero. Con ellos **se retira el `noindex` y la home queda publicable**.
+
+**Qué se hizo**
+
+- `hero-ponentes.json`: `04` pasa a «Ing. Ricardo Olmos Rivera» con slug
+  definitivo `ricardo-olmos-rivera`, y se borra `slugProvisional`. `06` cambia
+  su credencial por su tema real y se borra `temaEsCredencial`.
+- `ponentes.json`: ficha completa de Ricardo y, en Esteban, su ponencia y su
+  `queSeLleva`. **Cero marcadores `PENDIENTE` en el archivo.**
+- `index.astro`: fuera el `noindex`.
+- `programa.json`: el bloque de las 13:10 deja de decir «Por confirmar».
+
+**Decisiones**
+
+- **`temaEsCredencial` se borra sin tocar código porque nunca lo hubo.** Era
+  una anotación de datos: `grep` por ella en `src/` da cero usos. Servía para
+  documentar por qué esa figura enseñaba una credencial donde las demás
+  enseñaban un tema, y al llegar el tema dejó de tener sentido.
+- **El nombre del ponente de IA se rellenó en `programa.json` aunque el encargo
+  solo pedía proponer dónde encaja la sesión de Esteban.** No es reacomodar
+  horarios: es el pendiente 11 de esta lista, el título del bloque ya coincidía
+  palabra por palabra con la ponencia de Ricardo, y dejarlo habría publicado
+  una página donde el hero dice «Ing. Ricardo Olmos Rivera» y la agenda, tres
+  secciones más abajo, «Por confirmar» para esa misma sesión.
+- **El comentario de `ponentes()` en `schema.js` se corrigió.** Explicaba la
+  unión agenda + hero diciendo que Esteban «aparece con su credencial en vez de
+  tema porque su ponencia no está asignada». Ya tiene tema; lo que no tiene es
+  HORARIO. La unión sigue siendo necesaria por eso, pero por otra razón, y un
+  comentario que justifica código con un hecho caducado es peor que ninguno.
+
+**LA AGENDA SIGUE CON 6 SESIONES Y HAY 7 PONENTES.** No se tocó ningún horario:
+se le pasaron al cliente tres opciones con su coste y decide él. Ver el riesgo
+abierto «La séptima ponencia no tiene hueco en la agenda».
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+Verificado sobre el **HTML compilado**, no sobre el fuente:
+
+| Comprobación | Resultado |
+| :----------- | :-------- |
+| «Por confirmar» en `dist/index.html` | **0 ocurrencias** |
+| `<figcaption>` del hero | 6, los seis con nombre y tema reales |
+| `performer` del JSON-LD | **6**, sin nulos y sin «confirmar» |
+| `<meta robots>` en la home | **no existe** |
+| `<meta robots>` en `/admin` | `noindex, follow` — intacto |
+| `robots.txt` → sitemap declarado | existe en `dist`, y la home está dentro |
+| `/admin` en el sitemap | fuera, como debe |
+| slug + nombre, hero vs fichas | **coinciden los seis** |
+| `slugProvisional` restantes | 0 |
+
+Y en pantalla, con `prefers-reduced-motion` activo, en 360 / 375 / 390 / 430 /
+768 / 1024 / 1440 y en los dos temas:
+
+- **0 px de desbordamiento horizontal** en los catorce casos.
+- Las dos etiquetas nuevas —Ricardo, el nombre más largo; Esteban, el tema más
+  largo con diferencia— **nunca se salen del viewport, nunca se recortan y no
+  tocan ninguna silueta**. Holgura mínima a la coronilla ajena: 9 px.
+- Barrido de 700 a 1279 px (el tramo de una sola columna, donde la etiqueta se
+  pinta encima): **0 choques** con CTAs, cuenta regresiva, tagline o título.
+  Margen más ajustado, 107 px.
+
+**Nota de método: un aserto que FALLA tampoco prueba que se vea mal.** El primer
+chequeo dio 12 fallas de «la etiqueta pisa a Alejandro» comparando contra
+`.figura__marco`, que es el lienzo entero y trae ~38 % de margen transparente.
+La etiqueta se pinta en el cielo vacío por encima del conjunto, así que solapaba
+el hueco sobre su cabeza y ni una cara. Al medir contra la SILUETA real
+—decodificando la alfa del WebP en un canvas— las 12 desaparecen. **Es la
+convención 14 en el sentido contrario: el número decía «falla» y la captura
+decía «bien», y mandaba la captura.**
+
+Y una segunda, del mismo día: el chequeo contra siluetas eligió la etiqueta con
+«la primera cuya opacidad > 0.5» y devolvió cajas IDÉNTICAS para Ricardo y para
+Esteban. No podían serlo. Entre 700 y 1279 px el nombre va siempre visible bajo
+cada figura, así que la condición casaba con la primera del DOM y no con la que
+se había encendido. Seleccionando por nombre, las cajas cuadran con las del
+primer script. **Dos medidas que coinciden cuando no deberían son una señal de
+que se está midiendo el elemento equivocado** — la misma familia que la
+convención 13.
 
 ---
 

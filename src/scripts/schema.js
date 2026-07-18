@@ -116,10 +116,10 @@ function ponentes() {
     2. Y quien está anunciado en el hero.
 
     Hacen falta LAS DOS fuentes, y ninguna basta sola: un ponente puede estar
-    confirmado y anunciado sin tener todavía sesión en la agenda —hoy es el
-    caso de IBQ. Esteban Fructuoso Alducin, que aparece en el hero con su
-    credencial en vez de tema porque su ponencia no está asignada—, y a la
-    inversa, la agenda podría llevar a alguien que no salga en el hero.
+    confirmado y anunciado, con título de ponencia y todo, sin tener todavía
+    HUECO en la agenda —hoy es el caso de IBQ. Esteban Fructuoso Alducin, cuya
+    sesión está escrita pero sin horario asignado—, y a la inversa, la agenda
+    podría llevar a alguien que no salga en el hero.
 
     Un `performer` es quien participa en el evento, no quien tiene hueco en el
     horario, así que quedarse solo con la agenda dejaría fuera a una persona

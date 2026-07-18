@@ -27,8 +27,7 @@
     "id": "06",
     "slug": "esteban-fructuoso-alducin",
     "nombre": "IBQ. Esteban Fructuoso Alducin",
-    "tema": "Profesional Autorizado SENASICA",
-    "temaEsCredencial": true,
+    "tema": "Detrás de la vacuna: qué determina que un biológico proteja tu parvada",
     "img": "img/hero/ponente-06.webp",
     "destacado": false
   },
@@ -42,9 +41,8 @@
   },
   {
     "id": "04",
-    "slug": "ricardo",
-    "slugProvisional": true,
-    "nombre": "Ponente por confirmar",
+    "slug": "ricardo-olmos-rivera",
+    "nombre": "Ing. Ricardo Olmos Rivera",
     "tema": "Inteligencia artificial en avicultura",
     "img": "img/hero/ponente-04.webp",
     "destacado": false

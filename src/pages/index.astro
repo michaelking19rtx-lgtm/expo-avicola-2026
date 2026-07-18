@@ -17,16 +17,16 @@ import Footer from '../components/Footer.astro';
 {/*
   `evento`: la home es la única página que emite el JSON-LD del congreso.
 
-  `noindex` TEMPORAL. Mientras las etiquetas del hero lleven nombres
-  PLACEHOLDER, la home enseña caras reales de ponentes junto a «Ponente por
-  confirmar»; que un buscador indexe y cachee esa versión es peor que no
-  aparecer todavía. Ver el primer riesgo abierto de CLAUDE.md.
+  SIN `noindex` desde que llegaron los seis nombres reales. La home lo llevó
+  desde la Fase 2c porque el hero enseñaba caras reales junto a «Ponente por
+  confirmar», y que un buscador cachee esa versión es peor que no aparecer.
+  Hoy las seis etiquetas son nombre real y tema real.
 
-  QUÉ QUITAR PARA PUBLICAR: solo el atributo `noindex` de esta línea. El
-  sitemap ya incluye la home y no depende de esto, así que la indexación se
-  reanuda sola en el siguiente rastreo.
+  SI VUELVE A ENTRAR UN PLACEHOLDER EN EL HERO, vuelve a ponerlo: es un
+  atributo booleano de <Base>, `<Base evento noindex>`, y nada más depende de
+  él. `/admin` sí lo lleva de forma permanente, por otro motivo.
 */}
-<Base evento noindex>
+<Base evento>
   <Nav />
   {/* tabindex="-1": destino del enlace «Saltar al contenido». Sin él, un <main>
       no es focalizable y el salto movería el scroll pero no el foco. */}

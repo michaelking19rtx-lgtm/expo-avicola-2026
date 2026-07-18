@@ -76,20 +76,27 @@
     },
     {
       "id": "04",
-      "slug": "ricardo",
-      "nombre": "Ricardo",
-      "credencial": "PENDIENTE — falta nombre completo y credenciales",
+      "slug": "ricardo-olmos-rivera",
+      "nombre": "Ing. Ricardo Olmos Rivera",
+      "credencial": "Fundador de TEC CAPITAL Group · Director de Software a la Medida",
       "retrato": "img/ponentes/retrato-04.webp",
       "destacado": false,
       "ponencias": [
         "Inteligencia artificial en avicultura: herramientas para producir, vender y decidir mejor"
       ],
-      "bioCorta": "PENDIENTE — semblanza por entregar.",
-      "formacion": "PENDIENTE",
-      "trayectoria": "PENDIENTE",
-      "especialidades": [],
-      "enfoque": "PENDIENTE",
-      "queSeLleva": "PENDIENTE"
+      "bioCorta": "Desarrolla plataformas digitales a la medida para el sector agroindustrial y acompaña como consultor a productores y empresas en la modernización de sus procesos. Su enfoque: convertir los registros de granja en decisiones con datos.",
+      "formacion": "Ingeniero. Fundador de TEC CAPITAL Group.",
+      "trayectoria": "Fundador de TEC CAPITAL Group y director del Departamento de Software a la Medida. Su trabajo se ubica en el cruce entre la tecnología aplicada y la producción agroindustrial. Encabeza el desarrollo de plataformas digitales para el sector agropecuario y de consultoría, desde el registro y control de operaciones hasta sistemas de gestión, seguimiento de indicadores y automatización de procesos administrativos. En paralelo se desempeña como consultor agroindustrial.",
+      "especialidades": [
+        "Desarrollo de software a la medida para el sector agroindustrial",
+        "Sistemas de registro y control de operaciones en granja",
+        "Seguimiento de indicadores y tableros de gestión",
+        "Automatización de procesos administrativos",
+        "Consultoría agroindustrial",
+        "Digitalización progresiva para productores pequeños y medianos"
+      ],
+      "enfoque": "Los demás ponentes coinciden en que hay que medir. Él responde la pregunta que queda flotando después: cómo medirlo. La realidad de muchas granjas medianas y pequeñas es un cuaderno en la caseta y la memoria del encargado, y con eso no se puede corregir nada porque no se puede comparar nada. Su enfoque no es vender un sistema caro, sino mostrar cómo empezar a capturar los propios datos con lo que ya se tiene a la mano y escalar cuando la operación lo pida.",
+      "queSeLleva": "Un punto de partida concreto: qué cinco cosas debería estar registrando desde mañana, cómo hacerlo sin complicarse, y qué señales indican que su operación ya justifica invertir en un sistema propio."
     },
     {
       "id": "05",
@@ -123,7 +130,7 @@
       "retrato": "img/ponentes/retrato-06.webp",
       "destacado": false,
       "ponencias": [
-        "PENDIENTE — ponencia por asignar"
+        "Detrás de la vacuna: qué determina que un biológico proteja tu parvada"
       ],
       "bioCorta": "Doce años en el laboratorio de control de calidad de biológicos veterinarios: titulación de vacunas contra Newcastle, Gumboro, Marek e Influenza aviar, serología y aislamiento viral. Capacitado en titulación de Marek en Merial Select (Georgia, EUA) y cultivo celular avanzado en el IBt-UNAM.",
       "formacion": "Ingeniero Bioquímico por el Instituto Tecnológico de Tehuacán (TecNM), con especialidad en Ingeniería en Alimentos. Profesional Autorizado por SENASICA en Laboratorio de Constatación para el Control de Calidad Interno en Biológicos.",
@@ -137,7 +144,7 @@
         "Evaluación de toxicidad de antibióticos en sinergia con vacunas"
       ],
       "enfoque": "Es el único perfil del panel que viene desde el laboratorio y no desde la caseta. El productor compra vacunas y confía en que funcionan, pero rara vez sabe qué determina que un biológico proteja o no. Esteban vive del otro lado de esa pregunta: mide el título viral, verifica la potencia y detecta cuando algo salió mal.",
-      "queSeLleva": "PENDIENTE — depende de la ponencia que se le asigne."
+      "queSeLleva": "Criterios para que la vacuna que ya paga cumpla su función: qué determina la potencia de un biológico, por qué la cadena de frío pesa más que la marca, cómo manipularlo sin inactivarlo y qué señales delatan un lote comprometido. Una vacuna mal conservada no protege menos: puede no proteger nada."
     }
   ]
 }
