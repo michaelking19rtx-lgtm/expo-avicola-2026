@@ -4,7 +4,8 @@ Landing estática del evento **Expo Avícola Productiva 2026**.
 
 - **Fecha:** 7 de agosto de 2026
 - **Sede:** Tehuacán, Puebla
-- **Producción:** _pendiente de publicar_ → será https://michaelking19.github.io/expo-avicola-2026
+- **Producción:** https://michaelking19rtx-lgtm.github.io/expo-avicola-2026
+  _(requiere activar Pages: Settings → Pages → source «GitHub Actions»)_
 
 ## Stack
 

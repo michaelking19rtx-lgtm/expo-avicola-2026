@@ -14,7 +14,7 @@ Landing de una sola página para una conferencia del sector avícola.
 | Fecha      | 7 de agosto de 2026              |
 | Sede       | Tehuacán, Puebla                 |
 | Tipo       | Landing de evento, estática      |
-| Producción | _pendiente de publicar_ → https://michaelking19.github.io/expo-avicola-2026 |
+| Producción | https://michaelking19rtx-lgtm.github.io/expo-avicola-2026 |
 
 Estética: **oscura, editorial, premium**. No es un sitio corporativo genérico ni
 un dashboard: es una pieza editorial con jerarquía tipográfica fuerte, mucho
@@ -208,8 +208,10 @@ cambiar → recargar).
 
 No se construyó ninguna sección visual del evento — eso empieza en la Fase 2.
 
-**Pendiente para cerrar la fase del todo:** publicar. El repo remoto aún no
-existe porque `gh` no estaba autenticado. Falta: `gh auth login`, crear el repo
-público `expo-avicola-2026`, `git push -u origin main` y, en *Settings → Pages*,
-elegir **GitHub Actions** como source (el workflow no habilita Pages por sí
-solo). Hasta entonces, la URL de producción de arriba responde 404.
+**Publicación:** el repo público `expo-avicola-2026` vive en la cuenta
+`michaelking19rtx-lgtm` (no `michaelking19`, que fue una suposición inicial a
+partir del email de git). De ahí sale el `site` de `astro.config.mjs`.
+
+**Único paso manual pendiente:** en *Settings → Pages*, elegir **GitHub
+Actions** como source. El workflow no habilita Pages por sí solo, así que hasta
+hacerlo el job `deploy` falla y la URL de producción responde 404.
