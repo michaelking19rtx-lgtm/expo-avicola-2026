@@ -22,3 +22,15 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Originales sin optimizar. Un binario grande commiteado se queda en el
+# historial para siempre, aunque después lo borres: `git clone` sigue
+# descargándolo. El original de ponentes.png (4.79 MB) vive fuera del repo, en
+# ../expo-avicola-2026-assets-originales/. Al repo solo entra la versión
+# servida (public/img/hero/ponentes.webp, 125 KB).
+public/img/**/*.png
+public/img/**/*.jpg
+public/img/**/*.jpeg
+public/img/**/*.tif
+public/img/**/*.tiff
+public/img/**/*.psd

@@ -234,7 +234,7 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 6 | **WhatsApp** | `site.contacto.whatsapp` | «Próximamente» en el footer; el aviso de Boletos no promete WhatsApp |
 | 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
 | 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera |
-| 9 | **Imagen del hero** | `public/img/hero/ponentes.png` | Placeholder punteado (y un 404 en consola) |
+| ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO** — entregada y optimizada a `ponentes.webp` (125 KB) |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
 | 12 | **Stripe**: producto, precio y checkout | `boletos.json` (`priceId`, `checkoutUrl`) | El botón avisa de que la venta abre pronto |
@@ -402,7 +402,7 @@ horizontal; menú móvil ejercitado con clics y teclado; con
 
 | Archivo | Para qué | Notas |
 | :------ | :------- | :---- |
-| `public/img/hero/ponentes.png` | Imagen de ponentes del hero | PNG con fondo transparente, todos juntos. El marco es **4:3** y usa `object-fit: contain`; si la proporción es muy distinta quedarán franjas vacías — ajusta el `aspect-ratio` de `.hero__frame`. Hasta que exista, se ve el placeholder punteado (y hay un 404 en consola). |
+| ~~`public/img/hero/ponentes.png`~~ | Imagen de ponentes del hero | **ENTREGADA.** Ver «Imagen del hero» en la bitácora de optimización, al final de este archivo. Hoy se sirve `ponentes.webp` (1400×781, 125 KB) y `.hero__frame` pasó a 16/9. |
 | `public/video/congreso.mp4` y `.webm` | Video de la sección "El congreso" | Sustituir el bloque `.intro__placeholder` por el marcado ya escrito en el comentario de `VideoSection.astro`. |
 | `public/img/hero/poster-congreso.jpg` | Póster del video | Mismo 16:9 del reproductor. |
 
@@ -766,3 +766,74 @@ Con HTTP/2 el coste es bajo y el total son 10 KB, así que **no se tocó**:
 unificarlos obligaría a sacar el JS de los once componentes a un punto de
 entrada común y a perder la localidad que hace legible cada uno. Queda anotado
 por si algún día una auditoría de red lo señala.
+
+---
+
+### Imagen del hero — entregada y optimizada
+
+El cliente entregó `ponentes.png`: foto grupal de los seis ponentes, recortada
+sobre fondo transparente. **2752×1536 px y 4.79 MB.**
+
+**Auditoría del original**
+
+- Alfa **real**, no un fondo blanco horneado: 40.6% de píxeles transparentes,
+  las cuatro esquinas a `(0,0,0,0)`. Verificado también en el navegador contra
+  el halo, en los dos temas.
+- Recorte **limpio**: sobre los 20 664 píxeles del anillo de alfa parcial, solo
+  un 3.4% queda casi blanco y el histograma está repartido. A 3× de zoom no se
+  ve fleco. (Una primera medición sugirió un 34% de borde claro: era un
+  artefacto del muestreo, que tomaba el primer píxel de cada fila y caía
+  sistemáticamente en camisas blancas.)
+- Sin metadatos que inflen (21 B) y **ya óptimamente comprimida como PNG**:
+  re-codificarla sin pérdida daba exactamente el mismo tamaño.
+- El problema no era la imagen, era el formato: **1.19 bytes por píxel**, que es
+  lo que pasa al guardar una fotografía en PNG.
+
+**Lo que se hizo**
+
+| | Antes | Después |
+| :-- | --: | --: |
+| Archivo | `ponentes.png` | `ponentes.webp` |
+| Dimensiones | 2752×1536 | **1400×781** |
+| Peso | 4 904 KB | **125 KB** (−97.4%) |
+| Primera carga | 5 060 KB | **282 KB** |
+| Descarga en 4G lento | 25.7 s | **1.5 s** |
+| LCP (sin limitar) | 320 ms | 320 ms |
+| CLS | 0 | **0** |
+
+- **WebP a 1400 px, calidad 90, sin respaldo PNG.** 1400 px cubre DPR2 en el
+  breakpoint más exigente (el render más ancho son 681 px, en 768 px de
+  viewport). WebP con alfa lo soportan todos los navegadores desde 2020.
+- **`.hero__frame` pasó de 4/3 a 16/9.** Con 4/3 el marco reservaba entre 32 y
+  65 px de alto que la imagen nunca ocupaba. Ahora el desajuste es de 0.8–1.6 px.
+  Esto **no agranda la imagen** —el `contain` está limitado por el ancho en los
+  tres breakpoints—, solo elimina alto muerto.
+- **Desvanecido inferior con `mask-image`.** Los ponentes están recortados a
+  media altura del torso y ese corte recto, flotando sobre el halo, se leía como
+  un tajo. El degradado ocupa el último 12%. Va en el `<img>` y no en el marco,
+  para que el placeholder punteado —que es hermano, no hijo— siga intacto cuando
+  la imagen no carga. Verificado bloqueando la petición: `data-state=failed`,
+  placeholder visible y con `mask-image: none`.
+
+**EL ORIGINAL NO ESTÁ EN EL REPO.** Un binario de 4.79 MB commiteado se queda en
+el historial para siempre, aunque después se borre: cada `git clone` lo sigue
+descargando. El original vive en:
+
+```text
+C:\dev\expo-avicola-2026-assets-originales\ponentes.png
+```
+
+Es una carpeta hermana del repo, **fuera de control de versiones**. Guárdala
+aparte (copia de seguridad o almacenamiento del cliente): es la única fuente si
+algún día hay que regenerar la imagen a otro tamaño.
+
+`.gitignore` bloquea `public/img/**/*.{png,jpg,jpeg,tif,tiff,psd}` para que no
+vuelva a colarse un original sin optimizar. Comprobado creando un `.png` de
+prueba: git lo ignora. **Al repo solo entran los archivos ya servibles.**
+
+> **Cómo regenerar el WebP si hace falta:** no hay herramienta de imagen en el
+> proyecto ni se añadió ninguna dependencia. La conversión se hizo conduciendo
+> Chrome headless por CDP y volcando `canvas.toDataURL('image/webp', 0.90)` a
+> disco. Si mañana hace falta otro tamaño, o se repite ese método, o se usa
+> `astro:assets` moviendo el original a `src/assets/` (que además generaría el
+> `srcset` responsive solo).

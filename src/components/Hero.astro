@@ -81,12 +81,21 @@ const unidades = [
 
       <div class="hero__float" data-hero-float>
         <div class="hero__frame" data-hero-frame data-anim>
+          {/*
+            WebP a 1400px de ancho, sin respaldo PNG: WebP con alfa lo soportan
+            todos los navegadores desde 2020. El original de 2752px pesaba
+            4.79 MB y tardaba 25 s en 4G lento; este pesa 125 KB.
+
+            width/height son los REALES del archivo (1400×781). Con valores que
+            no correspondan, el navegador reserva una caja con la proporción
+            equivocada y reaparece el salto de layout que evitan.
+          */}
           <img
             class="hero__img"
-            src={asset('img/hero/ponentes.png')}
+            src={asset('img/hero/ponentes.webp')}
             alt="Ponentes de la Expo Avícola Productiva 2026"
-            width="1200"
-            height="900"
+            width="1400"
+            height="781"
             loading="eager"
             fetchpriority="high"
             decoding="async"
@@ -444,15 +453,55 @@ const unidades = [
     pointer-events: none;
   }
 
+  /*
+    16/9 y no 4/3: la imagen real es 1400×781 (1.792). Con 4/3 el marco
+    reservaba entre 32 y 65 px de alto que la imagen nunca ocupaba —invisibles,
+    porque el fondo es transparente, pero descuadraban el bloque. Con 16/9 el
+    desajuste baja a ~1.5 px.
+
+    Ojo: esto NO agranda la imagen. En los tres breakpoints el `contain` está
+    limitado por el ancho, así que el tamaño dibujado no cambia; lo único que
+    desaparece es el alto muerto.
+  */
   .hero__frame {
     position: relative;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
   }
 
   .hero__img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    /*
+      Desvanecido inferior: los ponentes están recortados a media altura del
+      torso y, flotando sobre el halo, ese corte recto se leía como un tajo.
+      El degradado ocupa solo el último 12% para que se funda con el fondo sin
+      llegar a comerse los cuerpos.
+
+      Va en el <img> y NO en .hero__frame a propósito: así el placeholder
+      punteado (hermano, no hijo) se queda intacto cuando la imagen no carga.
+
+      El prefijo -webkit- es para Safari < 15.4, que soporta la propiedad pero
+      solo con prefijo. Sin él, ahí no hay degradado — no se rompe nada, solo
+      vuelve el corte seco.
+
+      `black` y `transparent` NO son colores de diseño y por eso no salen de
+      tokens.css: de una máscara el navegador solo lee el canal alfa, así que
+      esto significa «opaco → transparente», no «negro». Un token de color aquí
+      no tendría sentido.
+    */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 88%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 88%,
+      transparent 100%
+    );
   }
 
   .hero__placeholder {
