@@ -44,7 +44,8 @@ expo-avicola-2026/
 ├── public/
 │   ├── img/{ponentes,hero,patrocinadores,og}/
 │   ├── video/
-│   └── favicon.svg
+│   ├── favicon.svg
+│   └── robots.txt
 ├── src/
 │   ├── components/
 │   │   ├── {Nav,Hero,VideoSection}.astro
@@ -53,8 +54,8 @@ expo-avicola-2026/
 │   ├── data/{site,navegacion,programa,boletos,patrocinadores,faq}.json
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
-│   ├── pages/{index,admin}.astro
-│   ├── scripts/{theme,animations,paths,fechas}.js
+│   ├── pages/{index,admin,404}.astro
+│   ├── scripts/{theme,animations,paths,fechas,schema}.js
 │   └── styles/{tokens,global}.css
 ├── astro.config.mjs
 ├── CLAUDE.md
@@ -132,7 +133,14 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 6. **Accesibilidad no negociable.** Contraste AA, foco visible (`:focus-visible`
    ya definido), HTML semántico, roles ARIA correctos y navegación por teclado.
 7. **Sin dependencias nuevas** sin una razón escrita en este archivo.
-8. **Español (México)** en todo el texto de cara al usuario. `lang="es"`.
+   Las que hay: `@astrojs/check` + `typescript` (dev, para `npm run check`) y
+   **`@astrojs/sitemap`** (Fase 7). Esta última porque cada URL del sitemap
+   tiene que llevar el subpath `/expo-avicola-2026`: escribirlo a mano obligaba
+   a mantener una lista de rutas en paralelo al router, que es justo lo que
+   acaba desincronizándose. La integración lo deriva de `site` + `base` y no
+   añade nada al bundle: corre solo en build.
+8. **Español (México)** en todo el texto de cara al usuario. `lang="es-MX"`
+   (era `es` hasta la Fase 7; el subtag de región ayuda a buscadores y lectores).
 9. Rutas a `/public` siempre a través del `base` de Astro
    (`import.meta.env.BASE_URL`), nunca absolutas tipo `/img/foo.png`.
 10. **Revisa `git status` antes de CADA commit.** Mira la lista completa de
@@ -150,7 +158,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
 | 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
-| 7    | SEO, Open Graph, rendimiento, auditoría de accesibilidad, pulido          | Pendiente      |
+| 7    | SEO técnico, datos estructurados, indexación y rendimiento                | **COMPLETADA** |
 | 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
 
 > **La numeración cambió al empezar la Fase 4.** El plan original metía
@@ -231,6 +239,7 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
 | 12 | **Stripe**: producto, precio y checkout | `boletos.json` (`priceId`, `checkoutUrl`) | El botón avisa de que la venta abre pronto |
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
+| 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
 
 Los tres que más pesan: **el 12 impide vender**, el **8 bloquea una fase entera**
 y los **1–3** dejan la sección de sede a medio contestar la pregunta que da
@@ -662,3 +671,95 @@ Verificado en Chrome 150 headless por CDP:
 - **Jerarquía de headings**: 1 h1, 11 h2, 22 h3, sin un solo salto de nivel.
 - **Contraste**: 38 pares comprobados en los dos temas, 0 por debajo del mínimo.
   El más ajustado es 6.66:1 (texto secundario sobre `--surface` en azul).
+
+---
+
+### Fase 7 — SEO técnico, datos estructurados e indexación · COMPLETADA
+
+Cero secciones nuevas. Todo es cabecera, archivos de indexación y rendimiento.
+
+**Qué se hizo**
+
+- `Base.astro`: `lang="es-MX"`, Open Graph completo con imagen, Twitter card
+  `summary_large_image`, `theme-color`, preload de fuentes, `noindex` opcional
+  y el JSON-LD del evento tras la bandera `evento`.
+- `src/scripts/schema.js`: genera el `Event` de schema.org desde `site.json`,
+  `programa.json` y `boletos.json`.
+- `astro.config.mjs`: integración `@astrojs/sitemap` filtrando `/404` y
+  `/admin`.
+- `public/robots.txt` y `src/pages/404.astro`.
+- CLS: reserva de ancho en la cuenta regresiva y `width`/`height` en los logos.
+
+**Decisiones**
+
+- **`theme-color` se lee de `--bg` en tiempo de ejecución, no se escribe el hex
+  en el `<head>`.** Los colores viven solo en `tokens.css` (convención 1) y
+  duplicarlos en el layout era garantizar que un día dejaran de coincidir. El
+  script inline lo rellena leyendo la variable computada, y lo vuelve a hacer en
+  cada `themechange`. Como la barra del navegador es cromo del sistema y no
+  contenido, rellenarla un instante después del primer pintado no provoca ningún
+  salto. Verificado: verde da `#0a0f0d` y azul `#0a1428`, ambos idénticos al
+  `--bg` real.
+- **`limpiar()` poda el JSON-LD antes de emitirlo.** Un `"name": null` dentro de
+  un `Place` es peor que no declarar el campo: Google lo lee como dato
+  malformado. La poda es recursiva y también quita objetos que se quedan sin
+  claves. Verificado con `recinto` y `direccion` en null (no aparecen) y
+  rellenándolos a mano (aparecen).
+- **Las fechas del schema se derivan de `site.horario`, no de `site.inicio`.**
+  Ojo con esto: `site.inicio` son las **09:00** (la primera conferencia) y lo usa
+  la cuenta regresiva, mientras que el evento **abre a las 08:00** con el
+  registro. El JSON-LD declara 08:00–16:30 porque es cuando el asistente puede
+  entrar. El desfase horario (`-06:00`) sí se saca de `site.inicio`, para que la
+  zona del evento viva en un solo sitio.
+- **«Por confirmar» no entra como `performer`.** Declarar una `Person` con ese
+  nombre sería afirmar que existe alguien que se llama así. Los cuatro ponentes
+  reales sí entran, y Edgar Oliva —que da dos sesiones— aparece una sola vez.
+- **`localidad`, `region` y `pais` son claves nuevas de `site.json`.** El schema
+  necesita la dirección desglosada y `ciudad` es una cadena de presentación
+  («Tehuacán, Puebla»). Partirla por la coma habría funcionado hoy y se habría
+  roto el día que alguien la escriba distinto. **Si se cambia `ciudad`, hay que
+  cambiar también estas tres.**
+- **`/admin` quedó fuera del sitemap y con `noindex`.** El primer build lo
+  incluía: un panel interno invitando a Google a rastrearlo. Lleva las dos
+  cosas porque quedar fuera del sitemap no impide que un buscador lo encuentre
+  por otro camino.
+- **Preload solo de los dos `.woff2` latinos.** Se importan con `?url` para que
+  la ruta lleve el hash real del build y el preload no apunte nunca a un archivo
+  inexistente.
+- **Los 8 subconjuntos restantes se quedan.** Emitirlos no cuesta nada al
+  visitante: su `unicode-range` hace que un texto en español no los pida jamás.
+  Medido: en una carga completa se descargan **2 woff2, no 10**.
+- **La 404 no carga la capa de movimiento.** Bajar 132 KB de GSAP para animar un
+  mensaje de error es justo el peso que esta fase quita.
+
+**Estado**
+
+`npm run build` y `npm run check` pasan con 0 errores, 0 warnings y 0 hints.
+Tres páginas construidas + sitemap.
+
+Medido sobre el build de producción servido con `astro preview` (no el dev
+server, que sirve los módulos sin empaquetar y da cifras engañosas):
+
+| Métrica | Valor |
+| :------ | :---- |
+| CLS | **0** — cero desplazamientos de layout |
+| JS crítico | **10 066 B** en 12 archivos |
+| GSAP + Lenis | **133 289 B**, fuera del HTML, solo por import dinámico |
+| CSS | 37 178 B en 2 archivos |
+| Fuentes descargadas | **2 de 10** (89 600 B); las otras 8 nunca se piden |
+| Primera carga total | ~181 KB |
+
+- **JSON-LD**: extraído del HTML compilado y parseado con `JSON.parse`. Válido,
+  con los 11 campos exigidos y **cero valores null**.
+- **Indexación**: `/robots.txt`, `/sitemap-index.xml`, `/sitemap-0.xml` y `/404`
+  responden 200. El sitemap contiene **solo la home**.
+- **Cuenta regresiva**: el ancho no se mueve entre el valor de build y el primer
+  tick (38,3 px antes y después).
+
+**Observación, no defecto:** la home sirve **11 `<script type="module">`
+separados**, uno por componente, de unos 800 B cada uno. Es consecuencia directa
+del patrón de script local por componente que usa el proyecto desde la Fase 2.
+Con HTTP/2 el coste es bajo y el total son 10 KB, así que **no se tocó**:
+unificarlos obligaría a sacar el JS de los once componentes a un punto de
+entrada común y a perder la localidad que hace legible cada uno. Queda anotado
+por si algún día una auditoría de red lo señala.

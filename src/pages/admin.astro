@@ -8,7 +8,9 @@ const opciones = [
 ] as const;
 ---
 
-<Base title={`Panel de administración — ${site.nombre}`}>
+{/* noindex: el panel interno no tiene por qué aparecer en buscadores. También
+    queda fuera del sitemap (ver el filtro en astro.config.mjs). */}
+<Base title={`Panel de administración — ${site.nombre}`} noindex>
   <main class="admin">
     <section class="panel" aria-labelledby="admin-title">
       <p class="panel__eyebrow">{site.nombre}</p>

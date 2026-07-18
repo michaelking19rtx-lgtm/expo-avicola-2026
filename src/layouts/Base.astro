@@ -5,33 +5,67 @@ import '../styles/tokens.css';
 import '../styles/global.css';
 import site from '../data/site.json';
 import { STORAGE_KEY, THEMES } from '../scripts/theme.js';
+import { asset } from '../scripts/paths.js';
+import { fechaLarga } from '../scripts/fechas.js';
+import { eventoJsonLd } from '../scripts/schema.js';
+
+/*
+  Preload de las fuentes del primer viewport.
+
+  El navegador no descubre una fuente hasta que ha bajado y parseado el CSS y
+  ha encontrado un elemento que la use: son tres saltos antes de empezar la
+  descarga. Estos dos `?url` dan la ruta YA HASHEADA que emite el build, así
+  que el preload nunca apunta a un archivo que no existe.
+
+  Solo el subconjunto `latin`, y solo estos dos archivos: son los que pinta el
+  primer viewport (wordmark y título en display, todo lo demás en cuerpo). El
+  resto de subconjuntos (cyrillic, greek, vietnamese, latin-ext) se quedan
+  detrás de su `unicode-range` y no se descargan nunca con texto en español.
+*/
+import fuenteDisplay from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2?url';
+import fuenteCuerpo from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Emite el JSON-LD del evento. Solo la home debe hacerlo. */
+  evento?: boolean;
+  /** Pide a los buscadores que no indexen la página (404). */
+  noindex?: boolean;
 }
-
-const fechaLarga = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'long',
-  timeZone: 'UTC',
-}).format(new Date(site.fecha));
 
 const {
   title = site.nombre,
-  description = `${site.nombre}. ${fechaLarga} · ${site.ciudad}.`,
+  description = `${site.nombre}. ${fechaLarga(site.fecha)} · ${site.ciudad}. ${site.tagline}`,
+  evento = false,
+  noindex = false,
 } = Astro.props;
 
-/** Une el `base` de Astro con una ruta de /public sin duplicar barras. */
-const asset = (path: string): string =>
-  `${import.meta.env.BASE_URL}/${path}`.replace(/\/{2,}/g, '/');
-
+/*
+  Canónica. `Astro.url.pathname` ya viene con el `base` aplicado, así que
+  resolverla contra `Astro.site` (que es solo el origen) da la URL completa.
+*/
 const canonical = Astro.site
   ? new URL(Astro.url.pathname, Astro.site).href
   : Astro.url.pathname;
+
+/*
+  PENDIENTE: la imagen no existe todavía (ver «Pendientes de contenido» en
+  CLAUDE.md). Se declara igualmente para que el marcado esté completo el día
+  que se suba; mientras tanto, quien comparta el enlace verá la tarjeta sin
+  imagen, que es exactamente lo que pasaría sin la etiqueta.
+
+  Debe ser ABSOLUTA: las redes sociales no resuelven rutas relativas.
+*/
+const ogImagen = Astro.site
+  ? new URL(asset('img/og/og-expo-avicola.jpg'), Astro.site).href
+  : asset('img/og/og-expo-avicola.jpg');
+
+const jsonLd = evento ? JSON.stringify(eventoJsonLd(canonical)) : null;
 ---
 
 <!doctype html>
-<html lang="es" data-theme={site.temaDefault}>
+<html lang="es-MX" data-theme={site.temaDefault}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -45,6 +79,10 @@ const canonical = Astro.site
     */}
     <script is:inline define:vars={{ storageKey: STORAGE_KEY, themes: THEMES }}>
       (function () {
+        // Se declara lo primero: sincronizarThemeColor lo usa, y dejarlo más
+        // abajo lo hacía depender del orden en que se dispararan los eventos.
+        var root = document.documentElement;
+
         function aplicarTemaGuardado() {
           try {
             var stored = localStorage.getItem(storageKey);
@@ -62,6 +100,29 @@ const canonical = Astro.site
           }
         }
 
+        /*
+          theme-color = el --bg del tema activo, LEÍDO DE LA HOJA DE ESTILOS.
+
+          No se escribe el hex aquí porque los colores viven solo en tokens.css
+          (convención 1); duplicarlos en el <head> era garantizar que un día
+          dejaran de coincidir. Como la barra del navegador es cromo del
+          sistema, no contenido, actualizarla un instante después del primer
+          pintado no provoca ningún salto visible.
+
+          Se intenta ya, y se reintenta cuando el CSS esté seguro: en este punto
+          del <head> la hoja puede no haberse parseado y --bg saldría vacío.
+        */
+        function sincronizarThemeColor() {
+          try {
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (!meta) return;
+            var bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+            if (bg) meta.setAttribute('content', bg);
+          } catch (error) {
+            /* Sin getComputedStyle no hay nada que sincronizar. */
+          }
+        }
+
         aplicarTemaGuardado();
 
         // Al volver con «Atrás» el navegador restaura la página desde bfcache
@@ -75,7 +136,9 @@ const canonical = Astro.site
           if (event.key === storageKey) aplicarTemaGuardado();
         });
 
-        var root = document.documentElement;
+        document.addEventListener('themechange', sincronizarThemeColor);
+        document.addEventListener('DOMContentLoaded', sincronizarThemeColor);
+        sincronizarThemeColor();
 
         // Hay JS: los componentes pueden ocultar cosas con la certeza de que
         // algo las volverá a mostrar. Sin JS este atributo no existe y todo se
@@ -104,10 +167,30 @@ const canonical = Astro.site
       })();
     </script>
 
+    {/* El script de arriba le pone el --bg del tema activo. */}
+    <meta name="theme-color" content="" />
+
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href={asset('favicon.svg')} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+
+    {/* Adelanta la descarga de las dos fuentes del primer viewport. */}
+    <link
+      rel="preload"
+      href={fuenteDisplay}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href={fuenteCuerpo}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="es_MX" />
@@ -115,7 +198,23 @@ const canonical = Astro.site
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImagen} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${site.nombre} — ${site.tagline}`} />
+
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImagen} />
+
+    {/*
+      Datos estructurados del evento. `set:html` con JSON.stringify: Astro no
+      debe escapar las comillas del JSON o dejaría de ser parseable.
+    */}
+    {jsonLd && (
+      <script type="application/ld+json" is:inline set:html={jsonLd} />
+    )}
 
     <slot name="head" />
   </head>

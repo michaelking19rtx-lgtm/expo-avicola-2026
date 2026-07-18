@@ -42,10 +42,18 @@ import { asset } from '../scripts/paths.js';
           <li class="patro" data-anim>
             <Marco class="patro__marco" {...propsEnlace}>
               <div class="patro__caja" data-logo-frame>
+                {/*
+                  width/height declarados aunque el CSS mande: le dan al
+                  navegador una proporción con la que reservar la caja antes de
+                  que el archivo llegue. Sin ellos, el logo aparece de golpe y
+                  empuja la descripción hacia abajo.
+                */}
                 <img
                   class="patro__logo"
                   src={asset(patro.logo)}
                   alt={`Logotipo de ${patro.nombre}`}
+                  width="320"
+                  height="120"
                   loading="lazy"
                   decoding="async"
                   data-logo-img

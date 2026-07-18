@@ -1,0 +1,11 @@
+# Expo Avícola Productiva 2026
+# Sitio estático en GitHub Pages bajo el subpath /expo-avicola-2026.
+
+User-agent: *
+Allow: /
+
+# El sitemap lo genera @astrojs/sitemap en cada build, ya con el subpath.
+# La URL tiene que ser ABSOLUTA: robots.txt vive en la raíz del dominio
+# (michaelking19rtx-lgtm.github.io/robots.txt), no dentro del proyecto, así que
+# una ruta relativa apuntaría al sitio equivocado.
+Sitemap: https://michaelking19rtx-lgtm.github.io/expo-avicola-2026/sitemap-index.xml

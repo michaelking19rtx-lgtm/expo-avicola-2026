@@ -347,8 +347,21 @@ const unidades = [
     border-inline-start: 1px solid var(--border);
   }
 
+  /*
+    Reserva de ancho: sin ella el bloque se movía dos veces.
+
+    1. Al cambiar la fuente de respaldo a la display (font-display: swap), los
+       dígitos cambian de ancho.
+    2. Los días bajan de 3 cifras a 2 (y de 2 a 1 el último día), y el valor que
+       se pinta en build puede tener otra longitud que el del primer tick.
+
+    2ch sobre tabular-nums equivale a dos dígitos exactos y deja crecer a tres
+    sin recortar. `display: inline-block` es necesario para que min-width
+    aplique; el `block` anterior lo hacía ocupar toda la columna.
+  */
   .countdown__value {
-    display: block;
+    display: inline-block;
+    min-inline-size: 2ch;
     font-family: var(--font-display);
     font-size: clamp(1.8rem, 1.25rem + 2vw, 2.75rem);
     font-weight: 700;
@@ -356,6 +369,7 @@ const unidades = [
     font-feature-settings: 'tnum' 1;
     letter-spacing: -0.02em;
     line-height: 1;
+    text-align: center;
   }
 
   .countdown__label {

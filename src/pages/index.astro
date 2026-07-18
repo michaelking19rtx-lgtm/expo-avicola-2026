@@ -14,7 +14,8 @@ import CtaFinal from '../components/CtaFinal.astro';
 import Footer from '../components/Footer.astro';
 ---
 
-<Base>
+{/* `evento`: la home es la única página que emite el JSON-LD del congreso. */}
+<Base evento>
   <Nav />
   {/* tabindex="-1": destino del enlace «Saltar al contenido». Sin él, un <main>
       no es focalizable y el salto movería el scroll pero no el foco. */}
