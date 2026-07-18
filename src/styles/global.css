@@ -20,7 +20,16 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
-  scroll-padding-block-start: var(--space-2xl);
+  /*
+    Reserva para la nav fija al saltar a un ancla.
+
+    Tiene que ser MAYOR que --nav-h (4.5rem): con el valor anterior
+    (--space-2xl, 4rem) el destino quedaba 8px por debajo de la barra, o sea
+    tapado. Este es el camino del scroll NATIVO — sin JS, con movimiento
+    reducido o si el chunk de animaciones no llega. Cuando Lenis está vivo, el
+    offset exacto lo calcula bindAnchors() midiendo la nav real.
+  */
+  scroll-padding-block-start: calc(var(--nav-h) + var(--space-md));
 }
 
 body {

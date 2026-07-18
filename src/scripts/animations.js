@@ -55,11 +55,22 @@ function detenerMovimiento() {
   try {
     if (g) {
       g.globalTimeline.getChildren(true, true, true).forEach((t) => t.kill());
-      // clearProps devuelve los elementos a lo que dicta el CSS; como
-      // data-motion pasa a 'off', eso equivale al estado final visible.
-      g.set('[data-anim], [data-hero-media], [data-hero-float], [data-hero-frame]', {
-        clearProps: 'all',
-      });
+      /*
+        clearProps devuelve los elementos a lo que dicta el CSS; como
+        data-motion pasa a 'off', eso equivale al estado final visible.
+
+        Este selector tiene que cubrir TODO lo que la capa de movimiento llegue
+        a tocar, no solo lo marcado con [data-anim]. Los elementos que se animan
+        con .from() (hoy [data-anim-punto], los puntos de la tarjeta de boletos)
+        son el caso peligroso: GSAP les escribe opacity:0 EN LÍNEA y no hay
+        ninguna regla CSS que los rescate después, así que si se quedan fuera de
+        esta limpieza desaparecen para siempre al activar "reducir movimiento"
+        a media animación.
+      */
+      g.set(
+        '[data-anim], [data-anim-punto], [data-hero-media], [data-hero-float], [data-hero-frame]',
+        { clearProps: 'all' }
+      );
       g.ticker.lagSmoothing(500, 33);
     }
   } catch {

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "acceso-general",
+    "nombre": "Acceso general",
+    "precio": 699,
+    "moneda": "MXN",
+    "disponible": true,
+    "incluye": [
+      "Acceso a las 6 conferencias especializadas",
+      "Panel de preguntas y respuestas con los ponentes",
+      "Show especial de medio tiempo",
+      "Coffee break incluido",
+      "Acceso al área comercial y recorrido de stands",
+      "Networking con productores, técnicos y empresas del sector",
+      "Constancia digital con código QR verificable"
+    ],
+    "priceId": null,
+    "checkoutUrl": null
+  }
+]

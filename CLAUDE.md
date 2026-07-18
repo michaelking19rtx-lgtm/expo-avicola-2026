@@ -46,8 +46,8 @@ expo-avicola-2026/
 │   ├── video/
 │   └── favicon.svg
 ├── src/
-│   ├── components/{Nav,Hero,VideoSection,Pilares,Programa,ParaQuien}.astro
-│   ├── data/{site,programa}.json
+│   ├── components/{Nav,Hero,VideoSection,Pilares,Programa,ParaQuien,Boletos}.astro
+│   ├── data/{site,programa,boletos}.json
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin}.astro
@@ -145,7 +145,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 2    | Nav + hero + sección de video, con capa de movimiento (GSAP, Lenis)      | **COMPLETADA** |
 | 3    | Ponentes: fichas con foto, cargo y sesión                                 | **POSPUESTA**  |
 | 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
-| 5    | Boletos: planes, precios, CTA de registro                                 | Pendiente      |
+| 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
 | 6    | Patrocinadores, sede y ubicación, FAQ, footer                             | Pendiente      |
 | 7    | SEO, Open Graph, rendimiento, auditoría de accesibilidad, pulido          | Pendiente      |
 | 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
@@ -168,29 +168,52 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 ### Anclas de navegación que no llevan a ningún sitio · ABIERTO (parcial)
 
-Estado tras la Fase 4:
+Estado tras la Fase 5:
 
 | Ancla        | Enlaces | ¿Existe el destino? |
 | :----------- | ------: | :------------------ |
 | `#programa`  |       3 | **SÍ** — creado en la Fase 4 |
+| `#boletos`   |       5 | **SÍ** — creado en la Fase 5 |
 | `#ponentes`  |       2 | NO — Fase 3, pospuesta |
 | `#sede`      |       2 | NO — Fase 6 |
-| `#boletos`   |       5 | NO — Fase 5 |
 
-Quedan **9 enlaces muertos de los 12 originales**. El más caro es `#boletos`:
-son los dos CTAs del hero más el botón de la nav, o sea los tres botones de
-conversión del sitio. Un clic en «Comprar mi boleto» se queda donde está.
+Quedan **4 enlaces muertos de los 12 originales**, y ya no son de conversión:
+los cinco de `#boletos` (enlace «Boletos» de la nav y del menú, CTA de la nav y
+del menú, y el CTA del hero) llegan a la sección y quedan por debajo de la barra
+fija, verificado enlace por enlace.
 
 `id` reales hoy en la home: `#inicio`, `#congreso`, `#pilares`, `#programa`,
-`#para-quien`, `#contenido` y `#menu-movil`.
+`#para-quien`, `#boletos`, `#contenido` y `#menu-movil`.
 
-**NO publicar el sitio promocionalmente —ni compartir la URL como demo
-navegable— hasta que `#boletos` exista (Fase 5) como mínimo.** Hasta entonces
-el despliegue de Pages vale como vista previa técnica, no como material de
-difusión.
+**El bloqueo de publicación promocional se levanta parcialmente:** el recorrido
+principal (ver programa → ver precio → intentar comprar) ya funciona de punta a
+punta. Antes de difundirlo hay que decidir dos cosas:
 
-Al cerrar cada fase, actualiza la tabla de arriba y tacha la entrada cuando no
-quede ningún ancla muerta.
+1. Que sea aceptable que «Comprar mi boleto» avise de que la venta abre pronto
+   en vez de cobrar — **la pasarela no está conectada** (ver abajo).
+2. Que sea aceptable que `#ponentes` y `#sede` sigan sin destino.
+
+Al cerrar cada fase, actualiza la tabla y tacha la entrada cuando no quede
+ningún ancla muerta.
+
+### La pasarela de pago no existe · ABIERTO
+
+`boletos.json` tiene `checkoutUrl: null` y `priceId: null`. Con eso, el botón
+**no simula una compra ni manda a una página inexistente**: muestra un aviso en
+una región `role="status"` diciendo que la venta en línea abre pronto.
+
+Para cerrarlo hace falta una fase de integración de pagos: crear el producto y
+el precio en Stripe, poner el `price_xxx` en `priceId`, y sustituir el `<button>`
+por el enlace real (el marcado está escrito en un comentario dentro de
+`Boletos.astro`). Mientras tanto, **el sitio no puede vender**.
+
+### DATO PENDIENTE: WhatsApp de contacto
+
+`site.contacto.whatsapp` está en `null`. El aviso del botón está preparado para
+ofrecer «Escribir por WhatsApp» en cuanto haya número, pero **hoy no lo promete**,
+porque anunciar un canal de contacto sin dar forma de usarlo es peor que no
+mencionarlo. Al rellenar la clave (formato internacional, p. ej. `+52 238 ...`),
+el enlace `wa.me` aparece solo, sin tocar el componente.
 
 ---
 
@@ -450,3 +473,87 @@ no solo leyendo el código:
 
 **Sin assets pendientes nuevos**: las tres secciones son tipografía, SVG inline
 y color. No necesitan ni una imagen.
+
+---
+
+### Fase 5 — Boletos · COMPLETADA
+
+**Qué se hizo**
+
+- `boletos.json`: un array con el único boleto que existe (`acceso-general`,
+  $699 MXN, siete puntos de «incluye», `priceId` y `checkoutUrl` en null).
+  **No hay niveles, ni comparativa, ni precios tachados: solo este.**
+- `Boletos.astro`: `id="boletos"`, tarjeta única centrada de 560px con barra de
+  acento de 2px arriba y halo tenue detrás, precio grande en `--font-display`
+  con tabular-nums, lista de incluye con check SVG dibujado a mano, CTA a ancho
+  completo y aviso accesible mientras no haya pasarela.
+- `site.json` estrena `contacto.whatsapp` (hoy `null`).
+- `global.css`: corregido el `scroll-padding-block-start`.
+- `animations.js`: `detenerMovimiento()` ahora también limpia
+  `[data-anim-punto]`.
+
+**Decisiones**
+
+- **El aviso del botón no promete WhatsApp mientras no haya número.** Con
+  `site.contacto.whatsapp` en null el texto solo dice que la venta abre pronto;
+  el enlace `wa.me` aparece automáticamente en cuanto se rellene la clave.
+  Ofrecer un canal de contacto sin forma de usarlo es peor que no ofrecerlo.
+- **La región del aviso nace vacía y siempre presente**, con `role="status"` y
+  `aria-live="polite"`. Si se insertara en el DOM junto con su texto, muchos
+  lectores de pantalla no lo anunciarían. Vacía no ocupa alto (el estilo va en
+  `.aviso:not(:empty)`), así que no descuadra la tarjeta. El segundo clic no
+  vuelve a insertar ni a re-anunciar.
+- **Sin JS el aviso se pinta ya escrito** (`.aviso--sinjs`, oculta bajo
+  `[data-js]`): el botón no puede hacer nada sin JS, así que la información se
+  da de entrada. Mismo reparto que la imagen del hero.
+- **Los puntos de «incluye» NO llevan `[data-anim]`.** Ese atributo los pondría
+  a `opacity: 0` por CSS hasta que GSAP los tocara; como ya viven dentro de una
+  tarjeta que se anima entera, se animan con `.from()` desde su estado final y
+  un fallo a media carga los deja perfectamente legibles.
+- **`detenerMovimiento()` tuvo que ampliarse.** Al animar con `.from()`, GSAP
+  escribe `opacity: 0` EN LÍNEA, y no hay regla CSS que rescate a
+  `[data-anim-punto]` como sí la hay para `[data-anim]`. Sin añadirlo al
+  `clearProps`, activar «reducir movimiento» a media animación dejaba los siete
+  puntos invisibles para siempre. Verificado interrumpiendo la timeline a los
+  350 ms: antes del arreglo quedaban en `opacity: 0`; después quedan limpios.
+  **Regla para el futuro: todo lo que la capa de movimiento toque tiene que
+  estar en ese selector.**
+- **`scroll-padding-block-start` pasó de `--space-2xl` (4rem) a
+  `calc(var(--nav-h) + var(--space-md))` (5.5rem).** La nav mide 4.5rem, así que
+  el valor anterior dejaba el destino de CUALQUIER ancla 8px por debajo de la
+  barra. Se arregló en `global.css` y no con un `scroll-margin-top` local: el
+  fallo no era de la sección de boletos, era de todas las anclas por el camino
+  del scroll nativo (sin JS, con movimiento reducido, o si GSAP no llega).
+  Con Lenis vivo el offset ya lo calculaba `bindAnchors()` midiendo la nav real.
+- **La fecha del encabezado se formatea con `timeZone: 'UTC'`.** `site.fecha` es
+  una fecha sin hora, que el motor lee como medianoche UTC; formateándola en
+  hora de México saldría «6 de agosto».
+- **El precio se lee entero para lectores de pantalla** con un `.sr-only`: sin
+  él, los tres trozos (`$`, `699`, `MXN`) se anuncian sueltos.
+
+**Estado**
+
+`npm run build` y `npm run check` pasan con 0 errores, 0 warnings y 0 hints.
+
+Verificado en Chrome 150 headless por CDP, no leyendo el código:
+
+- **Los 5 enlaces a `#boletos`** —enlace y CTA de la nav, enlace y CTA del menú
+  móvil, y CTA del hero— llegan a la sección con `top=161px` frente a un
+  `navBottom=73px`: ninguno queda tapado, y el foco acaba dentro de la sección.
+- **Camino del scroll nativo** (movimiento reducido, sin Lenis): `top=88px`
+  contra `navBottom=73px`. Antes del arreglo del `scroll-padding` quedaba por
+  debajo.
+- **Casos límite del JSON, probados de verdad** modificando el fichero,
+  compilando y revirtiendo: con `precio: null` sale «Por definir» sin dejar
+  colgando ni el `$` ni el `MXN`; con `disponible: false` sale la etiqueta
+  «Agotado», el botón queda `disabled`, desaparece el `data-comprar` y se apaga
+  el halo.
+- **Aviso**: región vacía de 0px de alto con `role="status"`; tras el clic,
+  78px con el texto; el segundo clic no duplica.
+- **0 px de desbordamiento horizontal** en 375/768/1440 × verde/azul, con los
+  45 `[data-anim]` visibles al final del recorrido y los 7 puntos en opacidad 1.
+- **Contraste**: el par más bajo es 6.66:1 (texto secundario en azul). El CTA da
+  12.86:1 en verde y 10.55:1 en azul.
+
+**PENDIENTE — integración de pagos.** Ver «Riesgos abiertos». Sin `checkoutUrl`
+el sitio informa, pero no vende.

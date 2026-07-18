@@ -1,0 +1,511 @@
+---
+import boletos from '../data/boletos.json';
+import site from '../data/site.json';
+
+/*
+  Punto de conversión del sitio. TODO sale de src/data/boletos.json y
+  src/data/site.json — aquí no hay ni un precio ni una fecha escritos a mano.
+
+  Hoy existe un único boleto. El componente itera el array de todos modos: si
+  algún día hay dos, se apilan sin romper nada (el ancho máximo es de la
+  tarjeta, no del contenedor).
+*/
+
+/*
+  timeZone UTC a propósito: site.fecha es una fecha sin hora ("2026-08-07"), y
+  el motor la interpreta como medianoche UTC. Formateándola en la zona local de
+  México saldría el día 6. La hora con offset real vive en site.inicio, que usa
+  el hero para la cuenta regresiva; aquí solo se necesita el día.
+*/
+const fechaLarga = new Intl.DateTimeFormat('es-MX', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+}).format(new Date(site.fecha));
+
+const formatoNumero = new Intl.NumberFormat('es-MX');
+
+/*
+  Contacto para apartar lugar mientras la pasarela no existe.
+
+  DATO PENDIENTE: site.contacto.whatsapp está en null. Mientras siga así, el
+  aviso NO promete WhatsApp — prometer un canal sin número es peor que no
+  ofrecerlo. En cuanto se rellene la clave, el enlace aparece solo.
+*/
+const whatsapp = site.contacto?.whatsapp ?? null;
+const whatsappUrl = whatsapp
+  ? `https://wa.me/${String(whatsapp).replace(/\D/g, '')}`
+  : null;
+
+const avisoTexto = whatsappUrl
+  ? 'La venta en línea abre muy pronto. Mientras tanto puedes apartar tu lugar por WhatsApp.'
+  : 'La venta en línea abre muy pronto. En cuanto se active, este botón te llevará directo al pago seguro.';
+
+const entradas = boletos.map((boleto) => ({
+  ...boleto,
+  // precio null es un estado válido: la tarjeta muestra "Por definir".
+  precioTexto: boleto.precio == null ? null : formatoNumero.format(boleto.precio),
+}));
+---
+
+<section class="boletos" id="boletos">
+  <div class="boletos__inner">
+    <header class="boletos__head">
+      <p class="boletos__eyebrow" data-anim>Boletos</p>
+      <h2 class="boletos__titulo" data-anim>Aparta tu lugar</h2>
+      <p class="boletos__lead" data-anim>
+        Un solo día, un solo boleto: {fechaLarga} en {site.ciudad}.
+      </p>
+    </header>
+
+    {entradas.map((boleto) => (
+      <article
+        class="tarjeta"
+        data-anim
+        data-agotado={boleto.disponible ? undefined : 'true'}
+      >
+        <div class="tarjeta__halo" aria-hidden="true"></div>
+
+        <div class="tarjeta__cuerpo">
+          <div class="tarjeta__encabezado">
+            <h3 class="tarjeta__nombre">{boleto.nombre}</h3>
+            {!boleto.disponible && <span class="tarjeta__etiqueta">Agotado</span>}
+          </div>
+
+          {boleto.precioTexto ? (
+            <p class="precio">
+              <span class="precio__simbolo" aria-hidden="true">$</span>
+              <span class="precio__valor">{boleto.precioTexto}</span>
+              <span class="precio__moneda">{boleto.moneda}</span>
+              {/* El precio se lee entero de una vez, sin deletrear los trozos. */}
+              <span class="sr-only">
+                {boleto.precioTexto} pesos {boleto.moneda}
+              </span>
+            </p>
+          ) : (
+            <p class="precio precio--pendiente">Por definir</p>
+          )}
+
+          <p class="tarjeta__nota">Precio por persona · Cupo limitado</p>
+
+          <ul class="incluye" role="list">
+            {boleto.incluye.map((punto) => (
+              <li class="incluye__item" data-anim-punto>
+                <svg
+                  class="incluye__check"
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m4.8 12.6 4.7 4.7L19.2 7"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span>{punto}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/*
+            SUSTITUIR este bloque cuando exista la pasarela.
+
+            Con `checkoutUrl` relleno en boletos.json, el botón deja de ser un
+            <button> con aviso y pasa a ser el enlace real al checkout:
+
+            <a class="cta" href={boleto.checkoutUrl}>Comprar mi boleto</a>
+
+            INTEGRACIÓN DE PAGOS (fase aparte): aquí entra Stripe. El campo
+            `priceId` de boletos.json se rellena con el ID del precio de Stripe
+            (price_xxx) y se usa para crear la Checkout Session. Mientras
+            `checkoutUrl` siga en null, esta sección NO simula una compra ni
+            manda a una página inexistente: avisa y ofrece contacto.
+          */}
+          {boleto.disponible ? (
+            <button class="cta" type="button" data-comprar>
+              Comprar mi boleto
+            </button>
+          ) : (
+            <button class="cta" type="button" disabled>
+              Agotado
+            </button>
+          )}
+
+          <p class="tarjeta__seguro">
+            Pago seguro. Recibes tu confirmación por correo.
+          </p>
+
+          {/*
+            Región viva: existe desde el primer render y arranca VACÍA. Si se
+            insertara junto con el texto, muchos lectores de pantalla no lo
+            anunciarían. Vacía no ocupa alto, así que no descuadra la tarjeta.
+          */}
+          <p class="aviso" role="status" aria-live="polite" data-aviso></p>
+
+          <template data-aviso-plantilla>
+            {avisoTexto}
+            {whatsappUrl && (
+              <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
+                Escribir por WhatsApp
+              </a>
+            )}
+          </template>
+
+          {/*
+            Sin JS el botón no puede hacer nada, así que el aviso se muestra ya
+            escrito. Con JS manda la región viva de arriba. Mismo reparto que la
+            imagen del hero.
+          */}
+          <p class="aviso aviso--sinjs">
+            {avisoTexto}
+            {whatsappUrl && (
+              <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
+                Escribir por WhatsApp
+              </a>
+            )}
+          </p>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.boletos');
+
+  // ---------------------------------------------------------------------
+  // Aviso de "todavía no hay pasarela". Sin dependencias: si el chunk de
+  // animaciones no llega, el botón sigue respondiendo.
+  // ---------------------------------------------------------------------
+  (() => {
+    const boton = document.querySelector<HTMLButtonElement>('[data-comprar]');
+    const region = document.querySelector<HTMLElement>('[data-aviso]');
+    const plantilla = document.querySelector<HTMLTemplateElement>(
+      '[data-aviso-plantilla]'
+    );
+    if (!boton || !region || !plantilla) return;
+
+    boton.addEventListener('click', () => {
+      // Ya anunciado: no se repite el trabajo ni se re-anuncia en cada clic.
+      if (region.dataset.state === 'visible') return;
+      region.append(plantilla.content.cloneNode(true));
+      region.dataset.state = 'visible';
+    });
+  })();
+
+  // ---------------------------------------------------------------------
+  // Movimiento: mejora progresiva.
+  // ---------------------------------------------------------------------
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      const cabecera = seccion.querySelectorAll<HTMLElement>(
+        '.boletos__head [data-anim]'
+      );
+      const tarjeta = seccion.querySelector<HTMLElement>('.tarjeta[data-anim]');
+      const puntos = seccion.querySelectorAll<HTMLElement>('[data-anim-punto]');
+
+      const tl = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+        scrollTrigger: { trigger: seccion, start: 'top 75%', once: true },
+      });
+
+      tl.fromTo(
+        cabecera,
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.8, stagger: 0.1 }
+      );
+
+      if (tarjeta) {
+        tl.fromTo(
+          tarjeta,
+          { opacity: 0, y: 32, scale: 0.98 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.9 },
+          0.15
+        );
+      }
+
+      /*
+        Los puntos NO llevan data-anim: si lo llevaran, quedarían invisibles por
+        CSS hasta que GSAP los tocara, y aquí van dentro de una tarjeta que ya
+        se anima entera. Se animan desde su estado final, así que un fallo a
+        media carga los deja perfectamente legibles.
+      */
+      tl.from(
+        puntos,
+        { opacity: 0, y: 12, duration: 0.5, stagger: 0.06 },
+        0.5
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .boletos {
+    padding-block: var(--space-3xl);
+  }
+
+  .boletos__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Encabezado ------------------------------------------------------------- */
+  .boletos__head {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .boletos__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .boletos__titulo {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .boletos__lead {
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  /* Tarjeta ---------------------------------------------------------------- */
+  .tarjeta {
+    position: relative;
+    max-width: 560px;
+    margin-inline: auto;
+    margin-block-start: var(--space-2xl);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    /* overflow clip para que la barra de acento respete el radio superior. */
+    overflow: clip;
+  }
+
+  /* Barra de acento: el único punto de la página con este tratamiento. */
+  .tarjeta::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: 2px;
+    background-color: var(--accent);
+  }
+
+  /* Halo muy tenue detrás de la tarjeta: da peso sin ensuciar el fondo. */
+  .tarjeta__halo {
+    position: absolute;
+    z-index: 0;
+    inset-block-start: -20%;
+    inset-inline-start: 50%;
+    width: 70%;
+    aspect-ratio: 1;
+    translate: -50% 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+    opacity: 0.18;
+    filter: blur(70px);
+    pointer-events: none;
+  }
+
+  .tarjeta__cuerpo {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-xl) var(--space-lg);
+  }
+
+  .tarjeta__encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .tarjeta__nombre {
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .tarjeta__etiqueta {
+    padding: 0.15rem var(--space-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Precio ----------------------------------------------------------------- */
+  .precio {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-md);
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    line-height: 1;
+  }
+
+  .precio__simbolo {
+    /* align-self start + fuente menor: el símbolo cuelga de la parte alta de
+       la cifra, como en composición editorial de precios. */
+    align-self: flex-start;
+    margin-block-start: 0.12em;
+    font-size: clamp(1.4rem, 1rem + 1.4vw, 2rem);
+    font-weight: 500;
+  }
+
+  .precio__valor {
+    font-size: clamp(3.5rem, 2.4rem + 3.6vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .precio__moneda {
+    margin-inline-start: var(--space-2xs);
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+  }
+
+  .precio--pendiente {
+    color: var(--text-muted);
+    font-size: var(--step-2);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .tarjeta__nota {
+    margin-block-start: var(--space-sm);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  /* Lista de lo incluido --------------------------------------------------- */
+  .incluye {
+    display: grid;
+    gap: var(--space-md);
+    margin-block: var(--space-xl);
+    padding-block-start: var(--space-xl);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .incluye__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-sm);
+    align-items: start;
+  }
+
+  .incluye__check {
+    color: var(--accent);
+    /* Alinea el trazo del check con la primera línea del texto. */
+    margin-block-start: 0.1em;
+  }
+
+  /* CTA -------------------------------------------------------------------- */
+  .cta {
+    display: block;
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step-0);
+    font-weight: 600;
+    text-align: center;
+    transition:
+      filter var(--t-base) var(--ease-out),
+      transform var(--t-fast) var(--ease-out);
+  }
+
+  .cta:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+
+  .cta:disabled {
+    background-color: var(--surface-2);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  .tarjeta__seguro {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+  }
+
+  /* Aviso ------------------------------------------------------------------ */
+  /*
+    Vacía no pinta nada: sin :empty tendría margen y borde permanentes aunque no
+    hubiera mensaje. Así la región viva puede existir desde el principio sin
+    dejar un hueco en la tarjeta.
+  */
+  .aviso:not(:empty) {
+    margin-block-start: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+  }
+
+  .aviso__enlace {
+    display: inline-block;
+    margin-block-start: var(--space-xs);
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  /* Con JS manda la región viva; el aviso estático sobra. */
+  :global([data-js]) .aviso--sinjs {
+    display: none;
+  }
+
+  /* Agotado ---------------------------------------------------------------- */
+  .tarjeta[data-agotado] .tarjeta__halo {
+    display: none;
+  }
+
+  .tarjeta[data-agotado]::before {
+    background-color: var(--border);
+  }
+
+  @media (min-width: 40rem) {
+    .tarjeta__cuerpo {
+      padding: var(--space-2xl) var(--space-xl);
+    }
+  }
+</style>
