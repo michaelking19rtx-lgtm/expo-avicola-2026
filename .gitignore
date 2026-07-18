@@ -23,14 +23,28 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-# Originales sin optimizar. Un binario grande commiteado se queda en el
-# historial para siempre, aunque después lo borres: `git clone` sigue
-# descargándolo. El original de ponentes.png (4.79 MB) vive fuera del repo, en
-# ../expo-avicola-2026-assets-originales/. Al repo solo entra la versión
-# servida (public/img/hero/ponentes.webp, 125 KB).
-public/img/**/*.png
-public/img/**/*.jpg
-public/img/**/*.jpeg
+# Formatos de TRABAJO bajo public/. No se sirven en una web jamás, así que
+# bloquearlos es señal pura: si aparece uno aquí, está de paso.
+#
+# Los originales pesados viven fuera del repo, en
+# ../expo-avicola-2026-assets-originales/. Un binario grande commiteado se
+# queda en el historial para siempre aunque después lo borres: cada
+# `git clone` lo sigue descargando.
+public/img/**/*.psd
 public/img/**/*.tif
 public/img/**/*.tiff
-public/img/**/*.psd
+public/img/**/*.ai
+public/img/**/*.xcf
+
+# OJO — png/jpg/jpeg NO se bloquean, y es deliberado.
+#
+# Se bloquearon hasta la migración a dominio propio, y el efecto fue el
+# contrario del buscado: escondían también los entregables finales. La imagen
+# Open Graph es .jpg y los logos de patrocinadores son .png, así que la regla
+# los habría hecho invisibles — se habrían visto en local, no en producción, y
+# sin un solo aviso. De hecho ya estaba pasando con seis retratos de ponentes.
+#
+# La protección contra el original de varios MB no desaparece: cambia de forma.
+# Ahora la cubre `avisaDeAssetsDePublic()` en astro.config.mjs, que en cada
+# build señala lo que pese de más o lo que git esté ignorando. Deja de ser un
+# bloqueo silencioso y pasa a ser un aviso ruidoso, que es lo que falló aquí.

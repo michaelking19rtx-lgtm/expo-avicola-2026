@@ -1262,7 +1262,7 @@ entero y el JSON-LD.
   componente los cubre con su marco punteado. Comprobado en pantalla: los dos
   en `data-state="failed"` con su nombre visible.
 
-#### TRAMPA ABIERTA — `.gitignore` bloquea assets que SÍ hay que publicar
+#### TRAMPA — `.gitignore` bloqueaba assets que SÍ hay que publicar · CERRADA
 
 Salió al revisar la migración y **no es de la migración**: `.gitignore` ignora
 `public/img/**/*.{png,jpg,jpeg,…}` para que no se cuele un original sin
@@ -1285,11 +1285,65 @@ local, falta en producción»: el runner compila solo lo commiteado.
 Las figuras del hero se salvaron por casualidad, no por diseño: son `.webp` y
 esa extensión no está en la lista.
 
-**Al integrar cualquiera de esos assets hay que añadir su excepción**
-(`!public/img/og/og-expo-avicola.jpg`, `!public/img/patrocinadores/*.png`,
-`!public/img/ponentes/*.jpeg`) o acotar la regla a la carpeta de originales, y
-comprobarlo con `git check-ignore -v` y `git ls-files` **antes** de dar la
-tarea por cerrada. No se tocó aquí para no mezclarlo con la migración.
+**CERRADA** — ver «Qué entra a `public/img/` y qué no», justo debajo.
+
+---
+
+### Qué entra a `public/img/` y qué no
+
+> **Léelo antes de subir la imagen Open Graph, los logos de patrocinadores o
+> los retratos de la Fase 3.** Aquí se tropezó ya una vez.
+
+**La regla, en una línea:** a `public/img/` entra lo que se sirve; los
+originales pesados viven fuera del repo, en
+`../expo-avicola-2026-assets-originales/`.
+
+| | Entra al repo | Dónde |
+| :-- | :-- | :-- |
+| `.webp`, `.svg`, `.avif` | **Sí** | `public/img/…` |
+| `.png`, `.jpg`, `.jpeg` **ya optimizados** | **Sí** | `public/img/…` |
+| `.png`/`.jpg` **originales de varios MB** | **No** | carpeta hermana de originales |
+| `.psd`, `.tif`, `.tiff`, `.ai`, `.xcf` | **No — bloqueados** | carpeta hermana |
+
+**Por qué el criterio es «formato que nunca se sirve» y no «formato pesado».**
+Hasta la migración a dominio propio, `.gitignore` bloqueaba `png/jpg/jpeg` bajo
+`public/img/` para frenar los originales. El problema es que un `.png` puede
+ser tanto un original de 4.79 MB como el logo final de un patrocinador: el
+formato no distingue el rol, así que la regla escondía las dos cosas. Y lo
+hacía en silencio — se veían en local y faltaban en producción, porque el
+runner compila solo lo commiteado.
+
+Ya estaba ocurriendo: seis retratos llevaban tiempo en `public/img/ponentes/`,
+invisibles para git, sin un solo aviso.
+
+Ahora solo se bloquean los formatos que **nunca** son servibles (`.psd`,
+`.tif`, `.tiff`, `.ai`, `.xcf`): ahí no hay falsos positivos posibles.
+
+**La protección contra el binario pesado no desapareció, cambió de forma.** La
+cubre `avisaDeAssetsDePublic()`, una integración mínima en `astro.config.mjs`
+que corre en `astro:build:start` y avisa —nunca lanza— de dos cosas:
+
+1. **Archivos servibles que git esté ignorando.** El fallo viejo: invisibles.
+2. **Archivos servibles de más de 400 KB.** Probablemente un original.
+
+> El umbral de 400 KB sale de medir este repo: las seis figuras del hero pesan
+> entre 26 y 68 KB ya optimizadas y los retratos sin convertir rondan los
+> 2.3 MB. Deja holgura de sobra a un entregable legítimo —una Open Graph de
+> 1200×630 no llega— y caza cualquier original.
+
+> **`--no-index` en `git check-ignore` es imprescindible, y costó encontrarlo.**
+> Sin él, `check-ignore` **omite los archivos ya rastreados**. La primera
+> versión del guardián parecía no funcionar porque se probó contra los WebP del
+> hero, que ya estaban commiteados y por eso quedaban fuera del informe.
+
+**Las dos ramas se probaron haciéndolas fallar** (convención 14), no solo
+viéndolas pasar: con una regla temporal que ocultaba `hero/*.webp` el build
+listó los seis archivos y volvió a 0 avisos al quitarla; la de peso dispara
+hoy con los seis retratos reales.
+
+**Al subir un asset nuevo:** déjalo en su carpeta, compila, y **lee la salida
+del build**. Si sale en cualquiera de las dos listas, algo hay que corregir
+antes de commitear.
 
 ---
 
