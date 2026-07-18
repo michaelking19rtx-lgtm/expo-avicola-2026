@@ -46,6 +46,15 @@ const entradas = boletos.map((boleto) => ({
   ...boleto,
   // precio null es un estado válido: la tarjeta muestra "Por definir".
   precioTexto: boleto.precio == null ? null : formatoNumero.format(boleto.precio),
+  /*
+    `checkoutUrl` es lo ÚNICO que decide si el botón compra o avisa. Un boleto
+    agotado no compra aunque haya pasarela, de ahí que se exijan las dos cosas.
+
+    Hasta ahora esta condición no existía: el componente pintaba siempre el
+    <button> con aviso, y el bloque de "sustituir cuando exista la pasarela"
+    era un COMENTARIO, no código. Rellenar el JSON no habría cambiado nada.
+  */
+  compraAbierta: Boolean(boleto.disponible && boleto.checkoutUrl),
 }));
 ---
 
@@ -113,20 +122,31 @@ const entradas = boletos.map((boleto) => ({
           </ul>
 
           {/*
-            SUSTITUIR este bloque cuando exista la pasarela.
+            TRES ESTADOS, y los tres salen de boletos.json:
 
-            Con `checkoutUrl` relleno en boletos.json, el botón deja de ser un
-            <button> con aviso y pasa a ser el enlace real al checkout:
+            1. Con `checkoutUrl` y disponible → ENLACE real al checkout.
+            2. Disponible pero sin `checkoutUrl` → botón que avisa de que la
+               venta todavía no abre. No simula una compra ni manda a una
+               página inexistente.
+            3. Agotado → botón inerte.
 
-            <a class="cta" href={boleto.checkoutUrl}>Comprar mi boleto</a>
-
-            INTEGRACIÓN DE PAGOS (fase aparte): aquí entra Stripe. El campo
-            `priceId` de boletos.json se rellena con el ID del precio de Stripe
-            (price_xxx) y se usa para crear la Checkout Session. Mientras
-            `checkoutUrl` siga en null, esta sección NO simula una compra ni
-            manda a una página inexistente: avisa y ofrece contacto.
+            PAGOS: es un Payment Link hospedado por Stripe, sin backend. Por
+            eso `priceId` sigue en null: ese campo solo haría falta para crear
+            una Checkout Session por API, que aquí no existe.
           */}
-          {boleto.disponible ? (
+          {boleto.compraAbierta ? (
+            <a
+              class="cta"
+              href={boleto.checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Comprar mi boleto
+              <span class="sr-only">
+                (abre el pago seguro en una pestaña nueva)
+              </span>
+            </a>
+          ) : boleto.disponible ? (
             <button class="cta" type="button" data-comprar>
               Comprar mi boleto
             </button>
@@ -136,39 +156,51 @@ const entradas = boletos.map((boleto) => ({
             </button>
           )}
 
-          <p class="tarjeta__seguro">
-            Pago seguro. Recibes tu confirmación por correo.
-          </p>
+          {boleto.compraAbierta && (
+            <p class="tarjeta__seguro">
+              Pago con tarjeta u OXXO, procesado por Stripe. Recibes la
+              confirmación por correo; si pagas en OXXO, la acreditación puede
+              tardar algunos días.
+            </p>
+          )}
 
           {/*
-            Región viva: existe desde el primer render y arranca VACÍA. Si se
-            insertara junto con el texto, muchos lectores de pantalla no lo
-            anunciarían. Vacía no ocupa alto, así que no descuadra la tarjeta.
+            El aviso solo existe mientras NO haya pasarela. Con el checkout
+            vivo desaparece entero —región, plantilla y respaldo sin JS— en vez
+            de quedarse vacío ocupando marcado.
           */}
-          <p class="aviso" role="status" aria-live="polite" data-aviso></p>
+          {boleto.disponible && !boleto.checkoutUrl && (
+            <>
+              {/*
+                Región viva: existe desde el primer render y arranca VACÍA. Si
+                se insertara junto con el texto, muchos lectores de pantalla no
+                lo anunciarían. Vacía no ocupa alto.
+              */}
+              <p class="aviso" role="status" aria-live="polite" data-aviso></p>
 
-          <template data-aviso-plantilla>
-            {avisoTexto}
-            {whatsappUrl && (
-              <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
-                Escribir por WhatsApp
-              </a>
-            )}
-          </template>
+              <template data-aviso-plantilla>
+                {avisoTexto}
+                {whatsappUrl && (
+                  <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
+                    Escribir por WhatsApp
+                  </a>
+                )}
+              </template>
 
-          {/*
-            Sin JS el botón no puede hacer nada, así que el aviso se muestra ya
-            escrito. Con JS manda la región viva de arriba. Mismo reparto que la
-            imagen del hero.
-          */}
-          <p class="aviso aviso--sinjs">
-            {avisoTexto}
-            {whatsappUrl && (
-              <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
-                Escribir por WhatsApp
-              </a>
-            )}
-          </p>
+              {/*
+                Sin JS el botón no puede hacer nada, así que el aviso se muestra
+                ya escrito. Con JS manda la región viva de arriba.
+              */}
+              <p class="aviso aviso--sinjs">
+                {avisoTexto}
+                {whatsappUrl && (
+                  <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
+                    Escribir por WhatsApp
+                  </a>
+                )}
+              </p>
+            </>
+          )}
         </div>
       </article>
     ))}

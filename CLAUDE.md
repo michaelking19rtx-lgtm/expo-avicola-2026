@@ -308,16 +308,15 @@ primer texto del hero a 156px, también libre.
 barata si molesta es quitar «Ponentes» de `navegacion.json`: desaparece de la
 nav, del menú y del footer a la vez.
 
-### La pasarela de pago no existe · ABIERTO
+### La pasarela de pago · CERRADO
 
-`boletos.json` tiene `checkoutUrl: null` y `priceId: null`. Con eso, el botón
-**no simula una compra ni manda a una página inexistente**: muestra un aviso en
-una región `role="status"` diciendo que la venta en línea abre pronto.
+**El sitio ya vende.** `checkoutUrl` apunta a un Payment Link hospedado por
+Stripe y el CTA de la tarjeta es un enlace real a él. `priceId` se queda en
+null a propósito: ese campo solo haría falta para crear una Checkout Session
+por API, y aquí no hay backend.
 
-Para cerrarlo hace falta una fase de integración de pagos: crear el producto y
-el precio en Stripe, poner el `price_xxx` en `priceId`, y sustituir el `<button>`
-por el enlace real (el marcado está escrito en un comentario dentro de
-`Boletos.astro`). Mientras tanto, **el sitio no puede vender**.
+Ver «Pasarela conectada» en la bitácora, incluida la discrepancia de nombres
+entre el sitio y el Payment Link, que sigue abierta y NO es de código.
 
 ### PENDIENTES DE CONTENIDO — lista consolidada
 
@@ -341,12 +340,12 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | ~~9c~~ | ~~**Las otras 3 figuras del hero**~~ | ~~`public/img/hero/ponente-0{4,5,6}.webp`~~ | **RESUELTO** — entregadas e integradas en la Fase 2c |
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
-| 12 | **Stripe**: producto, precio y checkout | `boletos.json` (`priceId`, `checkoutUrl`) | El botón avisa de que la venta abre pronto |
+| ~~12~~ | ~~**Stripe**: producto, precio y checkout~~ | ~~`boletos.json`~~ | **RESUELTO** — Payment Link conectado en `checkoutUrl` |
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
 | 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
 
-Los dos que más pesan ahora: **el 12 impide vender** y el **9b mantiene la home
-en `noindex`**. El 8 sigue bloqueando la Fase 3.
+El que más pesa ahora es el **9b**, que mantiene la home en `noindex` y por
+tanto fuera de buscadores. El 8 sigue bloqueando la Fase 3.
 
 ---
 
@@ -1184,6 +1183,102 @@ Con HTTP/2 el coste es bajo y el total son 10 KB, así que **no se tocó**:
 unificarlos obligaría a sacar el JS de los once componentes a un punto de
 entrada común y a perder la localidad que hace legible cada uno. Queda anotado
 por si algún día una auditoría de red lo señala.
+
+---
+
+### Pasarela conectada — Payment Link de Stripe
+
+Cierra el pendiente 12. **El sitio ya vende.**
+
+**Qué se hizo**
+
+- `boletos.json`: `checkoutUrl` con el Payment Link. **`priceId` se queda en
+  null a propósito** — ese campo solo haría falta para crear una Checkout
+  Session por API, y aquí no hay backend.
+- `Boletos.astro`: la lógica de los tres estados, que **no existía**.
+- El texto bajo el botón pasa a nombrar los métodos reales.
+- FAQ «¿Cómo puedo pagar?» actualizada.
+
+> **OJO: la lógica del checkout no estaba escrita, solo comentada.** El
+> componente pintaba SIEMPRE el `<button>` con aviso; el bloque «SUSTITUIR
+> este bloque cuando exista la pasarela» era un comentario describiendo qué
+> hacer, no código condicional. Rellenar `checkoutUrl` en el JSON no habría
+> cambiado absolutamente nada en pantalla. Ahora sí: `compraAbierta` se deriva
+> de `disponible && checkoutUrl` y de ahí salen los tres estados.
+>
+> **Lección para los otros «SUSTITUIR cuando…» del repo** (queda el del vídeo
+> en `VideoSection.astro`): un comentario que describe el marcado futuro NO es
+> una rama que se active sola. Antes de dar por hecho que «el componente ya lo
+> lee», comprobar que existe la condición.
+
+**Los tres estados, todos desde `boletos.json`**
+
+| Estado | Condición | Qué se pinta |
+| :----- | :-------- | :----------- |
+| Compra abierta | `disponible && checkoutUrl` | `<a>` al checkout, en pestaña nueva |
+| Venta sin abrir | `disponible && !checkoutUrl` | `<button>` + aviso en región viva |
+| Agotado | `!disponible` | `<button disabled>` |
+
+Con la compra abierta desaparece el aviso ENTERO —región, plantilla y respaldo
+sin JS—, no se queda vacío ocupando marcado. Verificado sobre el HTML
+compilado: 0 ocurrencias de `data-comprar`, `data-aviso` y del texto «la venta
+en línea abre muy pronto».
+
+**Decisiones**
+
+- **Los otros cinco CTAs siguen anclando a `#boletos`**, no al checkout: nav de
+  escritorio, menú móvil, los dos del hero y el CTA final. El comprador tiene
+  que ver qué incluye antes de pagar. Verificado uno por uno.
+- **El CTA abre en pestaña nueva** con `rel="noopener noreferrer"` y un
+  `.sr-only` que lo anuncia: irse a un dominio de pago sin avisar, y sin dejar
+  la página del evento detrás, es peor experiencia.
+- **El texto de métodos nombra tarjeta, OXXO y Stripe, y avisa del retraso de
+  OXXO** sin alarmar. No se escribió de memoria: se leyó del propio checkout
+  (ver abajo).
+
+**Verificado con un clic REAL, no leyendo el código**
+
+Se pulsó el CTA con ratón, se esperó la pestaña nueva y se leyó su contenido:
+
+| | |
+| :-- | :-- |
+| Pestañas | 1 → 2 |
+| URL | `https://buy.stripe.com/fZufZh9GB2vm6DPeTZ5c408` |
+| Importe | **699,00 MXN** — coincide con `boletos.json` |
+| Métodos ofrecidos | **Tarjeta y OXXO** — coinciden con el texto del sitio |
+| ¿Página de error? | No |
+
+Y 0 px de desbordamiento con el CTA como `<a>` en 375/768/1440 × verde/azul.
+
+#### RIESGO ABIERTO — los nombres del checkout NO coinciden con los del sitio
+
+**No es un problema de código y no se puede arreglar desde el repo:** vive en
+el panel de Stripe.
+
+| | En el sitio | En el checkout |
+| :-- | :---------- | :------------- |
+| Comercio | Expo Avícola Productiva 2026 | **Bioorigen** |
+| Producto | Acceso general | **1er Congreso Avícola 2026 - Acceso** |
+| Qué promete | 7 puntos: conferencias, panel, show, coffee break, stands, networking y constancia con QR | «conferencias magistrales y **talleres**» |
+
+Tres cosas que conviene resolver antes de promocionar:
+
+1. Quien pulsa «Comprar mi boleto» de la **Expo Avícola Productiva** aterriza
+   en un cobro de **Bioorigen** por el **1er Congreso Avícola**. Aunque sea la
+   misma empresa y el mismo evento, el comprador no tiene forma de saberlo:
+   es un patrón clásico de carrito abandonado y de contracargo.
+2. La descripción del Payment Link menciona **talleres**, que no aparecen ni en
+   `programa.json` ni en la lista de «incluye». Se está prometiendo algo que el
+   sitio no vende.
+3. La descripción **no menciona** la constancia con QR, el coffee break, el
+   show ni los stands, que sí son argumentos de venta en la tarjeta.
+
+**PENDIENTE DE FASE FUTURA — no hay webhook ni constancia automática.** Al ser
+un Payment Link sin backend, el sitio no se entera de que alguien pagó: no hay
+página de gracias propia, ni registro de asistentes, ni emisión de la
+«constancia digital con código QR verificable» que promete la tarjeta. Hoy eso
+lo cubre Stripe con su correo de confirmación y el organizador a mano. Montar
+webhook, lista de asistentes y generación de constancias es una fase aparte.
 
 ---
 
