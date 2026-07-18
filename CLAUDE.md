@@ -132,6 +132,10 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 8. **Español (México)** en todo el texto de cara al usuario. `lang="es"`.
 9. Rutas a `/public` siempre a través del `base` de Astro
    (`import.meta.env.BASE_URL`), nunca absolutas tipo `/img/foo.png`.
+10. **Revisa `git status` antes de CADA commit.** Mira la lista completa de
+    archivos que vas a incluir, no solo los que tocaste a propósito. En la
+    Fase 2 se coló un `dbg2.mjs` de depuración y hubo que borrarlo en un commit
+    aparte. Los scripts temporales no van al repo.
 
 ## 6. Roadmap
 
@@ -150,7 +154,32 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 ---
 
-## 7. Bitácora
+## 7. Riesgos abiertos
+
+> Revisa esta sección antes de dar por publicable cualquier fase.
+
+### Las anclas de navegación no llevan a ningún sitio · ABIERTO
+
+La landing sirve **12 enlaces de ancla que apuntan a secciones que todavía no
+existen**: `#ponentes` (2), `#programa` (3), `#sede` (2) y `#boletos` (5),
+repartidos entre la nav de escritorio, el menú móvil y los dos CTAs del hero.
+Los únicos `id` reales en la home son `#inicio`, `#congreso`, `#contenido` y
+`#menu-movil`.
+
+Consecuencia: hoy **la navegación completa y los dos botones del hero no hacen
+nada**. Un clic en «Comprar mi boleto» se queda donde está.
+
+**NO publicar el sitio promocionalmente —ni compartir la URL con el cliente
+como demo navegable— hasta cerrar las Fases 3, 4 y 5**, que son las que crean
+esas cuatro secciones. Hasta entonces el despliegue de Pages vale como vista
+previa técnica, no como material de difusión.
+
+Al cerrar cada fase, comprueba que el `id` correspondiente ya existe y tacha
+la entrada de esta lista.
+
+---
+
+## 8. Bitácora
 
 ### Fase 1 — Cimientos · COMPLETADA
 
