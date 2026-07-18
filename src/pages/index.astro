@@ -7,6 +7,11 @@ import Pilares from '../components/Pilares.astro';
 import Programa from '../components/Programa.astro';
 import ParaQuien from '../components/ParaQuien.astro';
 import Boletos from '../components/Boletos.astro';
+import Sede from '../components/Sede.astro';
+import Patrocinadores from '../components/Patrocinadores.astro';
+import Faq from '../components/Faq.astro';
+import CtaFinal from '../components/CtaFinal.astro';
+import Footer from '../components/Footer.astro';
 ---
 
 <Base>
@@ -30,5 +35,13 @@ import Boletos from '../components/Boletos.astro';
     <Programa />
     <ParaQuien />
     <Boletos />
+    <Sede />
+    <Patrocinadores />
+    <Faq />
+    <CtaFinal />
   </main>
+
+  {/* El pie va FUERA de <main>: es contenido de la página, no del contenido
+      principal, y así «Saltar al contenido» no lo mete en el mismo saco. */}
+  <Footer />
 </Base>

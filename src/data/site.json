@@ -4,9 +4,13 @@
   "tagline": "Donde la producción avícola se vuelve rentable",
   "fecha": "2026-08-07",
   "inicio": "2026-08-07T09:00:00-06:00",
+  "horario": "08:00 – 16:30",
   "ciudad": "Tehuacán, Puebla",
   "recinto": null,
+  "direccion": null,
   "contacto": {
+    "correo": null,
+    "telefono": null,
     "whatsapp": null
   },
   "temaDefault": "green"

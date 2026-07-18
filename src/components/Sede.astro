@@ -1,0 +1,232 @@
+---
+import site from '../data/site.json';
+import { fechaLarga } from '../scripts/fechas.js';
+
+/*
+  Sede y fecha del congreso.
+
+  El recinto y la dirección todavía no están confirmados (`null` en site.json).
+  Ninguno de los dos se inventa ni se deja como hueco: se pinta un estado "por
+  confirmar" explícito, para que quien lea la página sepa que el dato falta a
+  propósito y no que la página está rota.
+*/
+const datos = [
+  { etiqueta: 'Fecha', valor: fechaLarga(site.fecha) },
+  { etiqueta: 'Horario', valor: site.horario },
+  { etiqueta: 'Ciudad', valor: site.ciudad },
+  { etiqueta: 'Recinto', valor: site.recinto, pendiente: 'Por confirmar' },
+  { etiqueta: 'Dirección', valor: site.direccion, pendiente: 'Por confirmar' },
+];
+---
+
+<section class="sede" id="sede">
+  <div class="sede__inner">
+    <div class="sede__datos">
+      <p class="sede__eyebrow" data-anim>Sede</p>
+      <h2 class="sede__titulo" data-anim>Dónde y cuándo</h2>
+
+      <dl class="ficha" data-anim>
+        {datos.map((dato) => (
+          <div class="ficha__fila" data-pendiente={dato.valor ? undefined : 'true'}>
+            <dt class="ficha__etiqueta">{dato.etiqueta}</dt>
+            <dd class="ficha__valor">{dato.valor ?? dato.pendiente}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {!site.recinto && (
+        <p class="sede__aviso" data-anim>
+          Estamos cerrando el recinto. En cuanto se confirme, aquí aparecerá la
+          dirección exacta y el mapa para llegar.
+        </p>
+      )}
+    </div>
+
+    <div class="sede__mapa" data-anim>
+      {/*
+        SUSTITUIR este bloque .mapa__placeholder por el mapa real cuando exista
+        la dirección. El iframe va con loading="lazy" para no pagar el coste de
+        Maps en la primera carga, y con un title descriptivo porque un iframe
+        sin nombre accesible es un agujero para quien navega con lector:
+
+        <iframe
+          class="mapa__marco"
+          src="https://www.google.com/maps/embed?pb=..."
+          title="Mapa de la sede de la Expo Avícola Productiva 2026"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+allowfullscreen
+        ></iframe>
+      */}
+      <div class="mapa__placeholder">
+        <svg
+          class="mapa__pin"
+          viewBox="0 0 24 24"
+          width="32"
+          height="32"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 21.2s6.8-5.7 6.8-11a6.8 6.8 0 1 0-13.6 0c0 5.3 6.8 11 6.8 11Z"
+            stroke="currentColor"
+            stroke-linejoin="round"
+          />
+          <circle cx="12" cy="10.2" r="2.6" stroke="currentColor" />
+        </svg>
+        <p class="mapa__texto">Ubicación por confirmar</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.sede');
+
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      gsap.fromTo(
+        seccion.querySelectorAll<HTMLElement>('[data-anim]'),
+        { opacity: 0, y: 28 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: seccion, start: 'top 78%', once: true },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .sede {
+    padding-block: var(--space-3xl);
+  }
+
+  .sede__inner {
+    display: grid;
+    max-width: var(--container);
+    gap: var(--space-2xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .sede__datos {
+    min-width: 0;
+  }
+
+  .sede__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .sede__titulo {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /* Ficha de datos --------------------------------------------------------- */
+  .ficha {
+    margin-block-start: var(--space-xl);
+  }
+
+  .ficha__fila {
+    display: grid;
+    gap: var(--space-2xs);
+    padding-block: var(--space-md);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .ficha__fila:last-child {
+    border-block-end: 1px solid var(--border);
+  }
+
+  .ficha__etiqueta {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .ficha__valor {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /*
+    Dato pendiente: se apaga, no se esconde. Que se lea distinto del resto es
+    justo el objetivo — comunica "falta este dato", no "aquí no hay nada".
+  */
+  .ficha__fila[data-pendiente] .ficha__valor {
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: var(--step-0);
+    font-weight: 500;
+    font-style: italic;
+  }
+
+  .sede__aviso {
+    max-width: 46ch;
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  /* Mapa ------------------------------------------------------------------- */
+  .sede__mapa {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    overflow: hidden;
+  }
+
+  .mapa__placeholder,
+  .sede__mapa :global(.mapa__marco) {
+    display: grid;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border: 0;
+  }
+
+  .mapa__placeholder {
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-sm);
+  }
+
+  .mapa__pin {
+    color: var(--text-muted);
+  }
+
+  .mapa__texto {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* Desktop: datos a la izquierda, mapa a la derecha. En móvil el orden del
+     DOM ya es el correcto y se apilan. */
+  @media (min-width: 62rem) {
+    .sede__inner {
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+    }
+  }
+</style>

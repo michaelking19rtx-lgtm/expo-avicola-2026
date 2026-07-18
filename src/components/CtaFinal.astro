@@ -1,0 +1,91 @@
+---
+import site from '../data/site.json';
+import { fechaCorta } from '../scripts/fechas.js';
+---
+
+<section class="cierre" aria-labelledby="cierre-titulo">
+  <div class="cierre__inner">
+    <h2 class="cierre__titulo" id="cierre-titulo" data-anim>
+      Nos vemos en Tehuacán
+    </h2>
+
+    <p class="cierre__apoyo" data-anim>
+      {fechaCorta(site.fecha)} · {site.horario} · Cupo limitado
+    </p>
+
+    <a class="cierre__cta" href="#boletos" data-anim>Comprar mi boleto</a>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.cierre');
+
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      gsap.fromTo(
+        seccion.querySelectorAll<HTMLElement>('[data-anim]'),
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: seccion, start: 'top 85%', once: true },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  /* Banda a ancho completo: los bordes cruzan toda la ventana, el contenido
+     se queda dentro del contenedor. */
+  .cierre {
+    padding-block: var(--space-3xl);
+    border-block: 1px solid var(--border);
+    background-color: var(--surface-2);
+  }
+
+  .cierre__inner {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    text-align: center;
+  }
+
+  .cierre__titulo {
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .cierre__apoyo {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+  }
+
+  .cierre__cta {
+    display: inline-block;
+    margin-block-start: var(--space-xl);
+    padding: var(--space-md) var(--space-2xl);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step-0);
+    font-weight: 600;
+    transition:
+      filter var(--t-base) var(--ease-out),
+      transform var(--t-fast) var(--ease-out);
+  }
+
+  .cierre__cta:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+</style>

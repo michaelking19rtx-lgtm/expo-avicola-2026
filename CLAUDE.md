@@ -46,12 +46,15 @@ expo-avicola-2026/
 │   ├── video/
 │   └── favicon.svg
 ├── src/
-│   ├── components/{Nav,Hero,VideoSection,Pilares,Programa,ParaQuien,Boletos}.astro
-│   ├── data/{site,programa,boletos}.json
+│   ├── components/
+│   │   ├── {Nav,Hero,VideoSection}.astro
+│   │   ├── {Pilares,Programa,ParaQuien,Boletos}.astro
+│   │   └── {Sede,Patrocinadores,Faq,CtaFinal,Footer}.astro
+│   ├── data/{site,navegacion,programa,boletos,patrocinadores,faq}.json
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin}.astro
-│   ├── scripts/{theme,animations,paths}.js
+│   ├── scripts/{theme,animations,paths,fechas}.js
 │   └── styles/{tokens,global}.css
 ├── astro.config.mjs
 ├── CLAUDE.md
@@ -146,7 +149,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 3    | Ponentes: fichas con foto, cargo y sesión                                 | **POSPUESTA**  |
 | 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
-| 6    | Patrocinadores, sede y ubicación, FAQ, footer                             | Pendiente      |
+| 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
 | 7    | SEO, Open Graph, rendimiento, auditoría de accesibilidad, pulido          | Pendiente      |
 | 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
 
@@ -166,35 +169,34 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
 
-### Anclas de navegación que no llevan a ningún sitio · ABIERTO (parcial)
+### Anclas de navegación que no llevan a ningún sitio · CASI CERRADO
 
-Estado tras la Fase 5:
+Estado tras la Fase 6:
 
 | Ancla        | Enlaces | ¿Existe el destino? |
 | :----------- | ------: | :------------------ |
-| `#programa`  |       3 | **SÍ** — creado en la Fase 4 |
-| `#boletos`   |       5 | **SÍ** — creado en la Fase 5 |
-| `#ponentes`  |       2 | NO — Fase 3, pospuesta |
-| `#sede`      |       2 | NO — Fase 6 |
+| `#programa`  |       4 | **SÍ** — Fase 4 |
+| `#boletos`   |       7 | **SÍ** — Fase 5 |
+| `#sede`      |       3 | **SÍ** — Fase 6 |
+| `#contenido` |       1 | **SÍ** — el `<main>` |
+| `#ponentes`  |       3 | **NO** — Fase 3, pospuesta |
 
-Quedan **4 enlaces muertos de los 12 originales**, y ya no son de conversión:
-los cinco de `#boletos` (enlace «Boletos» de la nav y del menú, CTA de la nav y
-del menú, y el CTA del hero) llegan a la sección y quedan por debajo de la barra
-fija, verificado enlace por enlace.
+De 18 enlaces ancla, **solo 3 siguen muertos y los tres van a `#ponentes`**:
+nav de escritorio, menú móvil y footer. El footer añadió uno más porque sirve
+los mismos enlaces que la nav (`src/data/navegacion.json`); es el precio de que
+las dos listas no puedan desincronizarse.
+
+Los 15 vivos se verificaron con clic real: todos aterrizan a 161px con la barra
+acabando en 73px, ninguno queda tapado. El enlace «Saltar al contenido» deja el
+primer texto del hero a 156px, también libre.
 
 `id` reales hoy en la home: `#inicio`, `#congreso`, `#pilares`, `#programa`,
-`#para-quien`, `#boletos`, `#contenido` y `#menu-movil`.
+`#para-quien`, `#boletos`, `#sede`, `#patrocinadores`, `#faq`, `#contenido` y
+`#menu-movil`.
 
-**El bloqueo de publicación promocional se levanta parcialmente:** el recorrido
-principal (ver programa → ver precio → intentar comprar) ya funciona de punta a
-punta. Antes de difundirlo hay que decidir dos cosas:
-
-1. Que sea aceptable que «Comprar mi boleto» avise de que la venta abre pronto
-   en vez de cobrar — **la pasarela no está conectada** (ver abajo).
-2. Que sea aceptable que `#ponentes` y `#sede` sigan sin destino.
-
-Al cerrar cada fase, actualiza la tabla y tacha la entrada cuando no quede
-ningún ancla muerta.
+**Esta entrada se cierra al construir la Fase 3.** Mientras tanto, la opción
+barata si molesta es quitar «Ponentes» de `navegacion.json`: desaparece de la
+nav, del menú y del footer a la vez.
 
 ### La pasarela de pago no existe · ABIERTO
 
@@ -207,13 +209,32 @@ el precio en Stripe, poner el `price_xxx` en `priceId`, y sustituir el `<button>
 por el enlace real (el marcado está escrito en un comentario dentro de
 `Boletos.astro`). Mientras tanto, **el sitio no puede vender**.
 
-### DATO PENDIENTE: WhatsApp de contacto
+### PENDIENTES DE CONTENIDO — lista consolidada
 
-`site.contacto.whatsapp` está en `null`. El aviso del botón está preparado para
-ofrecer «Escribir por WhatsApp» en cuanto haya número, pero **hoy no lo promete**,
-porque anunciar un canal de contacto sin dar forma de usarlo es peor que no
-mencionarlo. Al rellenar la clave (formato internacional, p. ej. `+52 238 ...`),
-el enlace `wa.me` aparece solo, sin tocar el componente.
+Todo lo que falta para que la landing esté completa. **Nada de esto es código
+que falte escribir: son datos y archivos que tiene que aportar el cliente.**
+Cada uno ya tiene su hueco preparado y se degrada con dignidad mientras no
+llegue — la página nunca enseña un dato falso ni un espacio roto.
+
+| # | Qué falta | Dónde entra | Qué se ve mientras tanto |
+| - | :-------- | :---------- | :----------------------- |
+| 1 | **Recinto** de la sede | `site.recinto` | «Por confirmar» en cursiva + aviso bajo la ficha |
+| 2 | **Dirección** exacta | `site.direccion` | «Por confirmar» en cursiva |
+| 3 | **Mapa** de la sede | comentario en `Sede.astro` | Placeholder con pin y «Ubicación por confirmar» |
+| 4 | **Correo** de contacto | `site.contacto.correo` | «Próximamente» en el footer |
+| 5 | **Teléfono** | `site.contacto.telefono` | «Próximamente» en el footer |
+| 6 | **WhatsApp** | `site.contacto.whatsapp` | «Próximamente» en el footer; el aviso de Boletos no promete WhatsApp |
+| 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
+| 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera |
+| 9 | **Imagen del hero** | `public/img/hero/ponentes.png` | Placeholder punteado (y un 404 en consola) |
+| 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
+| 11 | **Ponente de la sesión de IA** | `programa.json`, bloque 13:10 | «Por confirmar» como nombre |
+| 12 | **Stripe**: producto, precio y checkout | `boletos.json` (`priceId`, `checkoutUrl`) | El botón avisa de que la venta abre pronto |
+| 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
+
+Los tres que más pesan: **el 12 impide vender**, el **8 bloquea una fase entera**
+y los **1–3** dejan la sección de sede a medio contestar la pregunta que da
+título a la sección.
 
 ---
 
@@ -557,3 +578,87 @@ Verificado en Chrome 150 headless por CDP, no leyendo el código:
 
 **PENDIENTE — integración de pagos.** Ver «Riesgos abiertos». Sin `checkoutUrl`
 el sitio informa, pero no vende.
+
+---
+
+### Fase 6 — Sede, patrocinadores, FAQ, CTA final y footer · COMPLETADA
+
+Cierra la landing: ya no falta ninguna sección salvo Ponentes (Fase 3).
+
+**Qué se hizo**
+
+- `Sede.astro` (`id="sede"`): ficha de datos en dos columnas con el mapa a la
+  derecha. Fecha, horario y ciudad salen de `site.json`; recinto y dirección
+  están en `null` y se pintan como «Por confirmar».
+- `Patrocinadores.astro`: Avipork y Prosermat desde `patrocinadores.json`, con
+  el mismo fallback de imagen del hero. Avipork enlaza a su web; Prosermat no
+  tiene URL y por eso su tarjeta no es un enlace.
+- `Faq.astro` (`id="faq"`): siete preguntas en `<details>`/`<summary>` nativos.
+- `CtaFinal.astro`: banda a ancho completo en `--surface-2` con el último CTA.
+- `Footer.astro`: tres columnas + barra inferior. Fuera de `<main>`.
+- `navegacion.json` y `fechas.js`: dos fuentes compartidas nuevas (ver abajo).
+- `site.json` estrena `horario`, `direccion`, `contacto.correo` y
+  `contacto.telefono`.
+
+**Decisiones**
+
+- **El acordeón usa `<details>`/`<summary>` nativos, no divs con JS.** Sale
+  gratis: teclado (Enter y Espacio), estado expandido en el árbol de
+  accesibilidad, y Ctrl+F encuentra texto dentro de un panel cerrado. Nada de
+  eso habría salido gratis reimplementándolo. Verificado con teclas reales por
+  CDP: `role=DisclosureTriangle`, `expanded` pasa de `false` a `true`.
+- **La animación del acordeón va SOLO en el chevron.** Animar la altura de un
+  `<details>` obliga a medirlo con JS y a tomar el control del abierto/cerrado,
+  que es justo lo que rompe el funcionamiento sin bundle.
+- **Los enlaces de nav se mudaron a `src/data/navegacion.json`.** El footer
+  sirve los mismos cuatro; tenerlos duplicados en dos componentes garantizaba
+  que algún día se desincronizaran. Efecto colateral honesto: el footer añade
+  un tercer enlace muerto a `#ponentes`.
+- **El formateo de fechas se extrajo a `src/scripts/fechas.js`.** La fecha se
+  pinta en cuatro sitios y todos comparten la misma trampa (`site.fecha` es una
+  fecha sin hora que hay que formatear en UTC o sale el día 6). Tenerla en un
+  solo sitio evita que el próximo componente la repita mal.
+- **El footer va FUERA de `<main>`.** Es contenido de la página, no del
+  contenido principal; metido dentro, «Saltar al contenido» lo habría incluido
+  en el mismo salto.
+- **La nav del footer se llama «Enlaces del pie de página», no «Secciones del
+  sitio».** Ese nombre ya lo usa la cabecera, y dos landmarks de navegación con
+  nombre idéntico son indistinguibles al navegar por landmarks. Detectado
+  leyendo los `aria-label` renderizados, no a ojo.
+- **Los datos pendientes se apagan, no se esconden.** «Por confirmar» va en
+  `--text-muted` y cursiva, con la tipografía de cuerpo en vez de la display:
+  se lee distinto del resto a propósito, porque el mensaje es «falta este dato»,
+  no «aquí no hay nada».
+- **El aviso de privacidad es texto plano.** La página `/privacidad` no existe y
+  enlazarla sería un 404 — el mismo error que llevamos evitando con las anclas.
+- **`soloDigitos` acepta `unknown`.** Hoy las tres claves de contacto son `null`
+  y TypeScript infiere ese tipo; cuando lleguen serán texto y pueden traer
+  espacios o guiones, de ahí el filtro para `tel:` y `wa.me`.
+
+**Estado**
+
+`npm run build` y `npm run check` pasan con 0 errores, 0 warnings y 0 hints.
+
+Verificado en Chrome 150 headless por CDP:
+
+- **18 enlaces ancla, 15 vivos verificados con clic real**: todos aterrizan a
+  161px con la nav acabando en 73px. Los 3 muertos van a `#ponentes`.
+- **«Saltar al contenido»** deja el primer texto del hero a 156px, libre de la
+  barra. (Medir la caja de `<main>` da 0px y parece tapado: es un falso
+  positivo, el hero tiene su propio padding superior.)
+- **Acordeón por teclado**: Tab llega al `<summary>` con anillo visible
+  (`2px solid` en `--accent`, offset -2px), y Enter y Espacio lo abren y
+  cierran. *Nota metodológica: un `Input.dispatchKeyEvent` de Enter sin los
+  eventos `text`/`char` NO dispara la acción por defecto y da un falso negativo.
+  Hizo falta un experimento de control sobre un `<button>` para descartarlo.*
+- **Sin JavaScript**: el acordeón sigue abriendo y cerrando, y ningún
+  `[data-anim]` queda oculto.
+- **0 px de desbordamiento** en 375/768/1440 × verde/azul, con los 67
+  `[data-anim]` visibles al final del recorrido.
+- **Interrupción a media animación** (la lección del bug de la Fase 5): al
+  activar «reducir movimiento» con las entradas de Sede en vuelo, los 67
+  elementos quedan visibles. Ninguna animación nueva usa atributos fuera del
+  `clearProps` de `detenerMovimiento()`.
+- **Jerarquía de headings**: 1 h1, 11 h2, 22 h3, sin un solo salto de nivel.
+- **Contraste**: 38 pares comprobados en los dos temas, 0 por debajo del mínimo.
+  El más ajustado es 6.66:1 (texto secundario sobre `--surface` en azul).

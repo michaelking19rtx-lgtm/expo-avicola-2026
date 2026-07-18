@@ -1,0 +1,265 @@
+---
+import patrocinadores from '../data/patrocinadores.json';
+import { asset } from '../scripts/paths.js';
+
+/*
+  Patrocinadores.
+
+  Los archivos de logo TODAVÍA NO EXISTEN en /public. Se aplica el mismo reparto
+  entre CSS y JS que la imagen del hero:
+
+    - Sin JS ([data-js] ausente): manda el <img>. Si falta, el navegador pinta
+      su icono de imagen rota, pero es el único escenario donde no podemos
+      hacer nada mejor.
+    - Con JS: manda el marco punteado con el nombre de la empresa, y la imagen
+      solo aparece cuando se confirma que cargó.
+
+  Así el sitio nunca enseña un icono de imagen rota mientras los logos no
+  lleguen, y el nombre de la empresa siempre se lee.
+*/
+---
+
+<section class="patros" id="patrocinadores">
+  <div class="patros__inner">
+    <header class="patros__head">
+      <p class="patros__eyebrow" data-anim>Patrocinadores</p>
+      <h2 class="patros__titulo" data-anim>Quienes hacen posible el congreso</h2>
+    </header>
+
+    <ul class="patros__lista" role="list">
+      {patrocinadores.map((patro) => {
+        const Marco = patro.url ? 'a' : 'div';
+        const propsEnlace = patro.url
+          ? {
+              href: patro.url,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              'aria-label': `${patro.nombre} — ${patro.descripcion} (abre en una pestaña nueva)`,
+            }
+          : {};
+
+        return (
+          <li class="patro" data-anim>
+            <Marco class="patro__marco" {...propsEnlace}>
+              <div class="patro__caja" data-logo-frame>
+                <img
+                  class="patro__logo"
+                  src={asset(patro.logo)}
+                  alt={`Logotipo de ${patro.nombre}`}
+                  loading="lazy"
+                  decoding="async"
+                  data-logo-img
+                />
+                {/*
+                  aria-hidden: el nombre ya lo anuncia el alt del <img> o el
+                  aria-label del enlace. Sin esto se leería dos veces.
+                */}
+                <span class="patro__respaldo" aria-hidden="true">
+                  {patro.nombre}
+                </span>
+              </div>
+
+              <p class="patro__desc">{patro.descripcion}</p>
+            </Marco>
+          </li>
+        );
+      })}
+    </ul>
+
+    <p class="patros__invita" data-anim>
+      ¿Tu empresa trabaja en nutrición, sanidad, genética, equipos o tecnología
+      avícola? Hay espacios de expositor disponibles en el área comercial.
+    </p>
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.patros');
+
+  // -----------------------------------------------------------------------
+  // Logos: nunca debe verse un icono de imagen rota. Sin GSAP de por medio.
+  // -----------------------------------------------------------------------
+  (() => {
+    const marcos = document.querySelectorAll<HTMLElement>('[data-logo-frame]');
+
+    marcos.forEach((marco) => {
+      const img = marco.querySelector<HTMLImageElement>('[data-logo-img]');
+      if (!img) return;
+
+      const cargada = () => (marco.dataset.state = 'loaded');
+      const fallida = () => (marco.dataset.state = 'failed');
+
+      if (img.complete) {
+        // Ya resuelta antes de que corriera este script.
+        if (img.naturalWidth > 0) cargada();
+        else fallida();
+      } else {
+        img.addEventListener('load', cargada, { once: true });
+        img.addEventListener('error', fallida, { once: true });
+      }
+    });
+  })();
+
+  // -----------------------------------------------------------------------
+  // Movimiento: mejora progresiva.
+  // -----------------------------------------------------------------------
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      gsap.fromTo(
+        seccion.querySelectorAll<HTMLElement>('[data-anim]'),
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: seccion, start: 'top 80%', once: true },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .patros {
+    padding-block: var(--space-3xl);
+  }
+
+  .patros__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .patros__head {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .patros__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .patros__titulo {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /* Rejilla ---------------------------------------------------------------- */
+  /*
+    auto-fit + minmax con un máximo de 22rem por tarjeta: con dos patrocinadores
+    quedan centrados y del mismo ancho; si mañana hay cinco, se reparten sin
+    dejar a nadie huérfano en una fila suelta.
+  */
+  .patros__lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 22rem));
+    gap: var(--space-lg);
+    justify-content: center;
+    margin-block-start: var(--space-2xl);
+    list-style: none;
+  }
+
+  .patro__marco {
+    display: block;
+    height: 100%;
+    padding: var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    text-align: center;
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      transform var(--t-base) var(--ease-out);
+  }
+
+  a.patro__marco:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-bright);
+  }
+
+  .patro__caja {
+    position: relative;
+    display: grid;
+    place-items: center;
+    /* Altura fija: los logos llegarán con proporciones distintas y la fila
+       tiene que leerse pareja pase lo que pase. */
+    height: 5.5rem;
+  }
+
+  .patro__logo {
+    max-height: 100%;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .patro__respaldo {
+    position: absolute;
+    inset: 0;
+    display: none;
+    place-items: center;
+    padding: var(--space-sm);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /*
+    Mismo reparto que la imagen del hero:
+    - Sin JS manda el <img>, nunca el respaldo.
+    - Con JS manda el respaldo y la imagen espera invisible; solo aparece al
+      confirmarse la carga.
+  */
+  :global([data-js]) .patro__respaldo {
+    display: grid;
+  }
+
+  :global([data-js]) .patro__logo {
+    opacity: 0;
+    transition: opacity var(--t-slow) var(--ease-out);
+  }
+
+  :global([data-js]) [data-logo-frame][data-state='loaded'] .patro__logo {
+    opacity: 1;
+  }
+
+  :global([data-js]) [data-logo-frame][data-state='loaded'] .patro__respaldo {
+    display: none;
+  }
+
+  :global([data-js]) [data-logo-frame][data-state='failed'] .patro__logo {
+    display: none;
+  }
+
+  .patro__desc {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .patros__invita {
+    max-width: 56ch;
+    margin-block-start: var(--space-2xl);
+    margin-inline: auto;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+  }
+</style>

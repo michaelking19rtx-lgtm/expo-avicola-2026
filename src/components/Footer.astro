@@ -1,0 +1,220 @@
+---
+import site from '../data/site.json';
+import enlaces from '../data/navegacion.json';
+import { asset } from '../scripts/paths.js';
+import { fechaLarga } from '../scripts/fechas.js';
+
+/*
+  Pie de página.
+
+  NINGÚN dato de contacto está confirmado: correo, teléfono y WhatsApp están en
+  null dentro de site.json. Cada uno se resuelve por separado, así que en cuanto
+  llegue UNO solo aparece él y los otros dos siguen en "Próximamente". No se
+  inventa nada.
+*/
+const contacto = site.contacto ?? {};
+
+/*
+  `unknown` y no `string`: hoy las tres claves de contacto son null en el JSON,
+  así que TypeScript infiere el tipo `null` para ellas. Cuando se rellenen
+  llegarán como texto, y puede venir con espacios o guiones («+52 238 ...»), de
+  ahí el filtro de dígitos para tel: y wa.me.
+*/
+const soloDigitos = (valor: unknown) => String(valor).replace(/\D/g, '');
+
+const vias = [
+  {
+    etiqueta: 'Correo',
+    valor: contacto.correo,
+    href: contacto.correo ? `mailto:${contacto.correo}` : null,
+  },
+  {
+    etiqueta: 'Teléfono',
+    valor: contacto.telefono,
+    href: contacto.telefono ? `tel:${soloDigitos(contacto.telefono)}` : null,
+  },
+  {
+    etiqueta: 'WhatsApp',
+    valor: contacto.whatsapp,
+    href: contacto.whatsapp ? `https://wa.me/${soloDigitos(contacto.whatsapp)}` : null,
+  },
+];
+
+const anio = new Date(site.fecha).getUTCFullYear();
+---
+
+<footer class="pie">
+  <div class="pie__inner">
+    <div class="pie__marca">
+      <a class="pie__wordmark" href={asset('')}>Expo Avícola Productiva</a>
+      <p class="pie__desc">{site.tagline}</p>
+      <p class="pie__cuando">
+        {fechaLarga(site.fecha)} · {site.ciudad}
+      </p>
+    </div>
+
+    {/*
+      La etiqueta NO puede ser "Secciones del sitio": ese nombre ya lo usa la
+      nav de la cabecera, y dos landmarks de navegación con nombre idéntico son
+      indistinguibles para quien navega por landmarks con lector de pantalla.
+    */}
+    <nav class="pie__nav" aria-label="Enlaces del pie de página">
+      <h2 class="pie__titulo">Navegación</h2>
+      <ul class="pie__enlaces" role="list">
+        {enlaces.map((enlace) => (
+          <li>
+            <a class="pie__enlace" href={enlace.href}>{enlace.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="pie__contacto">
+      <h2 class="pie__titulo">Contacto</h2>
+      <dl class="vias">
+        {vias.map((via) => (
+          <div class="vias__fila">
+            <dt class="vias__etiqueta">{via.etiqueta}</dt>
+            <dd class="vias__valor">
+              {via.href ? (
+                <a
+                  class="pie__enlace"
+                  href={via.href}
+                  {...(via.etiqueta === 'WhatsApp'
+                    ? { target: '_blank', rel: 'noopener noreferrer' }
+                    : {})}
+                >
+                  {via.valor}
+                </a>
+              ) : (
+                <span class="vias__pendiente">Próximamente</span>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </div>
+
+  <div class="pie__barra">
+    <p class="pie__copy">© {anio} Expo Avícola Productiva</p>
+    {/*
+      Aviso de privacidad: TEXTO PLANO a propósito. La página /privacidad
+      todavía no existe y enlazarla sería un 404 — justo lo que llevamos
+      evitando con las anclas muertas. Cuando exista, esto pasa a ser:
+
+      <a class="pie__enlace" href={asset('privacidad')}>Aviso de privacidad</a>
+    */}
+    <p class="pie__legal">Aviso de privacidad · Próximamente</p>
+  </div>
+</footer>
+
+<style>
+  .pie {
+    padding-block-start: var(--space-3xl);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .pie__inner {
+    display: grid;
+    max-width: var(--container);
+    gap: var(--space-2xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Marca ------------------------------------------------------------------ */
+  .pie__wordmark {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .pie__desc {
+    max-width: 34ch;
+    margin-block-start: var(--space-sm);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .pie__cuando {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  /* Columnas de enlaces ---------------------------------------------------- */
+  .pie__titulo {
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .pie__enlaces {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+    list-style: none;
+  }
+
+  .pie__enlace {
+    color: var(--text);
+    transition: color var(--t-base) var(--ease-out);
+  }
+
+  .pie__enlace:hover {
+    color: var(--accent);
+  }
+
+  /* Contacto --------------------------------------------------------------- */
+  .vias {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+  }
+
+  .vias__fila {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: var(--space-sm);
+    align-items: baseline;
+  }
+
+  .vias__etiqueta {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .vias__pendiente {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Barra inferior --------------------------------------------------------- */
+  .pie__barra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+    justify-content: space-between;
+    max-width: var(--container);
+    margin-inline: auto;
+    margin-block-start: var(--space-2xl);
+    padding-block: var(--space-lg);
+    padding-inline: var(--gutter);
+    border-block-start: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  @media (min-width: 62rem) {
+    .pie__inner {
+      grid-template-columns: 2fr 1fr 1.4fr;
+      gap: var(--space-xl);
+    }
+  }
+</style>

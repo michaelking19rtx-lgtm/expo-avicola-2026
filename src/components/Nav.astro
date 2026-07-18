@@ -1,12 +1,11 @@
 ---
 import { asset } from '../scripts/paths.js';
-
-const enlaces = [
-  { href: '#ponentes', label: 'Ponentes' },
-  { href: '#programa', label: 'Programa' },
-  { href: '#sede', label: 'Sede' },
-  { href: '#boletos', label: 'Boletos' },
-];
+/*
+  Los enlaces viven en src/data/navegacion.json porque el footer sirve
+  exactamente los mismos. Duplicar el array en los dos componentes garantizaba
+  que algún día se desincronizaran.
+*/
+import enlaces from '../data/navegacion.json';
 ---
 
 <a class="skip" href="#contenido" data-anchor-immediate>Saltar al contenido</a>
