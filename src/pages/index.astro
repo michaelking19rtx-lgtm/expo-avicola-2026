@@ -43,24 +43,23 @@ import BarraCompra from '../components/BarraCompra.astro';
       SUPERFICIES CLARAS — claro donde se lee, oscuro donde se decide.
 
       El mecanismo entero vive en global.css («Superficies claras»); aquí solo
-      se declara QUÉ secciones son claras y DÓNDE están sus fronteras.
+      se declara QUÉ secciones son claras.
 
-      `data-borde` es explícito a propósito. Las claras van en parejas, así que
-      el orden deja cuatro fronteras y no ocho: la primera de cada pareja pinta
-      solo su banda de ENTRADA y la segunda solo la de SALIDA. Entre las dos no
-      hay nada que dibujar. Se suprime por atributo y no con :has() porque, si
-      :has() no aplicara, aparecería una banda oscura EN MITAD del claro.
+      Las fronteras son un CORTE SECO, sin degradado. Ya no hay `data-borde`:
+      existía solo para decidir qué banda pintaba cada sección y cuál se
+      suprimía entre dos claras seguidas. Sin bandas, el atributo no decidía
+      nada, así que se retiró en vez de dejarlo como marcado muerto.
 
         Pilares → [Programa · ¿Para quién?] → Boletos → Sede → [Patros · FAQ] → CTA
     */}
-    <Programa data-superficie="clara" data-borde="entrada" />
-    <ParaQuien data-superficie="clara" data-borde="salida" />
+    <Programa data-superficie="clara" />
+    <ParaQuien data-superficie="clara" />
 
     <Boletos />
     <Sede />
 
-    <Patrocinadores data-superficie="clara" data-borde="entrada" />
-    <Faq data-superficie="clara" data-borde="salida" />
+    <Patrocinadores data-superficie="clara" />
+    <Faq data-superficie="clara" />
 
     <CtaFinal />
   </main>

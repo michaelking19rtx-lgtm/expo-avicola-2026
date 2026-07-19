@@ -19,6 +19,34 @@ const lineasTitulo = [
 const tagline = site.tagline;
 
 /*
+  FONDO DEL HERO. Dos anchos, y el valor se pasa YA ENVUELTO en url().
+
+  Va como variable CSS y no escrito en la hoja porque la ruta tiene que salir
+  de asset() (convención 9): el base cambió una vez y una ruta a mano solo
+  sobrevive por casualidad. Y se envuelve aquí, en el frontmatter, porque
+  `url(var(--x))` NO es CSS válido — no se puede componer un url() desde una
+  variable. La variable tiene que contener la función entera.
+
+  ────────────────────────────────────────────────────────────────────────────
+  NO USAR `define:vars` PARA ESTO. Se probó y se midió: infla el HTML en
+  17 882 BYTES (96 971 → 114 853), porque Astro repite el atributo `style` con
+  las dos variables en CADA elemento del componente, y el hero tiene decenas.
+
+  El coste no era teórico: el LCP en 4G subía ~92 ms **también a 390 px**, un
+  ancho donde la media query no casa y el fondo NI SIQUIERA SE DESCARGA. Ese
+  fue el hilo del que tirar — un LCP que empeora donde la imagen no existe no
+  puede ser culpa de la imagen; era el documento, que bloquea el render.
+
+  Aquí las variables se declaran UNA vez, en el `style` de la propia <section>,
+  y los pseudo-elementos las heredan. Mismo resultado, ~120 bytes.
+  ────────────────────────────────────────────────────────────────────────────
+*/
+const estiloFondoHero = [
+  `--fondo-hero-1280: url("${asset('img/hero/fondo-hero-1280.webp')}")`,
+  `--fondo-hero-1920: url("${asset('img/hero/fondo-hero-1920.webp')}")`,
+].join('; ');
+
+/*
   Valores iniciales de la cuenta regresiva calculados en build.
 
   Se pintan ya resueltos —en vez de ceros— para que no haya destello ni salto
@@ -261,7 +289,7 @@ const IMG_W = 672;
 const IMG_H = 900;
 ---
 
-<section class="hero" id="inicio">
+<section class="hero" id="inicio" style={estiloFondoHero}>
   <div class="hero__inner">
     <div class="hero__content">
       {/*
@@ -747,6 +775,124 @@ const IMG_H = 900;
        horizontales del halo, del parallax y del sangrado del conjunto. */
     overflow: clip;
     padding-block: calc(var(--nav-h) + var(--space-xl)) var(--space-2xl);
+  }
+
+  /* =========================================================================
+     FONDO DEL HERO — SOLO ESCRITORIO
+
+     Tres capas, de abajo arriba:
+
+       imagen  (::before)  fotografía, difuminada a transparente en los 4 bordes
+       velo    (::after)   degradado oscuro, MÁS DENSO A LA IZQUIERDA
+       figuras             intactas, con su z-index propio, muy por encima
+
+     SE PINTA EN CSS Y NO CON UN <img> A PROPÓSITO. Así degrada solo: si el
+     archivo falta o da 404 no se ve un icono de imagen rota, se ve el --bg de
+     siempre y la sección sigue igual de legible. Es la misma razón por la que
+     el halo es un div y no una imagen.
+
+     Y VA DENTRO DE UNA MEDIA QUERY QUE NO CASA EN MÓVIL, que es lo que evita
+     la descarga: un fondo declarado fuera y anulado dentro SÍ se descargaría.
+     En teléfono no existe, así que no toca el LCP donde más caro sale.
+     ====================================================================== */
+  @media (min-width: 48rem) {
+    .hero {
+      position: relative;
+      /*
+        Las dos capas van en z-index negativo para quedar por debajo del
+        contenido sin tener que tocar el z-index de nada más. `isolation`
+        acota ese apilado al hero: sin ella, un z-index negativo puede colarse
+        por detrás del fondo de un ancestro y desaparecer.
+      */
+      isolation: isolate;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* CAPA DE ABAJO — la fotografía. */
+    .hero::before {
+      z-index: -2;
+      background-image: var(--fondo-hero-1280);
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      /*
+        MÁSCARA: se difumina a transparente en los cuatro bordes, para que la
+        foto no termine en un canto recto contra el --bg. Son dos degradados
+        cruzados y se INTERSECAN (mask-composite: intersect), no se suman: con
+        la suma por defecto, cada eje "rescata" lo que el otro había ocultado y
+        las esquinas se quedaban opacas, que es justo lo que había que evitar.
+      */
+      mask-image:
+        linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%),
+        linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
+      mask-composite: intersect;
+      -webkit-mask-image:
+        linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%),
+        linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
+      -webkit-mask-composite: source-in;
+    }
+
+    /*
+      CAPA DEL MEDIO — el velo.
+
+      Más denso a la IZQUIERDA porque ahí va el título: es la mitad que tiene
+      que leerse, y el contraste del texto no puede depender de qué haya salido
+      en la foto. A la derecha se abre para que la fotografía respire detrás de
+      las figuras. El segundo degradado, vertical, ancla el borde inferior con
+      la sección siguiente.
+
+      Se usa --bg y no un hex: el hero es oscuro en los dos temas y el velo
+      tiene que ser el fondo del tema activo, no un negro suelto.
+    */
+    .hero::after {
+      z-index: -1;
+      background-image:
+        linear-gradient(
+          to right,
+          var(--bg) 0%,
+          color-mix(in srgb, var(--bg) 88%, transparent) 38%,
+          color-mix(in srgb, var(--bg) 62%, transparent) 70%,
+          color-mix(in srgb, var(--bg) 52%, transparent) 100%
+        ),
+        linear-gradient(
+          to bottom,
+          color-mix(in srgb, var(--bg) 70%, transparent) 0%,
+          transparent 35%,
+          transparent 70%,
+          var(--bg) 100%
+        );
+    }
+
+    /*
+      SIN color-mix NO HAY VELO PARCIAL, Y SIN VELO EL TÍTULO QUEDA SOBRE LA
+      FOTO. Es la trampa que ya documentó la nav: como el valor lleva var(), un
+      navegador sin color-mix no descarta la declaración al parsear sino al
+      computar, y cada parada caería a transparent. El respaldo tapa la foto
+      entera con un velo plano: se pierde el efecto, no la legibilidad.
+    */
+    @supports not (background-color: color-mix(in srgb, red 50%, transparent)) {
+      .hero::after {
+        background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 100%);
+        opacity: 0.88;
+      }
+    }
+  }
+
+  /*
+    El archivo de 1920 solo entra donde de verdad se ve. Un portátil de 1280
+    se queda con el de 1280 y descarga 12.8 KB en vez de 24.2.
+  */
+  @media (min-width: 90rem) {
+    .hero::before {
+      background-image: var(--fondo-hero-1920);
+    }
   }
 
   .hero__inner {

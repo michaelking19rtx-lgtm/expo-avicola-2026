@@ -75,8 +75,11 @@ const precioTexto =
     display: none;
   }
 
-  /* SOLO MÓVIL. El mismo corte que usa .cta--movil de Boletos, para que las dos
-     duplicaciones del CTA aparezcan y desaparezcan en el mismo ancho. */
+  /* SOLO MÓVIL, y el corte es el mismo (47.9375rem) en el que la tarjeta de
+     Boletos pasa de dos mitades a apilada. Aquí vivía la coordinación con el
+     `.cta--movil` de esa tarjeta; ese CTA duplicado desapareció con el
+     rediseño en dos mitades, pero el ancho de corte se mantiene compartido
+     para que las dos decisiones de layout cambien a la vez. */
   @media (max-width: 47.9375rem) {
     :global([data-js]) .barra {
       position: fixed;

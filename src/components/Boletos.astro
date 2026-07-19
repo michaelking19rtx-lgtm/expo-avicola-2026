@@ -77,58 +77,52 @@ const entradas = boletos.map((boleto) => ({
       >
         <div class="tarjeta__halo" aria-hidden="true"></div>
 
-        <div class="tarjeta__cuerpo">
-          <div class="tarjeta__encabezado">
-            <h3 class="tarjeta__nombre">{boleto.nombre}</h3>
-            {!boleto.disponible && <span class="tarjeta__etiqueta">Agotado</span>}
+        {/*
+          TARJETA PARTIDA EN DOS MITADES.
+
+          Izquierda: el precio, dominante, sobre --accent. Es lo primero que se
+          lee — antes iba en el mismo color que todo lo demás y la tarjeta se
+          leía como una lista con un número arriba.
+
+          Derecha: qué incluye y el botón, JUSTO detrás del último punto.
+
+          En móvil se apilan (precio arriba, lista y botón abajo) y por eso
+          desapareció el CTA duplicado de cabecera que había aquí: existía solo
+          porque el botón caía 628px por debajo del precio y no había forma de
+          ver los dos a la vez. Con el precio en su propio panel compacto esa
+          distancia se desploma, así que el duplicado sobra — y un CTA repetido
+          dos veces en la misma tarjeta era ruido, no ayuda.
+        */}
+        <div class="tarjeta__split">
+          <div class="panel-precio">
+            <div class="tarjeta__encabezado">
+              <h3 class="tarjeta__nombre">{boleto.nombre}</h3>
+              {!boleto.disponible && <span class="tarjeta__etiqueta">Agotado</span>}
+            </div>
+
+            {boleto.precioTexto ? (
+              <p class="precio">
+                <span class="precio__simbolo" aria-hidden="true">$</span>
+                <span class="precio__valor" aria-hidden="true">{boleto.precioTexto}</span>
+                <span class="precio__moneda" aria-hidden="true">{boleto.moneda}</span>
+                {/*
+                  El precio se lee entero de una vez, sin deletrear los trozos.
+                  Los tres tramos visuales van en aria-hidden: sin eso el lector
+                  recitaba «699 MXN 699 pesos MXN» —los trozos y luego la frase—.
+                  Mismo criterio que BarraCompra.astro.
+                */}
+                <span class="sr-only">
+                  {boleto.precioTexto} pesos {boleto.moneda}
+                </span>
+              </p>
+            ) : (
+              <p class="precio precio--pendiente">Por definir</p>
+            )}
+
+            <p class="tarjeta__nota">Precio por persona · Cupo limitado</p>
           </div>
 
-          {boleto.precioTexto ? (
-            <p class="precio">
-              <span class="precio__simbolo" aria-hidden="true">$</span>
-              <span class="precio__valor" aria-hidden="true">{boleto.precioTexto}</span>
-              <span class="precio__moneda" aria-hidden="true">{boleto.moneda}</span>
-              {/*
-                El precio se lee entero de una vez, sin deletrear los trozos.
-                Los tres tramos visuales van en aria-hidden: sin eso el lector
-                recitaba «699 MXN 699 pesos MXN» —los trozos y luego la frase—.
-                Mismo criterio que BarraCompra.astro.
-              */}
-              <span class="sr-only">
-                {boleto.precioTexto} pesos {boleto.moneda}
-              </span>
-            </p>
-          ) : (
-            <p class="precio precio--pendiente">Por definir</p>
-          )}
-
-          <p class="tarjeta__nota">Precio por persona · Cupo limitado</p>
-
-          {/*
-            CTA DE CABECERA — solo móvil.
-
-            En un teléfono el orden de decisión es precio → botón → detalles,
-            no precio → detalles → botón. Medido a 360×800: la tarjeta mide
-            894px y el botón caía 628px por debajo del precio, así que NO
-            existía ningún momento en que precio y botón se vieran a la vez.
-
-            En escritorio no aparece: ahí la tarjeta cabe en pantalla y el
-            orden actual —leer qué incluye y decidir al final— funciona.
-          */}
-          {boleto.compraAbierta && (
-            <a
-              class="cta cta--movil"
-              href={boleto.checkoutUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Comprar mi boleto
-              <span class="sr-only">
-                (abre el pago seguro en una pestaña nueva)
-              </span>
-            </a>
-          )}
-
+          <div class="panel-detalle">
           <ul class="incluye" role="list">
             {boleto.incluye.map((punto) => (
               <li class="incluye__item" data-anim-punto>
@@ -234,6 +228,7 @@ const entradas = boletos.map((boleto) => ({
               </p>
             </>
           )}
+          </div>
         </div>
       </article>
     ))}
@@ -355,14 +350,70 @@ const entradas = boletos.map((boleto) => ({
   /* Tarjeta ---------------------------------------------------------------- */
   .tarjeta {
     position: relative;
-    max-width: 560px;
+    /*
+      560px era el ancho de la tarjeta de una sola columna. Partida en dos
+      mitades necesita más: a 560 la lista de la derecha se partía en tres
+      líneas por punto.
+    */
+    max-width: 880px;
     margin-inline: auto;
     margin-block-start: var(--space-2xl);
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
     background-color: var(--surface);
-    /* overflow clip para que la barra de acento respete el radio superior. */
+    /* overflow clip para que la barra de acento y el panel de precio respeten
+       el radio de las esquinas. */
     overflow: clip;
+  }
+
+  /*
+    LAS DOS MITADES.
+
+    Apiladas por defecto (móvil) y en dos columnas a partir de 48rem. La
+    columna del precio es la MENOR de las dos: tiene que dominar por tamaño de
+    cifra y por color, no por superficie ocupada — con 50/50 el panel de acento
+    se comía la tarjeta y la lista quedaba apretada.
+  */
+  .tarjeta__split {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 48rem) {
+    .tarjeta__split {
+      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+      /* `stretch` y no `start`: el panel de acento tiene que llegar hasta el
+         borde inferior de la tarjeta, si no queda un escalón de --surface
+         debajo del color. */
+      align-items: stretch;
+    }
+  }
+
+  /* ---------- MITAD IZQUIERDA: el precio ---------- */
+  .panel-precio {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-xl) var(--space-lg);
+    background-color: var(--accent);
+    /*
+      OBLIGATORIO, y es la convención 16. El panel remapea el color de fondo a
+      --accent, pero los hijos que no declaran color propio heredan el valor YA
+      COMPUTADO de body (el claro del tema oscuro) y saldrían casi invisibles
+      sobre el lima. Declararlo aquí hace que hereden la tinta correcta.
+    */
+    color: var(--accent-ink);
+  }
+
+  /* ---------- MITAD DERECHA: qué incluye y el botón ---------- */
+  .panel-detalle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-xl) var(--space-lg);
   }
 
   /* Barra de acento: el único punto de la página con este tratamiento. */
@@ -391,12 +442,6 @@ const entradas = boletos.map((boleto) => ({
     pointer-events: none;
   }
 
-  .tarjeta__cuerpo {
-    position: relative;
-    z-index: 1;
-    padding: var(--space-xl) var(--space-lg);
-  }
-
   .tarjeta__encabezado {
     display: flex;
     flex-wrap: wrap;
@@ -405,7 +450,10 @@ const entradas = boletos.map((boleto) => ({
   }
 
   .tarjeta__nombre {
-    color: var(--text-muted);
+    /* Sobre --accent, --text-muted es un gris pensado para fondo oscuro y se
+       pierde. Se atenúa mezclando la TINTA con su propio fondo: mantiene la
+       jerarquía sin salirse de la paleta ni inventar un token. */
+    color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
     font-family: var(--font-body);
     font-size: var(--step--1);
     font-weight: 500;
@@ -415,9 +463,9 @@ const entradas = boletos.map((boleto) => ({
 
   .tarjeta__etiqueta {
     padding: 0.15rem var(--space-sm);
-    border: 1px solid var(--border);
+    border: 1px solid color-mix(in srgb, var(--accent-ink) 35%, var(--accent));
     border-radius: var(--radius-pill);
-    color: var(--text-muted);
+    color: var(--accent-ink);
     font-size: var(--step--1);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -428,7 +476,6 @@ const entradas = boletos.map((boleto) => ({
     display: flex;
     align-items: baseline;
     gap: var(--space-2xs);
-    margin-block-start: var(--space-md);
     font-family: var(--font-display);
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum' 1;
@@ -452,7 +499,7 @@ const entradas = boletos.map((boleto) => ({
 
   .precio__moneda {
     margin-inline-start: var(--space-2xs);
-    color: var(--text-muted);
+    color: color-mix(in srgb, var(--accent-ink) 82%, var(--accent));
     font-family: var(--font-body);
     font-size: var(--step--1);
     font-weight: 500;
@@ -460,7 +507,7 @@ const entradas = boletos.map((boleto) => ({
   }
 
   .precio--pendiente {
-    color: var(--text-muted);
+    color: color-mix(in srgb, var(--accent-ink) 82%, var(--accent));
     font-size: var(--step-2);
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -468,7 +515,7 @@ const entradas = boletos.map((boleto) => ({
 
   .tarjeta__nota {
     margin-block-start: var(--space-sm);
-    color: var(--text-muted);
+    color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
     font-size: var(--step--1);
   }
 
@@ -476,9 +523,14 @@ const entradas = boletos.map((boleto) => ({
   .incluye {
     display: grid;
     gap: var(--space-md);
-    margin-block: var(--space-xl);
-    padding-block-start: var(--space-xl);
-    border-block-start: 1px solid var(--border);
+    /*
+      Sin margen, sin padding superior y SIN el borde que tenía antes: los
+      tres existían para separar la lista del precio cuando compartían
+      columna. Con el precio en la otra mitad ese borde separaba de nada, y
+      en móvil —paneles apilados— dibujaba una segunda línea justo debajo
+      del canto del panel de acento. El aire lo pone el gap del panel.
+    */
+    margin-block: 0;
   }
 
   .incluye__item {
@@ -522,38 +574,19 @@ const entradas = boletos.map((boleto) => ({
   }
 
   .tarjeta__seguro {
-    margin-block-start: var(--space-md);
     color: var(--text-muted);
     font-size: var(--step--1);
     text-align: center;
   }
 
   /*
-    El CTA de cabecera existe SOLO en móvil. Por defecto no se pinta; la
-    consulta de abajo lo enciende. Hacerlo así —y no al revés— deja el
-    escritorio exactamente igual que antes.
+    AQUÍ VIVÍA `.cta--movil`, EL CTA DUPLICADO DE CABECERA. Se retiró con el
+    rediseño en dos mitades: existía solo porque en la tarjeta de una columna
+    el botón caía 628px por debajo del precio y no había ningún momento en que
+    se vieran los dos. Ahora el precio ocupa su propio panel compacto y el
+    botón va detrás del último punto, así que la distancia cabe en pantalla
+    sin necesidad de repetir el botón.
   */
-  .cta--movil {
-    display: none;
-  }
-
-  @media (max-width: 47.9375rem) {
-    .cta--movil {
-      display: block;
-      margin-block-start: var(--space-lg);
-    }
-
-    /*
-      Con el botón ya arriba, la lista de «incluye» deja de ser el muro que
-      hay que cruzar para llegar a él y pasa a ser lo que es: el detalle para
-      quien lo quiera leer. Se le quita algo de aire por arriba para que el
-      bloque de decisión —precio, botón— quede compacto.
-    */
-    .incluye {
-      margin-block-start: var(--space-lg);
-      padding-block-start: var(--space-lg);
-    }
-  }
 
   /* Aviso ------------------------------------------------------------------ */
   /*
@@ -596,7 +629,8 @@ const entradas = boletos.map((boleto) => ({
   }
 
   @media (min-width: 40rem) {
-    .tarjeta__cuerpo {
+    .panel-precio,
+    .panel-detalle {
       padding: var(--space-2xl) var(--space-xl);
     }
   }

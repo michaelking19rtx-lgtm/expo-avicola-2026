@@ -256,46 +256,15 @@ ol[role='list'] {
 }
 
 /*
-  LA BANDA NO AÑADE ALTURA. Se pinta en position:absolute ENCIMA del padding
-  que la sección ya tiene (--space-3xl, 104px), así que las cuatro fronteras
-  cuestan 0 px de scroll extra. Por eso puede ser generosa también en móvil.
+  LAS BANDAS DE FRONTERA SE RETIRARON. El paso de oscuro a claro es un CORTE
+  SECO, sin degradado.
+
+  Había dos pseudo-elementos absolutos por sección que fundían --oscuro-bg
+  hacia --claro-bg sobre el padding, más un `data-borde` en index.astro para
+  suprimirlos entre dos claras seguidas. Con el corte limpio nada de eso hace
+  falta: se fueron los pseudo-elementos, el clamp de altura que los medía y el
+  atributo entero. `--oscuro-bg` SIGUE VIVO — lo usa la nav.
 */
-[data-superficie='clara']::before,
-[data-superficie='clara']::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  block-size: var(--banda, clamp(72px, 11vh, 104px));
-  pointer-events: none;
-  z-index: 0;
-}
-
-[data-superficie='clara']::before {
-  inset-block-start: 0;
-  background: linear-gradient(to bottom, var(--oscuro-bg), var(--claro-bg));
-}
-
-[data-superficie='clara']::after {
-  inset-block-end: 0;
-  background: linear-gradient(to top, var(--oscuro-bg), var(--claro-bg));
-}
-
-/* El contenido, por encima de las bandas. */
-[data-superficie='clara'] > * {
-  position: relative;
-  z-index: 1;
-}
-
-/*
-  Entre dos claras SEGUIDAS no hay frontera que dibujar. Se suprime con
-  selectores de atributo explícitos, NO con :has(): si :has() no aplicara,
-  saldría una banda oscura entre dos secciones claras —una mancha en mitad del
-  claro—, que es peor que no tener bandas. Los atributos los pone index.astro.
-*/
-[data-superficie='clara'][data-borde='salida']::before,
-[data-superficie='clara'][data-borde='entrada']::after {
-  content: none;
-}
 
 /* -----------------------------------------------------------------------------
    6. Accesibilidad de movimiento

@@ -276,6 +276,33 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
     > modo de ejecución en vez de los dos. **16** = miras el valor de la
     > variable en vez de quién la está usando de verdad.
 
+17. **Si una métrica empeora en una configuración donde la causa sospechada NO
+    EXISTE, la causa es otra. No la aceptes ni la descartes: úsala de control.**
+    Antes de atribuir un número a lo que acabas de tocar, busca un escenario
+    donde eso que tocaste no esté presente y mide ahí también. Si el número se
+    mueve igual, lo que has medido es otra cosa.
+
+    > Origen: al integrar el fondo del hero, el LCP en 4G subió ~104 ms a
+    > 1440px. Estaba por debajo del umbral y se habría aceptado como «lo que
+    > cuesta la imagen». Pero **a 390px subió ~92 ms, y a 390 el fondo va en
+    > una media query que no casa: no se descarga, cero peticiones y cero
+    > bytes.** Una imagen que no se pide no puede costar 92 ms.
+    >
+    > Repitiendo la corrida, la medida resultó reproducible a ±8 ms, así que no
+    > era ruido. El culpable era `define:vars`: Astro repite el atributo
+    > `style` con las variables en CADA elemento del componente, y el hero
+    > tiene decenas. **El documento pasaba de 96 971 a 114 853 bytes** —+17.9 KB
+    > de HTML que bloquea el render— por dos rutas de imagen.
+    >
+    > Declarando las variables una sola vez en el `style` de la `<section>`, el
+    > documento subió 143 bytes y el LCP volvió a su sitio: **+20 ms a 1440 y
+    > 0 ms a 390**. La imagen costaba 20 ms; los otros 84 eran el andamiaje.
+    >
+    > **Es la pareja de la 13.** La 13 dice que un LCP puede estar midiendo un
+    > elemento distinto del que crees. La 17 dice que puede estar midiendo una
+    > CAUSA distinta de la que crees. En las dos, la pregunta que lo destapa es
+    > la misma: ¿qué está midiendo esto exactamente?
+
 > **Nota sobre las convenciones 11, 12 y 13.** Son la misma falla con distinto
 > disfraz: un número que parece evidencia sin serlo. **11** = cifra escrita sin
 > medir. **12** = medida contra datos que otro proceso cambió. **13** = medida
@@ -302,7 +329,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
 | 7    | SEO técnico, datos estructurados, indexación y rendimiento                | **COMPLETADA** |
 | 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
-| —    | Superficies claras: cuatro secciones invertidas y bandas de frontera      | **COMPLETADA** |
+| —    | Superficies claras: cuatro secciones invertidas (las bandas se retiraron) | **COMPLETADA** |
 
 > **La numeración cambió al empezar la Fase 4.** El plan original metía
 > «programa/agenda» y «ponentes» juntos en la Fase 3. Al posponerse ponentes por
@@ -476,7 +503,10 @@ caja sin deformarse. Deja de depender de que corra JavaScript.
 
 ### La séptima ponencia · CERRADO · las 7 sesiones están en la agenda
 
-`programa.json` tiene ya **7 ponencias para 7 ponentes**. La de Esteban entra a
+`programa.json` tiene ya **7 ponencias repartidas entre 6 ponentes**: Edgar
+Oliva Ramírez da DOS (09:30 «Diagnóstico temprano» y 12:45 «Vacunación y
+prevención»). Aquí ponía «7 ponencias para 7 ponentes», que era falso y se
+corrigió al contarlo contra el JSON. La de Esteban entra a
 las 13:15, cerrando el arco Bioseguridad → Vacunación → Detrás de la vacuna.
 
 Se resolvió recortando las ponencias de 35 a 30 min: `7 × 30 = 210 = 6 × 35`, la
@@ -2513,13 +2543,13 @@ timeline, los divisores del FAQ y los marcadores de `<summary>`, que salen de
   sección. Con alfa 0.82 sobre claro computaba `#2f322e`, un panel gris sucio.
   A **0.94** sobre oscuro el cambio es imperceptible y sobre claro queda negra
   y nítida. Usa `--oscuro-bg`, no `--bg`, para no depender de dónde esté.
-- **Las bandas no añaden altura.** Van en `position:absolute` sobre el padding
-  que la sección ya tiene (`--space-3xl`, 104px). **Medido: 0 px de diferencia
-  de `scrollHeight`** contra el build anterior, en 390 y 1440, ambos temas.
-- **Las fronteras van EXPLÍCITAS con `data-borde`, no con `:has()`.** Las
-  claras van en parejas, así que el orden deja 4 fronteras y no 8. Con `:has()`,
-  si no aplicara, aparecería una banda oscura EN MITAD del claro, que es peor
-  que no tener bandas. Con atributos, el fallo es no pintar la banda.
+- ~~**Las bandas no añaden altura.**~~ · **LAS BANDAS SE RETIRARON.** Ver
+  «Fronteras a corte seco» al final de la bitácora. Lo que sigue describe el
+  mecanismo que hubo, no el que hay: hoy el paso de oscuro a claro es un corte
+  limpio, sin degradado y sin `data-borde`.
+- ~~**Las fronteras van EXPLÍCITAS con `data-borde`, no con `:has()`.**~~ El
+  atributo existía solo para decidir qué banda pintaba cada sección; sin bandas
+  no decidía nada y se retiró en vez de quedarse como marcado muerto.
 - **Sombras invertidas**: negro al 40-55% sobre claro se ve sucio. Las tres
   (`sm`, `md`, `lg`) pasan a tintes del propio color de texto a baja alfa.
 - **`color-scheme: light`** dentro de las claras, para que scrollbars y
@@ -2680,3 +2710,188 @@ constante desde el primer pintado y la barra es `position: fixed` movida por
 
 > **CAVEAT DE MÉTODO, el de siempre:** el servidor local NO comprime. Estos ms
 > solo valen contra otra medida hecha igual, nunca contra el dominio real.
+
+
+---
+
+### Fronteras a corte seco — fuera las bandas de degradado · COMPLETADA
+
+Las franjas que fundían `--oscuro-bg` hacia `--claro-bg` en cada frontera se
+eliminaron. **El paso de oscuro a claro es ahora un corte limpio.**
+
+**Qué se quitó**
+
+- Los dos pseudo-elementos `[data-superficie='clara']::before` y `::after`.
+- El `clamp(72px, 11vh, 104px)` que les daba altura, y la variable `--banda`.
+- La regla `[data-superficie='clara'] > *` con `z-index: 1`, que solo existía
+  para levantar el contenido por encima de las bandas.
+- El atributo `data-borde` de `index.astro` y su regla de supresión.
+
+`--oscuro-bg` **NO se tocó**: lo sigue usando la nav, que es la barra del sitio
+y tiene que quedarse oscura sobre sección clara.
+
+**Verificado — las 4 fronteras × 2 anchos × 2 temas = 16 comprobaciones**
+
+Dos evidencias por frontera, porque el número solo no basta (convención 14):
+
+| Frontera | 390 | 1440 |
+| :------- | :-- | :--- |
+| Pilares → Programa | corte seco | corte seco |
+| ¿Para quién? → Boletos | corte seco | corte seco |
+| Sede → Patrocinadores | corte seco | corte seco |
+| FAQ → CTA final | corte seco | corte seco |
+
+El muestreo lee una columna de píxeles de 240 px a caballo de la frontera y
+saca su codificación por bloques. Sale **un bloque plano de 240 px, un salto de
+UN píxel, y otro bloque plano de 240 px**. Un degradado de 72–104 px habría
+dado decenas de colores intermedios.
+
+> **EL PRIMER VEREDICTO FUE UN FALSO POSITIVO, y conviene saber por qué.** El
+> criterio inicial contaba TRANSICIONES de color, y a 390 px daba 3–4 por
+> frontera: «rampa». No lo era. El gutter a 390 es de 20 px y la sonda estaba
+> a x=8, así que rozaba bordes de tarjeta de 2 px. **Lo que distingue un corte
+> de una rampa no es cuántas veces cambia el color, sino CUÁNTOS COLORES
+> DISTINTOS hay**: 2–5 discretos es un corte con bordes; decenas es un
+> degradado. Con el criterio corregido, las 16 dan corte seco.
+
+Y mirado en captura, no solo medido: el corte se lee limpio en las dos
+direcciones (entrando al claro y saliendo de él).
+
+---
+
+### Fondo del hero — fotografía bajo velo, solo escritorio · COMPLETADA
+
+`fondo-hero.jpeg` (2752×1536, 2.24 MB) entra como fondo del hero.
+
+**Qué se hizo**
+
+- Dos WebP: `fondo-hero-1920.webp` (24.2 KB) y `fondo-hero-1280.webp`
+  (12.8 KB). **37.0 KB los dos**, contra un presupuesto de 40.
+- `Hero.astro`: dos capas nuevas en `::before` (imagen enmascarada) y
+  `::after` (velo), ambas dentro de `@media (min-width: 48rem)`.
+- El JPEG original salió a `../expo-avicola-2026-assets-originales/` y el
+  guardián del build dejó de avisar (comprobado leyendo la CABECERA del log,
+  que es donde imprime).
+
+**Decisiones**
+
+- **Calidad 0.85, no 0.90 ni 0.80.** Barrido medido: a 0.90 el de 1920 solo ya
+  pesa 47.9 KB y se sale del presupuesto; a 0.85 el par entra en 37.0 KB. La
+  foto es de por sí suave y oscura —un crepúsculo desenfocado con una silueta
+  de granja al horizonte—, así que comprime bien y no se ensucia.
+- **`background-image` de CSS y NO un `<img>`.** Así degrada solo: si el
+  archivo falta, se ve el `--bg` de siempre en vez de un icono de imagen rota.
+  Mismo criterio que el halo.
+- **Solo ≥768px, y dentro de la media query.** Un fondo declarado fuera y
+  anulado dentro SÍ se descarga. Declarado dentro de una consulta que no casa,
+  no. Comprobado: a 390 px hay **0 peticiones y 0 bytes** de fondo.
+- **El de 1920 solo entra a partir de 90rem.** Un portátil de 1280 se lleva
+  12.8 KB en vez de 24.2. Comprobado: una sola petición por viewport, nunca
+  las dos.
+- **Máscara con `mask-composite: intersect`, no la suma por defecto.** Son dos
+  degradados cruzados (horizontal y vertical) y con la suma cada eje
+  «rescataba» lo que el otro ocultaba: las esquinas se quedaban opacas, que es
+  justo lo que la máscara venía a evitar.
+- **El velo es más denso a la IZQUIERDA** porque ahí va el título: su contraste
+  no puede depender de qué haya salido en la foto. A la derecha se abre para
+  que la fotografía respire detrás de las figuras.
+- **`@supports` doble en el velo**, la misma trampa que la nav: como el valor
+  lleva `var()`, un navegador sin `color-mix` no descarta la declaración al
+  parsear sino al computar, y cada parada caería a `transparent` — título
+  sobre foto. El respaldo tapa con un velo plano: se pierde el efecto, no la
+  legibilidad.
+- **`isolation: isolate` en `.hero`.** Las dos capas van en z-index negativo
+  para no tocar el z-index de nada más; sin aislar, un z-index negativo puede
+  colarse por detrás del fondo de un ancestro y desaparecer.
+
+**Rendimiento — medido antes y después, 4G lento, `prefers-reduced-motion`**
+
+| 1440×900 | Antes | Después |
+| :------- | ----: | ------: |
+| LCP | 1976 ms | **1996 ms** (+20) |
+| Hero completo | 3112 ms | **3207 ms** (+95) |
+| Elemento LCP | `IMG.figura__img` 7/7 | `IMG.figura__img` **7/7** |
+| CLS | 0 | **0** |
+
+| 390×844 | Antes | Después |
+| :------ | ----: | ------: |
+| LCP | 1980 ms | **1980 ms** (0) |
+| Hero completo | 3186 ms | **3195 ms** (+9) |
+| Fondo descargado | — | **nada: 0 peticiones** |
+
+**+95 ms contra un umbral de 200: entra, y sin plan B.** El elemento LCP es el
+mismo en las 14 pasadas, así que la comparación es legítima (convención 13). La
+huella SHA de `dist/` se comprobó antes y después de cada corrida.
+
+> **AQUÍ NACIÓ LA CONVENCIÓN 17, y la primera versión de esto casi se publica
+> mal.** La integración inicial usaba `define:vars` y daba +104 ms a 1440. Bajo
+> el umbral, así que se habría aceptado. Lo que no cuadraba: **+92 ms a 390 px,
+> donde el fondo no se descarga**. Una imagen que no se pide no cuesta 92 ms.
+> Era `define:vars` inflando el HTML en 17 882 bytes. Corregido, el coste real
+> de la imagen son 20 ms. Ver la convención 17.
+
+---
+
+### Tarjeta de boletos partida en dos mitades · COMPLETADA
+
+La tarjeta se leía genérica: un número arriba y una lista debajo, todo del
+mismo color. Ahora son **dos mitades**.
+
+**Qué se hizo**
+
+- **Izquierda:** el precio, dominante, sobre `--accent` con `--accent-ink`.
+- **Derecha:** qué incluye y el CTA, justo detrás del último punto.
+- **En móvil se apilan**: precio arriba, lista y botón abajo.
+- Ancho máximo de 560 a **880 px** (a 560 la lista partía cada punto en tres
+  líneas).
+
+**Decisiones**
+
+- **La columna del precio es la MENOR de las dos** (0.72fr contra 1fr). Domina
+  por tamaño de cifra y por color, no por superficie: al 50/50 el panel de
+  acento se comía la tarjeta y la lista quedaba apretada.
+- **`color: var(--accent-ink)` en el propio panel es OBLIGATORIO.** Es la
+  convención 16: los hijos sin color propio heredan el valor YA COMPUTADO de
+  `body` —el claro del tema oscuro— y saldrían casi invisibles sobre el lima.
+- **`--text-muted` no existe sobre `--accent`.** Es un gris pensado para fondo
+  oscuro. Los textos atenuados del panel se mezclan con `color-mix` entre la
+  tinta y su propio fondo: misma jerarquía, sin inventar tokens.
+- **DESAPARECE `.cta--movil`, el CTA duplicado de cabecera.** Existía solo
+  porque en la tarjeta de una columna el botón caía 628 px por debajo del
+  precio. Con el precio en su propio panel compacto la distancia se desploma y
+  el duplicado sobra — un CTA repetido dos veces en la misma tarjeta es ruido.
+- **El borde superior de `.incluye` se fue.** Separaba la lista del precio
+  cuando compartían columna; con el precio en la otra mitad no separaba nada, y
+  en móvil dibujaba una segunda línea justo bajo el canto del panel de acento.
+- **El conteo de conferencias sigue siendo DERIVADO.** Sale de
+  `totalConferencias()`, que cuenta `tipo: 'ponencia'` en `programa.json`. No
+  se tocó. Hoy da 7 (con 6 ponentes: Edgar repite).
+
+**Verificado — 4 anchos × 2 temas**
+
+| | 360 | 768 | 1024 | 1440 |
+| :-- | --: | --: | --: | --: |
+| Alto de la tarjeta | 893 | 731 | 637 | 676 |
+| Tramo precio → CTA | **682** | 249 | 216 | 238 |
+| ¿Cabe en 800 de alto? | **SÍ** | SÍ | SÍ | SÍ |
+| Alto del CTA | 58 | 59 | 60 | 61 |
+| Desborde horizontal | 0 | 0 | 0 | 0 |
+| `href` = `checkoutUrl` | SÍ | SÍ | SÍ | SÍ |
+
+**Contraste leído del PÍXEL del render**, no del token: 7 elementos × 2 anchos
+× 2 temas, **todo por encima de 4.5:1**. Peor par **6.65:1** (la nota del
+precio en tema azul). El precio: 12.86:1 en verde y 10.55:1 en azul.
+
+> **DOS TRAMPAS DE MEDICIÓN EN ESTA MISMA TAREA, las dos de la familia 14.**
+>
+> **(1) Se midió la tarjeta equivocada.** `querySelector('.tarjeta')` devuelve
+> la PRIMERA del documento, y Ponentes usa esa misma clase y va antes. Las
+> capturas salían con la ficha de Edgar y los números eran de otro elemento.
+> Se destapó al MIRAR la captura, no leyendo la tabla. **Todo selector de
+> verificación va acotado a su sección** (`#boletos .tarjeta`).
+>
+> **(2) El contraste por `getComputedStyle` daba 77 000 000:1.** Con
+> `color-mix`, Chrome devuelve el color resuelto como `color(srgb 0.02 0.06
+> 0.04)` y un parser de enteros saca basura de los decimales. **El contraste se
+> lee del píxel**, por histograma de la caja del elemento: el color más
+> frecuente es el fondo y el más lejano con presencia ≥1.5% es la tinta.
