@@ -1,0 +1,903 @@
+---
+import datos from '../data/ponentes.json';
+import { asset } from '../scripts/paths.js';
+
+/*
+  Sección de ponentes — Fase 3.
+
+  TODO sale de src/data/ponentes.json. Aquí no hay ni un nombre, ni una
+  credencial, ni una ponencia escritos a mano.
+
+  ── LA FICHA COMPLETA NO VIVE EN EL MODAL ────────────────────────────────────
+
+  Cada ficha se emite como un <dialog> CON el atributo `open`. Un <dialog open>
+  no es modal: se pinta como un bloque normal en el flujo. Así, sin JavaScript,
+  la página enseña la rejilla de tarjetas y debajo las seis fichas completas,
+  y `#ponente-{slug}` es un ancla a un elemento que existe de verdad.
+
+  Con JavaScript, el script cierra los seis al arrancar y a partir de ahí los
+  abre con `showModal()`. Esa llamada da GRATIS lo que costaría cientos de
+  líneas reimplementar: foco atrapado, Escape para cerrar, `aria-modal`,
+  el resto de la página inerte, capa superior por encima de cualquier z-index,
+  y el foco de vuelta al elemento que lo abrió al cerrarse.
+
+  La alternativa evaluada era duplicar el contenido (resumen en la tarjeta +
+  copia dentro del modal) o moverlo por el DOM al abrir. Las dos duplican o
+  mutan; esta no hace ninguna de las dos cosas.
+
+  ── EL FONDO BLANCO ──────────────────────────────────────────────────────────
+
+  Los retratos vienen de estudio, con fondo blanco, y el sitio es oscuro. Sin
+  tratamiento serían seis rectángulos blancos pegados sobre el fondo. Se
+  resuelve con un degradado que va de transparente al color de la tarjeta sobre
+  el 55% inferior de la foto: el retrato se DISUELVE en la tarjeta y el texto
+  emerge de esa disolución, en vez de haber un borde duro entre foto y tarjeta.
+  Ver el comentario del CSS de `.tarjeta__foto`.
+*/
+
+const ponentes = datos.ponentes;
+
+/*
+  Ancho de origen de los WebP. El retrato se dibuja como mucho a 384px (tres
+  columnas dentro del contenedor de 1200px, menos dos huecos de 24px), así que
+  768 cubre DPR2 justo. Se redondea a 800 para no quedarse corto si el
+  contenedor crece.
+*/
+const IMG_W = 800;
+const IMG_H = 960;
+---
+
+<section class="ponentes" id="ponentes">
+  <div class="ponentes__inner">
+    <header class="ponentes__head">
+      <p class="ponentes__eyebrow" data-anim>Ponentes</p>
+      <h2 class="ponentes__titulo" data-anim>Quién sube al escenario</h2>
+      <p class="ponentes__lead" data-anim>
+        Seis especialistas que trabajan la avicultura desde frentes distintos:
+        la caseta, el laboratorio, la bioseguridad y los datos. Toca una ficha
+        para ver su trayectoria y qué se lleva quien la escuche.
+      </p>
+    </header>
+
+    <ul class="rejilla" role="list">
+      {
+        ponentes.map((p) => (
+          <li class="rejilla__item" data-anim>
+            <article class="tarjeta">
+              <div class="tarjeta__foto">
+                <img
+                  class="tarjeta__img"
+                  src={asset(p.retrato)}
+                  alt={`Retrato de ${p.nombre}`}
+                  width={IMG_W}
+                  height={IMG_H}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+
+              <div class="tarjeta__cuerpo">
+                <h3 class="tarjeta__nombre">
+                  {/*
+                    Enlace estirado: el <a> cubre la tarjeta entera con su
+                    ::after, así que toda ella es pulsable, pero solo hay UNA
+                    parada de tabulación y el nombre accesible del enlace es el
+                    nombre de la persona (WCAG 2.5.3, Label in Name).
+                  */}
+                  <a class="tarjeta__enlace" href={`#ponente-${p.slug}`}>
+                    {p.nombre}
+                  </a>
+                </h3>
+                <p class="tarjeta__credencial">{p.credencial}</p>
+
+                {/*
+                  Edgar da DOS ponencias. Se itera el array; nunca se asume que
+                  hay una. La tarjeta crece y la fila entera iguala su altura,
+                  que es el comportamiento por defecto de la rejilla.
+                */}
+                <ul class="tarjeta__ponencias" role="list">
+                  {p.ponencias.map((t) => (
+                    <li class="tarjeta__ponencia">
+                      <svg
+                        class="tarjeta__vineta"
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M5 12h14M13 6l6 6-6 6"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          fill="none"
+                        />
+                      </svg>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+
+  {/*
+    LAS FICHAS. `open` es deliberado — ver el frontmatter.
+
+    Van fuera de .ponentes__inner porque al pasar a modal se despegan del flujo
+    y no deben heredar el ancho del contenedor.
+
+    `data-ficha` además de la clase: el script del cliente NO está acotado por
+    Astro, y `.ficha` YA EXISTE en Sede.astro (el <dl> de los datos del
+    recinto). Con `querySelectorAll('.ficha')` ese <dl> entraba en la lista y
+    `close()` —que no existe en un <dl>— lanzaba TypeError en el nivel superior
+    del módulo, dejando el modal entero muerto. El CSS sí está a salvo porque
+    Astro lo acota; el JS no.
+
+    OJO con los comentarios aquí dentro: un {…} suelto dentro del cuerpo con
+    paréntesis de un .map() son DOS expresiones y el compilador de Astro lo
+    rechaza. Los comentarios de las fichas van en este bloque, fuera del map.
+  */}
+  <div class="fichas">
+    {
+      ponentes.map((p) => (
+        <dialog
+          class="ficha"
+          data-ficha
+          id={`ponente-${p.slug}`}
+          open
+          aria-labelledby={`ficha-titulo-${p.slug}`}
+        >
+          <article class="ficha__caja">
+            <form method="dialog" class="ficha__cerrar-form">
+              <button class="ficha__cerrar" type="submit" aria-label="Cerrar ficha">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path
+                    d="m6 6 12 12M18 6 6 18"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    fill="none"
+                  />
+                </svg>
+              </button>
+            </form>
+
+            <div class="ficha__cabecera">
+              <img
+                class="ficha__retrato"
+                src={asset(p.retrato)}
+                alt={`Retrato de ${p.nombre}`}
+                width={IMG_W}
+                height={IMG_H}
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="ficha__identidad">
+                <h3 class="ficha__nombre" id={`ficha-titulo-${p.slug}`}>
+                  {p.nombre}
+                </h3>
+                <p class="ficha__credencial">{p.credencial}</p>
+                <p class="ficha__bio">{p.bioCorta}</p>
+              </div>
+            </div>
+
+            <div class="ficha__cuerpo">
+              <section class="bloque">
+                <h4 class="bloque__titulo">
+                  {p.ponencias.length > 1 ? 'Sus ponencias' : 'Su ponencia'}
+                </h4>
+                <ul class="bloque__lista" role="list">
+                  {p.ponencias.map((t) => (
+                    <li>{t}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section class="bloque">
+                <h4 class="bloque__titulo">Formación</h4>
+                <p>{p.formacion}</p>
+              </section>
+
+              <section class="bloque">
+                <h4 class="bloque__titulo">Trayectoria</h4>
+                <p>{p.trayectoria}</p>
+              </section>
+
+              <section class="bloque">
+                <h4 class="bloque__titulo">Especialidades</h4>
+                <ul class="bloque__etiquetas" role="list">
+                  {p.especialidades.map((e) => (
+                    <li class="etiqueta">{e}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section class="bloque">
+                <h4 class="bloque__titulo">Su enfoque</h4>
+                <p>{p.enfoque}</p>
+              </section>
+
+              <section class="bloque bloque--destacado">
+                <h4 class="bloque__titulo">Qué se lleva quien lo escuche</h4>
+                <p>{p.queSeLleva}</p>
+              </section>
+            </div>
+          </article>
+        </dialog>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .ponentes {
+    padding-block: var(--space-3xl);
+    background: var(--bg);
+  }
+
+  .ponentes__inner {
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* ── Encabezado ─────────────────────────────────────────────────────── */
+
+  .ponentes__head {
+    max-inline-size: 44rem;
+    margin-block-end: var(--space-2xl);
+  }
+
+  .ponentes__eyebrow {
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-block-end: var(--space-xs);
+  }
+
+  .ponentes__titulo {
+    font-family: var(--font-display);
+    font-size: var(--step-4);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .ponentes__lead {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* ── Rejilla ────────────────────────────────────────────────────────── */
+
+  /*
+    Seis tarjetas y tres regímenes, todos sin huérfanos: 1 columna (6 filas),
+    2 columnas (3 filas) y 3 columnas (2 filas). Nunca queda un hueco suelto
+    al final, que es lo que pasaría con 4 columnas.
+  */
+  .rejilla {
+    display: grid;
+    gap: var(--space-lg);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 34rem) {
+    .rejilla {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 62rem) {
+    .rejilla {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .tarjeta {
+    position: relative;
+    block-size: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      transform var(--t-base) var(--ease-out);
+  }
+
+  /*
+    EL FONDO BLANCO DE LOS RETRATOS.
+
+    Los seis vienen de estudio sobre blanco y el sitio es oscuro. Puestos tal
+    cual serían seis rectángulos blancos pegados sobre el fondo — es el riesgo
+    que había que resolver.
+
+    La solución es quitar el BORDE DURO, no el blanco: un degradado que va de
+    transparente al color de la tarjeta sobre el 55% inferior de la foto. El
+    retrato se disuelve en la tarjeta y el texto emerge de esa disolución, así
+    que no hay ninguna línea donde acabe la foto y empiece el fondo.
+
+    El degradado usa var(--surface), no un color fijo, así que sigue al tema
+    activo sin una sola regla extra.
+
+    `color-mix` para el paso intermedio: un degradado de dos paradas entre
+    transparent y --surface pasa por gris translúcido en algunos motores
+    (transparent es rgba(0,0,0,0)) y ensucia la mitad de la foto. Con la parada
+    de en medio explícita el recorrido es limpio.
+  */
+  .tarjeta__foto {
+    position: relative;
+    aspect-ratio: 5 / 6;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+
+  .tarjeta__img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+  }
+
+  .tarjeta__foto::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /*
+      El degradado llega a --surface OPACO en el 86%, no en el 100%.
+
+      El texto de la tarjeta sube sobre la foto (margin negativo en
+      .tarjeta__cuerpo), así que el nombre y la credencial caen sobre el último
+      tramo del degradado. Terminándolo en el 100%, ahí seguía filtrándose
+      blanco del retrato y la credencial —que va en --text-muted, el color más
+      tenue— bajaba a 4.18:1 en tema azul alrededor de los 540px de viewport.
+      Por debajo de AA, y con los retratos que ya están en el repo.
+
+      Cerrando en el 86% ese tramo es --surface plano y el contraste deja de
+      depender de qué foto haya detrás. La disolución sigue durando del 38 al
+      86%, que es de sobra para que no se vea borde.
+    */
+    background: linear-gradient(
+      to bottom,
+      transparent 38%,
+      color-mix(in srgb, var(--surface) 60%, transparent) 68%,
+      var(--surface) 86%
+    );
+  }
+
+  @supports not (background: color-mix(in srgb, red 50%, blue)) {
+    .tarjeta__foto::after {
+      background: linear-gradient(to bottom, transparent 38%, var(--surface) 86%);
+    }
+  }
+
+  .tarjeta__cuerpo {
+    position: relative;
+    /* Sube sobre el degradado para que el nombre nazca dentro de la foto. */
+    margin-block-start: -18%;
+    padding: 0 var(--space-md) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    flex: 1;
+  }
+
+  .tarjeta__nombre {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .tarjeta__enlace {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /*
+    Enlace estirado: toda la tarjeta es pulsable con UNA sola parada de
+    tabulación. El ::after no lleva fondo, así que no tapa nada.
+  */
+  .tarjeta__enlace::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .tarjeta:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .tarjeta:hover {
+      transform: translateY(-3px);
+    }
+  }
+
+  /* El anillo de foco lo pinta la tarjeta, no el texto del enlace. */
+  .tarjeta:has(.tarjeta__enlace:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-color: var(--accent);
+  }
+
+  .tarjeta__credencial {
+    font-size: var(--step--1);
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
+  .tarjeta__ponencias {
+    margin-block-start: var(--space-2xs);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .tarjeta__ponencia {
+    display: flex;
+    gap: 0.5rem;
+    align-items: start;
+    font-size: var(--step--1);
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  .tarjeta__vineta {
+    flex: none;
+    margin-block-start: 0.15em;
+    color: var(--accent);
+  }
+
+  /* ── Fichas ─────────────────────────────────────────────────────────── */
+
+  /*
+    SIN JAVASCRIPT: los <dialog> llevan `open`, así que se pintan como bloques
+    normales. Se les da el ancho del contenedor y separación, y la página queda
+    perfectamente utilizable: rejilla arriba, seis fichas completas debajo.
+  */
+  .fichas {
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .ficha {
+    inline-size: 100%;
+    max-inline-size: none;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text);
+  }
+
+  /*
+    `display: block` SOLO con [open]. Es el detalle que decide todo el modo sin
+    JS y que, puesto en `.ficha` a secas, rompía el modo CON JS.
+
+    El navegador trae `dialog:not([open]) { display: none }`, pero es una regla
+    de ELEMENTO y `.ficha` es de CLASE, así que la clase gana: las seis fichas
+    cerradas seguían ocupando sitio en el flujo —1669px cada una, medido— por
+    detrás del modal. No se veía porque el modal se pinta encima.
+
+    Acotándolo a [open], al cerrarlas vuelve a mandar la regla del navegador,
+    que es exactamente lo que hace falta.
+  */
+  .ficha[open] {
+    display: block;
+    /*
+      `position: static` NO SOBRA, y es lo que hace que el modo sin JS exista.
+
+      La hoja del navegador da `position: absolute` a TODO <dialog>. Al abrirlo
+      con showModal() da igual, porque entonces pasa a `fixed` y a la capa
+      superior. Pero con el atributo `open` en el flujo, ese `absolute` se
+      resuelve contra el bloque contenedor inicial —ni .fichas ni .ponentes ni
+      body están posicionados— y provoca tres cosas a la vez:
+
+        1. Las SEIS fichas se apilan en la misma coordenada. Sin JS solo se veía
+           la última, Esteban: medido, las seis con top idéntico y cinco de
+           ellas con el 0.0% de su superficie visible.
+        2. `.fichas` no reserva alto —medía 0 px frente a los 5328 de las seis—
+           y la ficha visible se pintaba ENCIMA de Pilares y Programa, texto
+           sobre texto.
+        3. `inline-size: 100%` resolvía al 100% del viewport en vez del
+           contenedor, así que sangraba a ancho completo sin gutter.
+
+      Con `static` vuelve al flujo normal y las tres desaparecen.
+    */
+    position: static;
+    margin: var(--space-xl) auto 0;
+    max-inline-size: var(--container);
+  }
+
+  /*
+    CON JAVASCRIPT el script cierra los seis al cargar, y a partir de ahí solo
+    se ven abiertos por showModal(). `:modal` casa únicamente en ese caso, así
+    que estas reglas no tocan el modo sin JS.
+  */
+  .ficha:modal {
+    max-inline-size: min(56rem, calc(100vw - 2 * var(--gutter)));
+    max-block-size: min(90dvh, 56rem);
+    margin: auto;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ficha::backdrop {
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(3px);
+  }
+
+  @supports not (background: color-mix(in srgb, red 50%, blue)) {
+    .ficha::backdrop {
+      background: rgb(0 0 0 / 0.8);
+    }
+  }
+
+  .ficha__caja {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+  }
+
+  .ficha:modal .ficha__caja {
+    border: none;
+    border-radius: 0;
+  }
+
+  /* El botón de cerrar no significa nada si la ficha no es un modal. */
+  .ficha__cerrar-form {
+    display: none;
+  }
+
+  .ficha:modal .ficha__cerrar-form {
+    display: block;
+  }
+
+  .ficha__cerrar {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    z-index: 2;
+    /* WCAG 2.5.5: 44x44 reales aunque el icono mida 22. */
+    inline-size: 44px;
+    block-size: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+    transition:
+      border-color var(--t-fast) var(--ease-out),
+      color var(--t-fast) var(--ease-out);
+  }
+
+  .ficha__cerrar:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .ficha__cabecera {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: 1fr;
+    padding-inline-end: 52px; /* deja sitio al botón de cerrar */
+  }
+
+  @media (min-width: 40rem) {
+    .ficha__cabecera {
+      grid-template-columns: 9.5rem 1fr;
+      align-items: start;
+    }
+  }
+
+  /*
+    `block-size: auto` NO SOBRA, y su ausencia costó un modal roto que pasó las
+    quince comprobaciones.
+
+    El <img> lleva width="800" height="960" para reservar sitio y evitar CLS.
+    Esos atributos actúan como CSS presentacional, así que el elemento YA tiene
+    las dos dimensiones fijadas — y `aspect-ratio` solo calcula la que falta.
+    Sin nada que calcular, se ignora en silencio: el retrato salía de 152x960
+    en vez de 152x182, estiraba la cabecera a 960px de alto y empujaba los seis
+    bloques de la ficha fuera del área visible del modal.
+
+    En pantalla se veía un primerísimo plano de una cara y medio modal vacío;
+    en los asertos, todo correcto. `block-size: auto` devuelve el control a
+    aspect-ratio.
+  */
+  .ficha__retrato {
+    inline-size: 100%;
+    max-inline-size: 9.5rem;
+    block-size: auto;
+    aspect-ratio: 5 / 6;
+    align-self: start;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+  }
+
+  .ficha__nombre {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--text);
+  }
+
+  .ficha__credencial {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step--1);
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
+  .ficha__bio {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .ficha__cuerpo {
+    margin-block-start: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .bloque__titulo {
+    font-size: var(--step--1);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-block-end: var(--space-xs);
+  }
+
+  .bloque p,
+  .bloque__lista {
+    font-size: var(--step-0);
+    line-height: 1.65;
+    color: var(--text-muted);
+  }
+
+  .bloque__lista {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .bloque__lista li {
+    padding-inline-start: var(--space-sm);
+    border-inline-start: 2px solid var(--accent);
+    color: var(--text);
+  }
+
+  .bloque__etiquetas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+
+  .etiqueta {
+    font-size: var(--step--1);
+    line-height: 1.3;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text-muted);
+  }
+
+  .bloque--destacado {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .bloque--destacado p {
+    color: var(--text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tarjeta {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.ponentes');
+  /* [data-ficha] y no .ficha — ver el comentario del marcado. */
+  const fichas = Array.from(
+    document.querySelectorAll<HTMLDialogElement>('dialog[data-ficha]')
+  );
+
+  /*
+    PASO 1 — quitarles el `open`.
+
+    Hasta aquí los seis <dialog> se estaban pintando como bloques (que es lo
+    que ve quien no tiene JS). Con JS disponible pasan a ser modales.
+
+    Se hace en cuanto corre el script, no en 'load', para que no se vea el
+    bloque un instante y desaparezca.
+  */
+  for (const f of fichas) f.close();
+
+  const porId = new Map(fichas.map((f) => [f.id, f]));
+
+  /**
+   * Abre la ficha de un id, si existe y no está ya abierta.
+   *
+   * `showModal()` da foco atrapado, Escape, aria-modal, fondo inerte y retorno
+   * de foco al abridor. No hay que implementar nada de eso a mano.
+   */
+  const abrir = (id: string) => {
+    const f = porId.get(id);
+    if (!f || f.open) return false;
+
+    /*
+      CERRAR LA QUE HUBIERA ABIERTA ANTES DE ABRIR LA NUEVA.
+
+      Los <dialog> modales se APILAN: si ya hay uno abierto, showModal() pone el
+      segundo encima y al cerrarlo reaparece el primero. Pasa de verdad en dos
+      caminos: pulsar una figura del hero con una ficha ya abierta, y llegar a
+      otro #ponente-slug por hashchange (volver con «Atrás», o un enlace de
+      WhatsApp abierto desde la propia página).
+
+      Se detectó MIRANDO UNA CAPTURA: se pidió la ficha de Edgar y salió la de
+      Esteban, que era la que seguía encima de la pila. Ningún aserto lo vio
+      porque cada prueba navegaba en limpio.
+    */
+    for (const otra of fichas) if (otra !== f && otra.open) otra.close();
+
+    f.showModal();
+    return true;
+  };
+
+  /*
+    PASO 2 — los enlaces.
+
+    Cada tarjeta es un <a href="#ponente-slug"> y las figuras del hero también.
+    Se escucha en el documento entero, en captura no: un solo listener cubre
+    los de la sección, los del hero y cualquiera que se añada después.
+  */
+  document.addEventListener('click', (ev) => {
+    const el = ev.target as HTMLElement | null;
+    const a = el?.closest<HTMLAnchorElement>('a[href*="#ponente-"]');
+    if (!a) return;
+
+    // Solo clic primario y sin modificadores: Ctrl/Cmd+clic debe abrir pestaña.
+    const me = ev as MouseEvent;
+    if (me.button !== 0 || me.metaKey || me.ctrlKey || me.shiftKey || me.altKey) return;
+
+    const id = a.hash.slice(1);
+    if (!porId.has(id)) return;
+
+    ev.preventDefault();
+    /*
+      El hash SÍ se escribe, para que la ficha sea compartible por WhatsApp,
+      que es el canal del evento. `pushState` en vez de asignar location.hash
+      para no provocar un salto de scroll: el modal ya está a la vista.
+    */
+    history.pushState(null, '', a.hash);
+    abrir(id);
+  });
+
+  /*
+    PASO 3 — al cerrar, limpiar el hash.
+
+    Si se queda, recargar o volver con «Atrás» reabriría la ficha sin que nadie
+    lo haya pedido. Se sustituye la entrada en vez de añadir otra.
+  */
+  for (const f of fichas) {
+    f.addEventListener('close', () => {
+      if (location.hash === `#${f.id}`) {
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    });
+
+    /*
+      Clic en el fondo cierra. <dialog> no lo hace solo: el evento llega al
+      propio <dialog>, cuya caja ocupa toda la ventana, así que se compara con
+      la caja REAL del contenido.
+    */
+    f.addEventListener('click', (ev) => {
+      if (ev.target !== f) return;
+      const caja = f.querySelector('.ficha__caja');
+      if (!caja) return;
+      const r = caja.getBoundingClientRect();
+      const dentro =
+        ev.clientX >= r.left &&
+        ev.clientX <= r.right &&
+        ev.clientY >= r.top &&
+        ev.clientY <= r.bottom;
+      if (!dentro) f.close();
+    });
+  }
+
+  /*
+    PASO 4 — llegar con el hash puesto.
+
+    Quien abre un enlace de WhatsApp con #ponente-slug tiene que ver esa ficha
+    abierta. Se cubre la carga y también el hashchange (volver con «Atrás»).
+  */
+  const desdeHash = () => {
+    const id = location.hash.slice(1);
+    if (id.startsWith('ponente-')) abrir(id);
+  };
+  desdeHash();
+  window.addEventListener('hashchange', desdeHash);
+
+  /*
+    PASO 5 — el movimiento, que es mejora progresiva.
+
+    Las tarjetas llevan [data-anim]: bajo [data-motion='on'] están a opacity 0
+    y DEBEN animarse o se quedan invisibles. `detenerMovimiento()` las cubre
+    porque su selector de clearProps incluye [data-anim].
+  */
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      gsap.fromTo(
+        seccion.querySelectorAll('.ponentes__head [data-anim]'),
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: seccion, start: 'top 78%', once: true },
+        }
+      );
+
+      gsap.fromTo(
+        seccion.querySelectorAll('.rejilla__item[data-anim]'),
+        { opacity: 0, y: 28 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.rejilla',
+            start: 'top 82%',
+            once: true,
+          },
+        }
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento la sección ya es visible: el failsafe del
+         <head> devuelve data-motion a 'off' y [data-anim] deja de ocultar. */
+    });
+</script>

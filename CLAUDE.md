@@ -56,10 +56,11 @@ expo-avicola-2026/
 │   └── robots.txt
 ├── src/
 │   ├── components/
-│   │   ├── {Nav,Hero,VideoSection}.astro
+│   │   ├── {Nav,Hero,VideoSection,Ponentes}.astro
 │   │   ├── {Pilares,Programa,ParaQuien,Boletos}.astro
 │   │   └── {Sede,Patrocinadores,Faq,CtaFinal,Footer}.astro
-│   ├── data/{site,navegacion,programa,boletos,patrocinadores,faq,hero-ponentes}.json
+│   ├── data/{site,navegacion,programa,boletos,patrocinadores,faq}.json
+│   ├── data/{hero-ponentes,ponentes}.json
 │   ├── env.d.ts
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin,404}.astro
@@ -227,12 +228,40 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
     > un marco de 504×378. **Todo lo que el JS inyecte necesita `:global()` en
     > su regla.**
 
+15. **Un aserto que corre CON JavaScript no puede ver un fallo que solo existe
+    SIN él.** Y al revés. Toda función que tenga dos modos —con JS y sin JS,
+    con movimiento y con `prefers-reduced-motion`, con la imagen cargada y con
+    la imagen rota— **se verifica en LOS DOS**, porque un modo no es evidencia
+    del otro.
+
+    > Origen: en la Fase 3 las fichas de ponentes son `<dialog>` con `open`,
+    > pensadas justo para funcionar sin JavaScript. Se verificaron con 17
+    > comprobaciones de interacción real —foco atrapado, Escape, retorno de
+    > foco, hash, enlaces del hero— y las 17 pasaron. **Las 17 corrían con
+    > JavaScript**, que es el único modo donde el `<dialog>` es modal.
+    >
+    > Sin JavaScript había TRES fallos bloqueantes a la vez, todos con la misma
+    > causa: la hoja del navegador da `position: absolute` a todo `<dialog>` y
+    > nadie lo había reseteado. Las seis fichas se pintaban en la misma
+    > coordenada —solo se veía la última—, su contenedor medía 0 px y se
+    > superponían a Pilares y Programa con texto sobre texto, y sangraban a
+    > ancho completo sin gutter. Los encontró una revisión que sí miró ese modo.
+    >
+    > Es la convención 14 con otra piel: **14** dice que el número no ve lo que
+    > la captura sí; **15** dice que el número tampoco ve lo que pasa en el modo
+    > que no estás ejecutando. En los dos casos el error es confundir «pasó mi
+    > comprobación» con «funciona».
+
 > **Nota sobre las convenciones 11, 12 y 13.** Son la misma falla con distinto
 > disfraz: un número que parece evidencia sin serlo. **11** = cifra escrita sin
 > medir. **12** = medida contra datos que otro proceso cambió. **13** = medida
 > correcta pero comparando dos elementos distintos. Ante cualquier número que
 > justifique una decisión, verificar cuál de los tres casos podría estar
 > ocurriendo.
+>
+> **Y las 14 y 15 son el par siguiente:** no que el número esté mal, sino que
+> mire donde no hay que mirar. **14** = miras los números en vez de la pantalla.
+> **15** = miras un modo de ejecución en vez de los dos.
 
 ## 6. Roadmap
 
@@ -242,7 +271,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 2    | Nav + hero + sección de video, con capa de movimiento (GSAP, Lenis)      | **COMPLETADA** |
 | 2b   | Hero rediseñado: abanico de figuras individuales de ponentes              | **COMPLETADA** |
 | 2c   | Seis figuras en dos rangos, figura 78% más grande, entrada desacoplada    | **COMPLETADA** |
-| 3    | Ponentes: fichas con foto, cargo y sesión                                 | **POSPUESTA**  |
+| 3    | Ponentes: rejilla de seis tarjetas + ficha completa en `<dialog>`         | **COMPLETADA** |
 | 4    | Pilares + programa/agenda + ¿Para quién es?                               | **COMPLETADA** |
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
 | 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
@@ -323,9 +352,11 @@ con la ficha en la Fase 3. Un script de verificación coteja los seis por `id`,
 comparando `slug` Y `nombre`; conviene volver a pasarlo tras tocar cualquiera
 de los dos archivos.
 
-### Anclas de navegación que no llevan a ningún sitio · CASI CERRADO
+### Anclas de navegación que no llevan a ningún sitio · CERRADO
 
-Estado tras la Fase 6:
+**No queda ningún ancla muerta.** La Fase 3 creó `#ponentes` y con él murieron
+los tres últimos enlaces rotos —nav de escritorio, menú móvil y footer—, que
+eran los únicos que quedaban de los 18 del sitio.
 
 | Ancla        | Enlaces | ¿Existe el destino? |
 | :----------- | ------: | :------------------ |
@@ -333,24 +364,16 @@ Estado tras la Fase 6:
 | `#boletos`   |       7 | **SÍ** — Fase 5 |
 | `#sede`      |       3 | **SÍ** — Fase 6 |
 | `#contenido` |       1 | **SÍ** — el `<main>` |
-| `#ponentes`  |       3 | **NO** — Fase 3, pospuesta |
+| `#ponentes`  |       3 | **SÍ** — Fase 3 |
 
-De 18 enlaces ancla, **solo 3 siguen muertos y los tres van a `#ponentes`**:
-nav de escritorio, menú móvil y footer. El footer añadió uno más porque sirve
-los mismos enlaces que la nav (`src/data/navegacion.json`); es el precio de que
-las dos listas no puedan desincronizarse.
+Y aparecieron **seis anclas nuevas**, `#ponente-{slug}`, una por ficha. Son
+destinos reales con y sin JavaScript: cada ficha es un `<dialog open>` que sin
+JS se pinta como un bloque normal. Las enlazan las seis figuras del hero y las
+seis tarjetas de la rejilla.
 
-Los 15 vivos se verificaron con clic real: todos aterrizan a 161px con la barra
-acabando en 73px, ninguno queda tapado. El enlace «Saltar al contenido» deja el
-primer texto del hero a 156px, también libre.
-
-`id` reales hoy en la home: `#inicio`, `#congreso`, `#pilares`, `#programa`,
-`#para-quien`, `#boletos`, `#sede`, `#patrocinadores`, `#faq`, `#contenido` y
-`#menu-movil`.
-
-**Esta entrada se cierra al construir la Fase 3.** Mientras tanto, la opción
-barata si molesta es quitar «Ponentes» de `navegacion.json`: desaparece de la
-nav, del menú y del footer a la vez.
+`id` reales hoy en la home: `#inicio`, `#congreso`, `#ponentes`, `#pilares`,
+`#programa`, `#para-quien`, `#boletos`, `#sede`, `#patrocinadores`, `#faq`,
+`#contenido`, `#menu-movil` y los seis `#ponente-{slug}`.
 
 ### La pasarela de pago · CERRADO
 
@@ -377,8 +400,8 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 4 | **Correo** de contacto | `site.contacto.correo` | «Próximamente» en el footer |
 | 5 | **Teléfono** | `site.contacto.telefono` | «Próximamente» en el footer |
 | 6 | **WhatsApp** | `site.contacto.whatsapp` | «Próximamente» en el footer; el aviso de Boletos no promete WhatsApp |
-| 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display |
-| 8 | **Fotos de ponentes** | `public/img/ponentes/` | Bloquea la Fase 3 entera. Las 3 del hero ya están; faltan las de las fichas |
+| 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display. **Ojo: hay un desborde sin JS, ver abajo** |
+| ~~8~~ | ~~**Fotos de ponentes**~~ | ~~`public/img/ponentes/`~~ | **RESUELTO** — seis retratos entregados, reencuadrados y convertidos a WebP |
 | ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
 | ~~9b~~ | ~~**Nombre real de UNA figura del hero**~~ | ~~`hero-ponentes.json`~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera. Con él se retiró el `noindex` |
 | ~~9c~~ | ~~**Las otras 3 figuras del hero**~~ | ~~`public/img/hero/ponente-0{4,5,6}.webp`~~ | **RESUELTO** — entregadas e integradas en la Fase 2c |
@@ -392,7 +415,38 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 
 El que más pesa ahora es el **16**, porque lo ve quien está pagando: la página
 promete siete conferencias y la pantalla de Stripe, a un clic de distancia,
-sigue prometiendo seis. El 8 sigue bloqueando la Fase 3.
+sigue prometiendo seis. Con el 8 resuelto ya no queda nada que bloquee una fase
+entera: lo que falta son piezas sueltas (video, logos, contacto, OG, privacidad).
+
+### El logo roto de patrocinadores desborda sin JS · ABIERTO · va con el pendiente 7
+
+**No es de la Fase 3 y no se arregló ahí a propósito.** Se detectó midiendo
+Ponentes sin JavaScript y conviene tenerlo escrito antes de tocar los logos.
+
+Sin JS hay **45 px de desborde horizontal a 320 px de ancho y 5 px a 360**. Con
+JS es 0. El culpable es `IMG.patro__logo` en `#patrocinadores`: los archivos son
+404 (este mismo pendiente 7), y sin JS no corre el fallback que enseña
+`.patro__respaldo` y pone el `<img>` a `opacity: 0`.
+
+**Y no lo causa la falta del fallback, sino el `<img>` roto en sí.** Cuando una
+imagen es 404, Chrome pinta el marcador de imagen rota al tamaño de los
+atributos `width="320" height="120"` **e ignora tanto `max-width` como
+`max-height`**. Medido: el logo sale a 320×120 dentro de un `.patro__caja` de
+230×88, con `max-width: 100%` computado y activo. Por eso «ponerle un
+`max-width`» NO sirve: ya lo tiene.
+
+Probado sin JS, tres candidatos:
+
+| Parche | 320 px | 360 px | |
+| :----- | -----: | -----: | :-- |
+| `min-width: 0` en el item | 45 px | 5 px | no resuelve |
+| **`width:100%; height:100%` en `.patro__logo`** | **0** | **0** | **resuelve** — logo a 235×88 |
+| `overflow: hidden` en el marco | 0 | 0 | resuelve, pero recorta en vez de arreglar |
+
+**Al hacer el pendiente 7, meter el segundo:** sustituir `width: auto` por
+`width: 100%; height: 100%` en `.patro__logo`. Corrige ancho y alto a la vez y,
+con el `object-fit: contain` que ya está, un logo real se ajusta dentro de la
+caja sin deformarse. Deja de depender de que corra JavaScript.
 
 ### La séptima ponencia · CERRADO · las 7 sesiones están en la agenda
 
@@ -2059,6 +2113,234 @@ salta en build.
 > («conferencias» → «conferencia »). Las MEDIDAS eran correctas; el texto
 > mostrado, no. Es la tercera vez que pasa en este proyecto. **Los scripts se
 > escriben con Write, no con heredoc ni `node -e`.**
+
+---
+
+### Fase 3 — Ponentes: rejilla y ficha en `<dialog>` · COMPLETADA
+
+La última sección grande. Cierra el ancla muerta `#ponentes` y añade seis
+anclas nuevas, `#ponente-{slug}`.
+
+**Qué se hizo**
+
+- `Ponentes.astro`: encabezado, rejilla de seis tarjetas y seis fichas
+  completas. Todo sale de `ponentes.json`.
+- Los seis retratos, de JPEG 1792×2400 (12.99 MB) a **WebP 800×960 (243 KB)**,
+  con el reencuadre horneado. Los originales salieron a la carpeta hermana.
+- `Hero.astro`: cada figura pasa a ser `<a href="#ponente-{slug}">` y pierde su
+  `tabindex="0"`.
+
+#### LA FICHA COMPLETA NO VIVE EN EL MODAL
+
+Cada ficha se emite como un **`<dialog>` con el atributo `open`**. Un
+`<dialog open>` no es modal: se pinta como un bloque en el flujo. Sin
+JavaScript la página enseña la rejilla y debajo las seis fichas completas, y
+`#ponente-{slug}` es un ancla a un elemento que existe de verdad. Con
+JavaScript el script los cierra al arrancar y a partir de ahí usa
+`showModal()`.
+
+**`showModal()` da gratis lo que costaría cientos de líneas:** foco atrapado,
+Escape, `aria-modal`, resto de la página inerte, capa superior por encima de
+cualquier `z-index`, y **el foco de vuelta al elemento que lo abrió**. No se
+reimplementó nada de eso.
+
+> **`display: block` SOLO con `[open]`.** El navegador trae
+> `dialog:not([open]) { display: none }`, pero es una regla de ELEMENTO y
+> `.ficha` es de CLASE: la clase gana. Con `.ficha { display: block }` las seis
+> fichas cerradas seguían ocupando **1669 px cada una** por detrás del modal.
+> No se veía, porque el modal se pinta encima.
+
+#### EL FONDO BLANCO DE LOS RETRATOS
+
+Venían de estudio sobre blanco, y el sitio es oscuro. Puestos tal cual serían
+seis rectángulos blancos pegados sobre el fondo.
+
+**Se quitó el BORDE DURO, no el blanco:** un degradado de transparente a
+`var(--surface)` sobre el 55% inferior de la foto. El retrato se disuelve en la
+tarjeta y el nombre emerge de esa disolución, así que no hay ninguna línea
+donde acabe la foto y empiece el fondo. Usa el token, no un color fijo, así que
+sigue al tema activo sin una regla extra.
+
+#### LOS RETRATOS NO CUMPLÍAN, Y EL ARREGLO OBVIO EMPEORABA
+
+La regla del hero pide que las coronillas coincidan dentro del 1–2%. Medido:
+**3.83% a 9.00%, dispersión 5.17 puntos.** Y peor, el tamaño de cara variaba
+28% en relativo: Ricardo se leía lejano junto a José Ángel.
+
+Se probó alinear coronillas y **quedó peor**: Alejandro lleva sombrero, así que
+su «coronilla» es el ala y al alinearla su cara se hunde. **La coronilla es
+mala referencia para este conjunto.**
+
+La solución fue normalizar por **CARA**: cada retrato se escala para que su
+cara ocupe el 53% del alto de salida, con el centro al 31%. Zooms x1.01–x1.34,
+todos ≥1 —acercarse siempre cubre; alejarse dejaba hueco, que fue el primer
+intento fallido—. Va horneado en el WebP: coste cero en runtime, y de paso
+recorta fondo blanco.
+
+> **Método:** la cara se localiza por TONO DE PIEL, no por silueta. Se
+> intentaron tres detectores de «altura de cabeza» por línea de hombros y los
+> tres dieron respuestas incompatibles —uno daba 10% para Alejandro, imposible—
+> porque el pelo, el sombrero y el cuello contaminan cada foto distinto.
+> **Cuando tres métodos discrepan, el número no es evidencia: hay que mirar.**
+> La decisión se tomó sobre una hoja de contacto de antes/después.
+>
+> El 31% de centro sale de Alejandro: es quien tiene la cara más grande de
+> origen y con 36% su recorte pedía 94 px por encima del borde. A 31% los seis
+> caben enteros y nadie se pega a ningún borde.
+
+#### CALIDAD POR IMAGEN, otra vez por la camisa a cuadros
+
+A calidad 90 los seis sumaban **368 KB**, fuera del presupuesto de 250. El
+culpable, el mismo que en el hero: Alejandro, **109 KB él solo**, con **2.78×
+la energía de alta frecuencia** de la mediana.
+
+Bajar los seis por igual castigaría a los cinco que no tienen el problema. Se
+midió la curva peso/calidad de cada uno y se asignó la más alta que cupiera:
+
+| id | calidad | KB | por qué |
+| :- | ------: | -: | :------ |
+| 01 | 84 | 37.6 | |
+| 02 | 76 | 56.2 | hf ×2.78, camisa a cuadros |
+| 03 | 84 | 39.4 | |
+| 04 | 90 | 34.8 | hf ×0.53, traje liso |
+| 05 | 80 | 33.1 | |
+| 06 | 88 | 42.1 | |
+
+**Total 243.2 KB.** Comprobado en captura a 2.4× que la camisa de Alejandro
+—que es lo que la compresión castiga— sale limpia a 76.
+
+**Ancho de origen: 800 px, medido y no supuesto.** El render máximo del retrato
+en la rejilla es **385 px** (a 430 px de ancho, una columna), así que DPR2 pide
+770.
+
+**Dos fallos que pasaron TODAS las comprobaciones**
+
+Los dos se vieron mirando la captura, con quince asertos en verde:
+
+1. **El modal salía roto.** `.ficha__retrato` medía 152×960 en vez de 152×182:
+   el `<img>` lleva `width`/`height` para evitar CLS, esos atributos actúan
+   como CSS presentacional, y con las dos dimensiones ya fijadas
+   **`aspect-ratio` no tiene nada que calcular y se ignora en silencio**. El
+   retrato estiraba la cabecera a 960 px y empujaba los seis bloques de la
+   ficha fuera del área visible. En pantalla: un primerísimo plano y medio
+   modal vacío. Se arregla con **`block-size: auto`**.
+2. **Los modales se APILABAN.** Pedir otra ficha con una abierta ponía la
+   segunda encima en vez de cambiar: `showModal()` apila. Pasa al pulsar una
+   figura del hero con una ficha abierta y al llegar a otro `#ponente-slug` por
+   `hashchange`. Se detectó porque **se pidió la ficha de Edgar y la captura
+   mostró la de Esteban.** Ningún aserto lo vio porque cada prueba navegaba en
+   limpio. `abrir()` cierra ahora cualquier otra antes de abrir.
+
+**Y uno más, del mismo día: `.ficha` ya existía en `Sede.astro`.** El CSS estaba
+a salvo porque Astro lo acota, pero **el script del cliente NO está acotado**:
+`querySelectorAll('.ficha')` se tragaba el `<dl>` del recinto y `close()`
+—que no existe en un `<dl>`— lanzaba TypeError en el nivel superior del módulo,
+dejando el modal entero muerto. De ahí el `[data-ficha]`.
+
+#### LOS TRES BUGS QUE SOLO EXISTÍAN SIN JAVASCRIPT
+
+Los dos anteriores se cazaron mirando capturas. **Estos tres eran invisibles
+desde donde se estaba mirando**, porque las 17 comprobaciones del modal corrían
+con JavaScript y estos fallos viven en el otro modo. Los encontró una revisión
+en paralelo a la que se le pidió explícitamente medir sin JS.
+
+**Una sola causa raíz para los tres: la hoja del navegador da
+`position: absolute` a TODO `<dialog>`.** Con `showModal()` da igual, porque
+entonces pasa a `fixed` y a la capa superior — por eso el modo con JS estaba
+impecable. Pero con el atributo `open` en el flujo, ese `absolute` se resuelve
+contra el bloque contenedor inicial, porque ni `.fichas` ni `.ponentes` ni
+`body` están posicionados.
+
+| # | Qué se veía sin JS | Medido |
+| - | :----------------- | :----- |
+| 1 | Las **seis fichas apiladas en la misma coordenada**; solo se veía la última, Esteban | Seis con `top` idéntico; cinco con el **0.0%** de su superficie visible |
+| 2 | Las fichas **encima de Pilares y Programa**, texto sobre texto | `.fichas` medía **0 px** frente a los **5328** que suman las seis; 574 px de solape con Pilares |
+| 3 | La ficha **sangrando a ancho completo**, sin gutter | 1440 px de ancho con contenedor de 1200 |
+
+Se arreglan con **`position: static` en `.ficha[open]`**, y los tres a la vez.
+
+> El verificador montó un experimento de control con dos `<dialog open>` limpios
+> creados a mano en el mismo Chrome: se apilan igual aun con `display: block`, y
+> al añadir `position: static` se separan. Así que la causa está confirmada
+> contra el comportamiento del navegador, no inferida del síntoma.
+
+Verificado tras el arreglo, con JavaScript desactivado por CDP: `position`
+static, **las seis en coordenadas distintas**, contenedor de 6178 px, ninguna
+sangra fuera de los 1200, ninguna invade `#pilares`, las seis con sus seis
+bloques, y el botón de cerrar oculto —no significa nada si no hay modal—.
+
+#### EL CONTRASTE QUE FALLABA EN EL TRAMO QUE NADIE MUESTREÓ
+
+La misma revisión encontró que `.tarjeta__credencial` caía a **4.18:1 en tema
+azul alrededor de los 540 px de viewport**, por debajo del 4.5 de AA, con los
+retratos que ya están en el repo. El tramo 460–543 px no lo había muestreado
+nadie: ni las medidas propias ni las del primer agente, que saltaban de 390 a
+1440.
+
+La causa: el degradado terminaba en el **100%** de la foto, y el texto de la
+tarjeta sube sobre ella por el margen negativo de `.tarjeta__cuerpo`. Justo
+donde cae la credencial —que va en `--text-muted`, el color más tenue— todavía
+se filtraba blanco del retrato, **así que el contraste dependía de qué foto
+hubiera detrás**.
+
+Cerrando el degradado en el **86%**, ese tramo es `--surface` plano. Medido por
+muestreo de píxel real (texto en `color: transparent`, captura, y lectura del
+fondo) en 11 anchos × 2 temas: **6.66:1 en azul y 7.76:1 en verde, idénticos en
+todos los anchos** — y esa identidad es la prueba de que el fondo ya no depende
+de la foto. El peor par del conjunto queda en 6.66:1.
+
+#### RENDIMIENTO
+
+Medido en 4G lento (150 ms, 1.6 Mbps), 7 pasadas por viewport, mediana:
+
+| | 1440×900 | 390×844 |
+| :-- | --: | --: |
+| LCP | 3016 ms | 3000 ms |
+| Elemento LCP | `IMG.figura__img` **7/7** | `IMG.figura__img` **7/7** |
+| CLS | 0.00083 | 0.01423 |
+| Retratos cargados SIN hacer scroll | **0** | **0** |
+
+**La sección es neutra en la carga inicial.** El LCP sigue siendo una figura del
+hero en las 14 pasadas —ningún retrato entra en la cadena de candidatos— y el
+`loading="lazy"` funciona: cero de los seis se piden sin bajar hasta ellos.
+
+El CLS de móvil se atribuyó en una pasada: **un único desplazamiento a 2811 ms
+con fuentes `DIV.hero__media`, `DIV.countdown`, `DIV.hero__ctas` y un nodo de
+texto — todo del HERO, cero elementos de Ponentes.** Es el reflow al entrar la
+fuente display, ya identificado y descartado en su momento porque reservarle
+alto fijo sería apostar por un largo de nombre que cambia. Contra el 0.00939 de
+móvil de la revisión anterior, el delta real es de 0.005, y sigue 7× por debajo
+del umbral de «bueno».
+
+> **CAVEAT DE MÉTODO, y hay que declararlo siempre con estas cifras:** el
+> servidor local NO comprime, ni pidiéndoselo. En producción GitHub Pages sirve
+> gzip: el documento pasa de 93.3 a 15.0 KB y el conjunto JS+CSS de ~200 a
+> ~66 KB. **Estos ms sirven para comparar contra otra medida hecha igual, no
+> como cifra de producción.** Quien compare estos números contra una medida
+> futura hecha sobre el dominio real va a ver una mejora que no existe.
+
+> **Trampa de Astro, variante nueva.** Ya estaba documentado que un `{/* */}`
+> entre los atributos de una etiqueta rompe `astro check`. Aquí apareció otra:
+> un `{/* */}` dentro del cuerpo con paréntesis de un `.map()` son DOS
+> expresiones y **el compilador lo rechaza con `Expected , or ) but found
+> class`**, que no dice nada de comentarios. Los comentarios de un `.map()` van
+> fuera del `.map()`.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+Modal verificado con interacción real (ratón y teclado), 17 comprobaciones en
+verde: se abre como `:modal`, escribe el hash, el foco entra, 14 tabulaciones
+sin alcanzar nada interactivo de fuera, Escape cierra, el foco vuelve al enlace
+que abrió, el hash se limpia, llegar con `#hash` lo abre solo, las seis figuras
+del hero son enlaces y abren su ficha, el clic en el fondo cierra, y cambiar de
+ficha no apila.
+
+> *Nota metodológica:* el aserto de foco atrapado falló al principio con «4 de
+> 14 tabulaciones salen». El recorrido era `BODY → ficha → cerrar → …`: el foco
+> **nunca alcanzaba un elemento interactivo de fuera**, y `<body>` es el punto
+> de vuelta del ciclo, no una fuga. Se corrigió el TEST, no el producto.
 
 ---
 
