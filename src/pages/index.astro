@@ -13,6 +13,7 @@ import Patrocinadores from '../components/Patrocinadores.astro';
 import Faq from '../components/Faq.astro';
 import CtaFinal from '../components/CtaFinal.astro';
 import Footer from '../components/Footer.astro';
+import BarraCompra from '../components/BarraCompra.astro';
 ---
 
 {/*
@@ -67,4 +68,9 @@ import Footer from '../components/Footer.astro';
   {/* El pie va FUERA de <main>: es contenido de la página, no del contenido
       principal, y así «Saltar al contenido» no lo mete en el mismo saco. */}
   <Footer />
+
+  {/* Barra de compra fija, solo móvil. Va fuera de <main> por lo mismo que el
+      pie, y además así ninguna sección clara la alcanza: es contenido del
+      sitio, no de la sección que tenga debajo — el mismo criterio que la nav. */}
+  <BarraCompra />
 </Base>

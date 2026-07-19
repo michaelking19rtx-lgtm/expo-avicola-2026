@@ -1,0 +1,287 @@
+---
+import boletos from '../data/boletos.json';
+
+/*
+  Barra de compra fija — SOLO MÓVIL.
+
+  El sitio cobra $699 reales y el canal de difusión es WhatsApp, así que casi
+  todo el tráfico llega en celular. Esta barra es el CTA que acompaña el scroll
+  entero: aparece cuando el hero sale de vista y se retira al entrar Boletos,
+  que es donde la tarjeta ya enseña precio y botón por su cuenta.
+
+  Diseñada en la revisión de móvil y aparcada entonces —competía con el CTA del
+  hero antes del arreglo 3—. Se recupera de la bitácora tal cual: precio a la
+  izquierda, IntersectionObserver (nunca listeners de scroll, para no tocar
+  Lenis), visualViewport para el teclado, hueco reservado en el body y
+  env(safe-area-inset-bottom).
+
+  PRECIO Y URL SALEN DE boletos.json, el mismo sitio que la tarjeta. No hay un
+  segundo lugar que actualizar.
+*/
+const entrada = boletos[0];
+
+/*
+  Misma condición que la tarjeta: `checkoutUrl` es lo único que decide si hay
+  compra. Sin pasarela o sin disponibilidad, la barra NO se pinta — un botón
+  que no compra ocupando el borde inferior de cada pantalla es peor que nada.
+*/
+const compraAbierta = Boolean(entrada?.disponible && entrada?.checkoutUrl);
+
+const precioTexto =
+  entrada?.precio == null ? null : new Intl.NumberFormat('es-MX').format(entrada.precio);
+---
+
+{compraAbierta && precioTexto && (
+  <div class="barra" data-barra-compra>
+    {/*
+      El bloque visual va ENTERO en aria-hidden y la lectura la da el sr-only.
+
+      Si no, el lector recita los trozos y luego la frase completa: «699 MXN
+      Acceso general, 699 pesos MXN». La tarjeta de Boletos tiene hoy esa misma
+      duplicación —el sr-only se añadió sin ocultar los trozos—; aquí se hace
+      como estaba la intención, que es que el precio se lea una vez y entero.
+    */}
+    <p class="barra__precio">
+      <span class="barra__cifra" aria-hidden="true">
+        <span class="barra__simbolo">$</span>
+        {precioTexto}
+        <span class="barra__moneda">{entrada.moneda}</span>
+      </span>
+      <span class="barra__nombre" aria-hidden="true">{entrada.nombre}</span>
+      <span class="sr-only">
+        {entrada.nombre}, {precioTexto} pesos {entrada.moneda}
+      </span>
+    </p>
+
+    <a
+      class="barra__cta"
+      href={entrada.checkoutUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Comprar mi boleto
+      <span class="sr-only">(abre el pago seguro en una pestaña nueva)</span>
+    </a>
+  </div>
+)}
+
+<style>
+  /*
+    SIN JAVASCRIPT NO EXISTE. Quien decide mostrarla es el observer, así que sin
+    JS no hay nadie que pueda retirarla: se quedaría encallada tapando el pie.
+    Por eso el display arranca en none y solo [data-js] lo levanta.
+  */
+  .barra {
+    display: none;
+  }
+
+  /* SOLO MÓVIL. El mismo corte que usa .cta--movil de Boletos, para que las dos
+     duplicaciones del CTA aparezcan y desaparezcan en el mismo ancho. */
+  @media (max-width: 47.9375rem) {
+    :global([data-js]) .barra {
+      position: fixed;
+      inset-inline: 0;
+      inset-block-end: 0;
+      z-index: var(--z-sticky);
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+
+      min-block-size: var(--barra-h);
+      padding-inline: var(--gutter);
+      /*
+        La barra de gestos del iPhone se come el borde inferior. El inset va en
+        el padding y no en un margen para que el FONDO llegue hasta abajo del
+        todo: con margen quedaría una franja del contenido asomando por debajo.
+      */
+      padding-block: var(--space-sm);
+      padding-block-end: calc(var(--space-sm) + env(safe-area-inset-bottom));
+
+      border-block-start: 1px solid var(--border);
+      /* Sin sombra dura: la separa el borde y el desenfoque, no una caja
+         flotante. */
+      background-color: var(--surface);
+
+      /* Oculta por defecto; la revela el observer.
+         `visibility` la saca del orden de tabulación y del árbol de
+         accesibilidad mientras está fuera, así que no se puede enfocar a
+         ciegas un botón que no se ve. Su transición va con retardo para que
+         desaparezca DESPUÉS de terminar de bajar. */
+      transform: translateY(100%);
+      visibility: hidden;
+      transition:
+        transform var(--t-base) var(--ease-out),
+        visibility 0s linear var(--t-base);
+    }
+
+    :global([data-js]) .barra[data-visible] {
+      transform: none;
+      visibility: visible;
+      transition:
+        transform var(--t-base) var(--ease-out),
+        visibility 0s;
+    }
+
+    /*
+      TECLADO ABIERTO: fuera. En un viewport ya recortado a la mitad, una barra
+      fija se sienta encima justo de lo que se está escribiendo. Hoy la landing
+      no tiene ningún campo, así que esto es prevención: el día que entre un
+      formulario, no hay que acordarse de esto.
+    */
+    :global([data-js]) .barra[data-teclado] {
+      transform: translateY(100%);
+      visibility: hidden;
+    }
+
+    /*
+      Desenfoque solo si el navegador lo soporta, y con el MISMO @supports
+      doble que la nav: como el valor lleva var(), un navegador sin color-mix
+      no descarta la declaración al parsear sino al computar, y el fondo caería
+      a transparent en vez de al var(--surface) opaco de arriba.
+    */
+    @supports (backdrop-filter: blur(1px)) and
+      (background-color: color-mix(in srgb, red 50%, transparent)) {
+      :global([data-js]) .barra {
+        /*
+          94%, la misma alfa que la nav y por la misma razón MEDIDA: la barra
+          flota sobre contenido que cambia de superficie al hacer scroll, y
+          sobre las secciones claras una alfa baja deja subir el claro de
+          debajo y convierte la barra en el panel gris sucio que se arregló en
+          la nav. A 0.94 sobre oscuro el cambio es imperceptible y sobre claro
+          se mantiene oscura y nítida.
+
+          --surface resuelve SIEMPRE al oscuro: la barra vive fuera de <main>,
+          así que ningún [data-superficie='clara'] la alcanza.
+        */
+        background-color: color-mix(in srgb, var(--surface) 94%, transparent);
+        backdrop-filter: blur(var(--nav-blur));
+      }
+    }
+
+    /*
+      HUECO AL FINAL DEL BODY. Sin esto la barra tapa el pie al llegar abajo.
+
+      Va SIEMPRE que haya JS y estemos en móvil, no solo cuando la barra está
+      visible: si el hueco apareciera y desapareciera con ella, cada entrada y
+      cada salida movería el documento. Como es constante desde el primer
+      pintado, no puede generar ni un salto de layout.
+    */
+    :global([data-js]) :global(body) {
+      padding-block-end: calc(var(--barra-h) + env(safe-area-inset-bottom));
+    }
+  }
+
+  .barra__precio {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    line-height: 1.2;
+  }
+
+  .barra__cifra {
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 700;
+  }
+
+  .barra__simbolo {
+    margin-inline-end: 0.05em;
+    font-size: 0.7em;
+    /* Alineado a la parte alta de la cifra, como en la tarjeta. */
+    vertical-align: 0.35em;
+  }
+
+  .barra__moneda {
+    margin-inline-start: 0.15em;
+    font-size: 0.55em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+
+  .barra__nombre {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .barra__cta {
+    /*
+      Área de toque: el mínimo son 44x44 REALES. El padding vertical la levanta
+      por encima aunque la letra sea de --step--1, y el min-block-size la
+      garantiza si algún día encoge la fuente.
+    */
+    min-block-size: 44px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding-inline: var(--space-lg);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step--1);
+    font-weight: 600;
+    text-align: center;
+    transition: filter var(--t-base) var(--ease-out);
+  }
+
+  .barra__cta:hover {
+    filter: brightness(1.08);
+  }
+</style>
+
+<script>
+  /*
+    Aparece al salir el hero de vista y se retira al entrar Boletos.
+
+    IntersectionObserver y NO un listener de scroll: el scroll lo conduce Lenis
+    y engancharse ahí significaría correr en cada frame del scroll suave.
+    El observer no consulta nada, lo avisa el navegador.
+
+    Nada de esto importa GSAP ni Lenis: si el chunk de animación no llega, la
+    barra sigue funcionando. Es el mismo reparto que el resto del sitio.
+  */
+  const barra = document.querySelector('[data-barra-compra]');
+  const hero = document.querySelector('#inicio');
+  const boletos = document.querySelector('#boletos');
+
+  if (barra && hero && boletos) {
+    /*
+      Estado inicial explícito: arrancamos DENTRO del hero, así que la barra no
+      se ve. Si se dejara a que lo dedujera el primer callback, un deep-link
+      con hash a mitad de página tendría un fotograma con el estado equivocado.
+    */
+    const dentro = new Map([
+      [hero, true],
+      [boletos, false],
+    ]);
+
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        for (const entrada of entradas) dentro.set(entrada.target, entrada.isIntersecting);
+        /* Visible solo en la tierra de nadie: ni en el hero, ni en Boletos. */
+        barra.toggleAttribute('data-visible', !dentro.get(hero) && !dentro.get(boletos));
+      },
+      { threshold: 0 }
+    );
+
+    observador.observe(hero);
+    observador.observe(boletos);
+
+    /*
+      TECLADO. No hay forma directa de preguntar «¿hay teclado?»: se deduce de
+      que el viewport visual encoja mucho respecto al de layout. El 75% deja
+      fuera los cambios pequeños —la barra de URL de Safari al aparecer y
+      desaparecer— y solo dispara con un teclado de verdad.
+    */
+    const vv = window.visualViewport;
+    if (vv) {
+      const alRedimensionar = () => {
+        barra.toggleAttribute('data-teclado', vv.height < window.innerHeight * 0.75);
+      };
+      vv.addEventListener('resize', alRedimensionar);
+      alRedimensionar();
+    }
+  }
+</script>

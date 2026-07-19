@@ -1549,13 +1549,14 @@ va a cambiar en cuanto lleguen los nombres reales.
 
 **Lo que NO se hizo, y por qué**
 
-- **Barra de compra fija.** Se propuso y se descartó de momento: se come ~56px
-  de un viewport de 800 y compite con el CTA del hero durante todo el scroll.
-  Primero el arreglo 3, y ya cumple el objetivo —precio y botón en pantalla—,
-  así que la barra no hace falta hoy. Si se retoma: `IntersectionObserver`
-  sobre hero y boletos (no listeners de scroll, para no tocar Lenis),
-  `visualViewport` para esconderla con el teclado abierto, reserva de hueco con
-  `padding-block-end` en el `body` y `env(safe-area-inset-bottom)`.
+- **Barra de compra fija. YA NO: SE IMPLEMENTÓ.** Ver «La barra de compra fija»
+  al final de la bitácora. Se aparcó aquí porque competía con el CTA del hero
+  durante todo el scroll; se retomó con el diseño de esta entrada intacto
+  —`IntersectionObserver` sobre hero y boletos (no listeners de scroll, para no
+  tocar Lenis), `visualViewport` para el teclado, reserva de hueco con
+  `padding-block-end` en el `body` y `env(safe-area-inset-bottom)`— y el
+  conflicto con el hero lo resuelve el propio observer: no aparece hasta que el
+  hero sale de vista.
 - **Las seis etiquetas «Ponente por confirmar».** Tres pantallas de repetición
   en móvil, pero se resuelve solo al llegar los nombres.
 
@@ -2551,3 +2552,131 @@ abierto y Boletos.
 > **Boletos queda entre dos claras y NO se lee como un hueco.** Al contrario:
 > saliendo del claro, el lima del CTA y el filo de acento de la tarjeta ganan
 > fuerza. Sigue siendo el punto de conversión de la página.
+
+---
+
+### La barra de compra fija · COMPLETADA
+
+Recuperada del diseño que quedó aparcado en la revisión de móvil, sin
+reinventarlo: `IntersectionObserver` sobre hero y Boletos, `visualViewport`
+para el teclado, hueco reservado en el `body` y `env(safe-area-inset-bottom)`.
+Componente nuevo `BarraCompra.astro`, fuera de `<main>`, junto al pie.
+
+**Por qué ahora sí.** Se aparcó porque competía con el CTA del hero durante
+todo el scroll. Eso lo resuelve el propio observer: la barra no existe hasta
+que el hero sale de vista, así que los dos CTAs no coinciden nunca. El sitio
+cobra $699 reales y el canal de difusión es WhatsApp, así que el tráfico llega
+en celular y esta barra es el CTA que acompaña el scroll entero.
+
+**Decisiones**
+
+- **Precio y URL salen de `boletos.json`**, el mismo sitio que la tarjeta. No
+  hay un segundo lugar que actualizar. Comparte también la condición
+  `disponible && checkoutUrl`: sin pasarela la barra no se pinta, porque un
+  botón que no compra ocupando el borde inferior de cada pantalla es peor que
+  nada.
+- **El texto es «Comprar mi boleto»**, el mismo de la tarjeta. Una tercera
+  palabra para la misma acción —«reservar», «entrada»— confunde.
+- **El precio va en la barra** porque hace dos cosas: quita la fricción de
+  «¿cuánto era?» y evita que se lea como banner publicitario.
+- **`IntersectionObserver`, nunca un listener de scroll.** El scroll lo conduce
+  Lenis; engancharse ahí sería correr en cada frame del scroll suave. El
+  observer no consulta nada, lo avisa el navegador. Y no importa GSAP ni Lenis:
+  si el chunk de animación no llega, la barra sigue funcionando.
+- **Estado inicial explícito en el `Map`.** Se arranca dentro del hero. Dejarlo
+  a que lo dedujera el primer callback daba un fotograma con el estado
+  equivocado en un deep-link con hash a mitad de página.
+- **`visibility`, no solo `transform`.** Saca la barra del orden de tabulación
+  y del árbol de accesibilidad mientras está fuera: si solo se desplazara, se
+  podría enfocar a ciegas un botón invisible. Su transición lleva retardo para
+  que desaparezca DESPUÉS de terminar de bajar.
+- **El hueco del `body` es CONSTANTE**, no solo cuando la barra se ve. Si
+  apareciera y desapareciera con ella, cada entrada movería el documento. Como
+  está desde el primer pintado, no puede generar un salto de layout.
+- **Alfa 94%, la misma que la nav y por la misma razón medida.** La barra flota
+  sobre contenido que cambia de superficie al hacer scroll. `--surface`
+  resuelve siempre al oscuro —la barra vive fuera de `<main>`, así que ningún
+  `[data-superficie='clara']` la alcanza—, pero el 6% translúcido más el
+  desenfoque dejan subir el claro de debajo.
+- **El bloque visual del precio va entero en `aria-hidden` y la lectura la da
+  el `sr-only`.** Sin eso el lector recita los trozos y luego la frase completa.
+
+> **PENDIENTE HEREDADO · CERRADO.** La tarjeta de Boletos tenía esa misma
+> duplicación: su `sr-only` se añadió sin ocultar `.precio__valor` ni
+> `.precio__moneda`, así que un lector anunciaba «699 MXN 699 pesos MXN». Se
+> cerró aplicando el criterio de la barra —el bloque visual entero fuera del
+> árbol de accesibilidad— con `aria-hidden="true"` en los dos tramos que
+> faltaban. `.precio__simbolo` ya lo llevaba. Verificado sobre el HTML
+> COMPILADO, no sobre el fuente: los dos `<span>` salen con el atributo en
+> `dist/index.html`.
+
+**Estado — medido y mirado**
+
+| Comprobación | Resultado |
+| :----------- | :-------- |
+| Aparece / desaparece | oculta en el hero, visible en Programa y FAQ, **oculta en Boletos**, visible al final |
+| Parpadeo al entrar en Boletos | **una sola transición**, sin oscilación |
+| Área de toque del botón | **173×44 px** reales en 360, 390 y 430 |
+| Escritorio (768 / 1024 / 1440) | `display: none` |
+| Sin JavaScript | `data-js` ausente → `display: none`, también al final del scroll |
+| El pie no queda tapado | **−23 px** de solape (holgura) en 360, 390 y 430 |
+
+**Color compuesto de la barra, leído del PÍXEL del render** (no del
+`getComputedStyle`, que solo devuelve el `color-mix` declarado y no lo que se
+ve tras el desenfoque):
+
+| Tema | Sobre oscura | Sobre clara |
+| :--- | :----------- | :---------- |
+| Verde | `#1e2520` | `#2b312c` |
+| Azul | `#1c2942` | `#29354e` |
+
+Sobre claro sube, pero **se mantiene como barra oscura y nítida**: confirmado
+en captura a 360, 390 y 430 en ambos temas, sobre sección oscura y sobre
+sección clara. No reaparece el «panel gris sucio» de la nav.
+
+> **NOTA PARA EL FUTURO — el botón de WhatsApp.** Si algún día se añade, va
+> DENTRO de esta barra, como icono a la izquierda del precio. **No flotando
+> aparte.** Dos elementos peleándose la esquina inferior derecha es peor que
+> ninguno de los dos: se tapan entre sí, y en un teléfono esa esquina es justo
+> donde cae el pulgar.
+
+#### RENDIMIENTO — medido, y con una advertencia sobre con qué se compara
+
+390×844, 4G lento (150 ms, 1.6 Mbps), 7 pasadas, mediana, **con
+`prefers-reduced-motion` activo**. La huella SHA de `dist/` se tomó antes y
+después de la corrida y **salió idéntica**: la medida no está contaminada.
+
+| | Baseline (Fase 3) | Ahora | |
+| :-- | --: | --: | :-- |
+| LCP | 3000 ms | **1984 ms** | comparable en elemento, NO en condiciones |
+| Elemento LCP | `IMG.figura__img` 7/7 | `IMG.figura__img` **7/7** | mismo elemento, área 35 996 px² |
+| CLS | 0.01423 | **0.00000** | |
+
+**La barra no mete ni un desplazamiento.** CLS 0.00000 en las 14 pasadas —los
+dos modos de movimiento— y también en una pasada con recorrido completo en la
+que la barra ENTRA y SALE de vista, con la lista de turnos de `layout-shift`
+literalmente vacía. Es lo que buscaba el diseño: el hueco del `body` es
+constante desde el primer pintado y la barra es `position: fixed` movida por
+`transform`, así que no hay nada que pueda empujar al documento.
+
+> **EL DELTA DE LCP NO ES MÉRITO DE LA BARRA, Y HAY QUE DECIRLO.** Una barra
+> fija no puede mejorar el LCP: no toca la cadena crítica. Los 1016 ms de
+> diferencia contra el baseline se reparten así, y solo el primer tramo está
+> aislado de verdad:
+>
+> - **~492 ms son `prefers-reduced-motion`.** Se aisló midiendo EL MISMO
+>   `dist/` sin él: 2476 ms de mediana, mismo elemento LCP, 7/7. Es la variable
+>   que el enunciado de la sesión mandaba fijar, y sola explica la mitad.
+> - **El resto (~492 ms) queda SIN ATRIBUIR.** El baseline es de la Fase 3 y
+>   entre medias entraron las Fases 4, 5, 6 y 7 y las superficies claras, sin
+>   que ninguna dejara una medición de 4G en la bitácora. Además el baseline no
+>   declara en qué modo de movimiento se tomó.
+>
+> Así que lo que se puede afirmar es: **el elemento LCP no cambió** (convención
+> 13 satisfecha, 14/14 pasadas) y **la barra es neutra en carga y cero en CLS**.
+> Lo que NO se puede afirmar es que la página haya mejorado 1016 ms por esta
+> fase. Quien quiera esa cifra tiene que remedir el baseline en las mismas
+> condiciones.
+
+> **CAVEAT DE MÉTODO, el de siempre:** el servidor local NO comprime. Estos ms
+> solo valen contra otra medida hecha igual, nunca contra el dominio real.

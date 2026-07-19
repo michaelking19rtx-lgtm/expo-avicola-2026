@@ -86,9 +86,14 @@ const entradas = boletos.map((boleto) => ({
           {boleto.precioTexto ? (
             <p class="precio">
               <span class="precio__simbolo" aria-hidden="true">$</span>
-              <span class="precio__valor">{boleto.precioTexto}</span>
-              <span class="precio__moneda">{boleto.moneda}</span>
-              {/* El precio se lee entero de una vez, sin deletrear los trozos. */}
+              <span class="precio__valor" aria-hidden="true">{boleto.precioTexto}</span>
+              <span class="precio__moneda" aria-hidden="true">{boleto.moneda}</span>
+              {/*
+                El precio se lee entero de una vez, sin deletrear los trozos.
+                Los tres tramos visuales van en aria-hidden: sin eso el lector
+                recitaba «699 MXN 699 pesos MXN» —los trozos y luego la frase—.
+                Mismo criterio que BarraCompra.astro.
+              */}
               <span class="sr-only">
                 {boleto.precioTexto} pesos {boleto.moneda}
               </span>

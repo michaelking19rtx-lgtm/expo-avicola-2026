@@ -136,6 +136,10 @@
   --gutter: clamp(1.25rem, 5vw, 4rem);
   --nav-h: 4.5rem;
   --nav-blur: 14px;
+  /* Alto de la barra de compra fija (solo móvil). Lo consumen la propia barra
+     y el hueco que el body reserva al final para no taparle el pie: si cambia,
+     cambian los dos a la vez y no se pueden desincronizar. */
+  --barra-h: 4.25rem;
   --media-max: 980px;
   --radius-media: 12px;
   /* Tarjetas de contenido (¿Para quién es?, y lo que venga después). Coincide
