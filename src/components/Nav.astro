@@ -225,9 +225,14 @@ import enlaces from '../data/navegacion.json';
       backdrop-filter var(--t-base) var(--ease-out);
   }
 
+  /*
+    --oscuro-bg y no --bg: la nav es la barra del SITIO, no la de la sección
+    que tenga debajo. Es fija y translúcida, así que cruza por encima de las
+    secciones claras, y ahí debe seguir leyéndose como una barra oscura.
+  */
   .nav[data-scrolled='true'] {
     border-block-end-color: var(--border);
-    background-color: var(--bg);
+    background-color: var(--oscuro-bg);
     backdrop-filter: blur(var(--nav-blur));
   }
 
@@ -252,8 +257,14 @@ import enlaces from '../data/navegacion.json';
   */
   @supports (backdrop-filter: blur(1px)) and
     (background-color: color-mix(in srgb, red 50%, transparent)) {
+    /*
+      94% y no 82%. Con 0.82 sobre una sección CLARA el fondo computa #2f322e:
+      un panel gris sucio flotando sobre el claro. A 0.94 sobre oscuro el
+      cambio es imperceptible —el fondo ya era casi opaco— y sobre claro la
+      barra queda negra y nítida. El blur sigue haciendo su trabajo.
+    */
     .nav[data-scrolled='true'] {
-      background-color: color-mix(in srgb, var(--bg) 82%, transparent);
+      background-color: color-mix(in srgb, var(--oscuro-bg) 94%, transparent);
     }
   }
 

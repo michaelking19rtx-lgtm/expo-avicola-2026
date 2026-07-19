@@ -209,7 +209,96 @@ ol[role='list'] {
 }
 
 /* -----------------------------------------------------------------------------
-   5. Accesibilidad de movimiento
+   5. Superficies claras
+   -------------------------------------------------------------------------- */
+
+/*
+  Claro donde se LEE, oscuro donde se DECIDE.
+
+  Los componentes no saben nada de esto: ya consumen --text, --surface,
+  --border y --accent, así que basta remapear esas variables dentro del ámbito
+  de la sección y todo se invierte solo. La paleta vive en tokens.css.
+
+  Van claras: Programa, ¿Para quién?, Patrocinadores y FAQ.
+  Siguen oscuras: hero, Ponentes, Pilares, Sede, Boletos, CTA final y pie.
+*/
+[data-superficie='clara'] {
+  --bg: var(--claro-bg);
+  --surface: var(--claro-surface);
+  --surface-2: var(--claro-surface-2);
+  --text: var(--claro-text);
+  --text-muted: var(--claro-text-muted);
+  --accent: var(--claro-accent);
+  --accent-ink: var(--claro-accent-ink);
+  --border: var(--claro-border);
+  --shadow-sm: var(--claro-shadow-sm);
+  --shadow-md: var(--claro-shadow-md);
+  --shadow-lg: var(--claro-shadow-lg);
+
+  /* Scrollbars y controles nativos dejan de asumir fondo oscuro. */
+  color-scheme: light;
+  background-color: var(--claro-bg);
+  position: relative;
+
+  /*
+    ESTA LÍNEA ES OBLIGATORIA. Sin ella los <h2> salen INVISIBLES.
+
+    body lleva `color: var(--text)` y los títulos no declaran color propio:
+    heredan el valor YA COMPUTADO del body, que es el claro del tema oscuro.
+    La herencia transmite el color RESUELTO, no la referencia var(), así que
+    remapear --text aquí dentro no alcanza a nada que herede de fuera — solo
+    invierten los elementos con `color: var(--…)` explícito.
+
+    Es la convención 14/15 con otra piel: la comprobación pasa (el token está
+    bien remapeado) y la pantalla dice otra cosa.
+  */
+  color: var(--text);
+}
+
+/*
+  LA BANDA NO AÑADE ALTURA. Se pinta en position:absolute ENCIMA del padding
+  que la sección ya tiene (--space-3xl, 104px), así que las cuatro fronteras
+  cuestan 0 px de scroll extra. Por eso puede ser generosa también en móvil.
+*/
+[data-superficie='clara']::before,
+[data-superficie='clara']::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  block-size: var(--banda, clamp(72px, 11vh, 104px));
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-superficie='clara']::before {
+  inset-block-start: 0;
+  background: linear-gradient(to bottom, var(--oscuro-bg), var(--claro-bg));
+}
+
+[data-superficie='clara']::after {
+  inset-block-end: 0;
+  background: linear-gradient(to top, var(--oscuro-bg), var(--claro-bg));
+}
+
+/* El contenido, por encima de las bandas. */
+[data-superficie='clara'] > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+  Entre dos claras SEGUIDAS no hay frontera que dibujar. Se suprime con
+  selectores de atributo explícitos, NO con :has(): si :has() no aplicara,
+  saldría una banda oscura entre dos secciones claras —una mancha en mitad del
+  claro—, que es peor que no tener bandas. Los atributos los pone index.astro.
+*/
+[data-superficie='clara'][data-borde='salida']::before,
+[data-superficie='clara'][data-borde='entrada']::after {
+  content: none;
+}
+
+/* -----------------------------------------------------------------------------
+   6. Accesibilidad de movimiento
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {

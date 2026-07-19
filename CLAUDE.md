@@ -252,6 +252,30 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
     > que no estás ejecutando. En los dos casos el error es confundir «pasó mi
     > comprobación» con «funciona».
 
+16. **La herencia de `color` transmite el valor YA COMPUTADO, no la referencia
+    `var()`.** Remapear un token de color dentro de un ámbito NO alcanza a
+    ningún elemento que herede ese color desde fuera del ámbito. Solo cambian
+    los elementos que declaran `color: var(--…)` explícitamente. **Todo bloque
+    que remapee `--text` debe declarar además `color: var(--text)`.**
+
+    > Origen: en las superficies claras, `[data-superficie='clara']` remapea
+    > `--text` al tinte oscuro y todo parecía correcto: el token resolvía al
+    > valor nuevo, el `<h2>` no tenía regla de color propia y la sección pintaba
+    > su fondo claro. **Los `<h2>` salían invisibles.** Heredaban de
+    > `body { color: var(--text) }`, que el navegador ya había resuelto a
+    > `#f4f1ea` —el claro del tema OSCURO— antes de entrar en la sección. La
+    > herencia pasa `#f4f1ea`, no `var(--text)`, así que remapear la variable
+    > dentro no reevalúa nada. Invertían solo los elementos con color explícito:
+    > eyebrows, horas y títulos de bloque. Se cierra con una línea,
+    > `color: var(--text)`, en el propio bloque del remapeo.
+    >
+    > **Es la misma familia que la 14 y la 15:** la comprobación pasa y la
+    > pantalla dice otra cosa. Aquí el token remapeado es correcto —se puede
+    > leer con `getComputedStyle` y da el valor nuevo— y aun así el título no
+    > se ve. **14** = miras el número en vez de la pantalla. **15** = miras un
+    > modo de ejecución en vez de los dos. **16** = miras el valor de la
+    > variable en vez de quién la está usando de verdad.
+
 > **Nota sobre las convenciones 11, 12 y 13.** Son la misma falla con distinto
 > disfraz: un número que parece evidencia sin serlo. **11** = cifra escrita sin
 > medir. **12** = medida contra datos que otro proceso cambió. **13** = medida
@@ -259,9 +283,10 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 > justifique una decisión, verificar cuál de los tres casos podría estar
 > ocurriendo.
 >
-> **Y las 14 y 15 son el par siguiente:** no que el número esté mal, sino que
-> mire donde no hay que mirar. **14** = miras los números en vez de la pantalla.
-> **15** = miras un modo de ejecución en vez de los dos.
+> **Y las 14, 15 y 16 son el grupo siguiente:** no que el número esté mal, sino
+> que mire donde no hay que mirar. **14** = miras los números en vez de la
+> pantalla. **15** = miras un modo de ejecución en vez de los dos. **16** =
+> miras el valor de la variable en vez de quién la consume de verdad.
 
 ## 6. Roadmap
 
@@ -277,6 +302,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
 | 7    | SEO técnico, datos estructurados, indexación y rendimiento                | **COMPLETADA** |
 | 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
+| —    | Superficies claras: cuatro secciones invertidas y bandas de frontera      | **COMPLETADA** |
 
 > **La numeración cambió al empezar la Fase 4.** El plan original metía
 > «programa/agenda» y «ponentes» juntos en la Fase 3. Al posponerse ponentes por
@@ -2416,3 +2442,81 @@ prueba: git lo ignora. **Al repo solo entran los archivos ya servibles.**
 > disco. Si mañana hace falta otro tamaño, o se repite ese método, o se usa
 > `astro:assets` moviendo el original a `src/assets/` (que además generaría el
 > `srcset` responsive solo).
+
+---
+
+### Superficies claras — claro donde se lee, oscuro donde se decide · COMPLETADA
+
+El sitio era oscuro de arriba a abajo y se leía monótono. Cuatro secciones
+pasan a superficie clara: **Programa, ¿Para quién?, Patrocinadores y FAQ**.
+Siguen oscuras hero, Ponentes, Pilares, Sede, Boletos, CTA final y pie.
+
+**Qué se hizo**
+
+- `tokens.css`: paleta clara completa por tema (`--claro-*`) y **`--oscuro-bg`**,
+  el fondo oscuro accesible desde DENTRO de una sección clara.
+- `global.css`, sección 5: el mecanismo entero —remapeo, bandas de frontera y
+  supresión entre claras seguidas.
+- `index.astro`: qué secciones son claras y dónde están sus fronteras.
+- `Nav.astro`: la barra pasa a `--oscuro-bg` al 94%.
+- Los cuatro componentes reciben `{...Astro.props}` en su `<section>`.
+
+**El mecanismo**
+
+Los componentes no se tocaron: ya consumían `--text`, `--surface`, `--border` y
+`--accent`, así que `[data-superficie='clara']` remapea esas variables dentro
+del ámbito y **todo se invierte solo** — incluidos el carril y los puntos del
+timeline, los divisores del FAQ y los marcadores de `<summary>`, que salen de
+`var(--border)` y `var(--accent)` sin una línea de CSS nueva.
+
+**Decisiones**
+
+- **`--accent` NO puede ser el lima/cian sobre claro.** Dan 1.24:1 y 1.53:1 y
+  se usan como color de TEXTO (eyebrows, horas del programa, ponentes). Se
+  remapean al `--primary` profundo de cada tema: misma identidad, y medidos
+  dan 6.24:1 (verde) y 6.35:1 (azul).
+- **`color: var(--text)` en el bloque del remapeo es OBLIGATORIO.** Es la
+  convención 16; sin esa línea los `<h2>` salen invisibles.
+- **La nav se queda oscura siempre**: es la barra del SITIO, no la de la
+  sección. Con alfa 0.82 sobre claro computaba `#2f322e`, un panel gris sucio.
+  A **0.94** sobre oscuro el cambio es imperceptible y sobre claro queda negra
+  y nítida. Usa `--oscuro-bg`, no `--bg`, para no depender de dónde esté.
+- **Las bandas no añaden altura.** Van en `position:absolute` sobre el padding
+  que la sección ya tiene (`--space-3xl`, 104px). **Medido: 0 px de diferencia
+  de `scrollHeight`** contra el build anterior, en 390 y 1440, ambos temas.
+- **Las fronteras van EXPLÍCITAS con `data-borde`, no con `:has()`.** Las
+  claras van en parejas, así que el orden deja 4 fronteras y no 8. Con `:has()`,
+  si no aplicara, aparecería una banda oscura EN MITAD del claro, que es peor
+  que no tener bandas. Con atributos, el fallo es no pintar la banda.
+- **Sombras invertidas**: negro al 40-55% sobre claro se ve sucio. Las tres
+  (`sm`, `md`, `lg`) pasan a tintes del propio color de texto a baja alfa.
+- **`color-scheme: light`** dentro de las claras, para que scrollbars y
+  controles nativos no desentonen.
+
+**Estado — verificado sobre el sitio REAL COMPILADO, no sobre la maqueta**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+| Comprobación | Resultado |
+| :----------- | :-------- |
+| Contraste, 26 pares, ambos temas | todo **AA**; peor par **5.31:1** (atenuado sobre recuadro hundido), idéntico en verde y azul |
+| Eyebrows y ponentes (`--accent` como texto) | 6.24:1 verde · 6.35:1 azul |
+| Títulos `<h2>` | 13.87:1 verde · 15.37:1 azul |
+| Altura de scroll vs build anterior | **0 px** en 390 y 1440, ambos temas |
+| Desborde horizontal | 0 px en 320 / 390 / 768 / 1440 |
+| Fondo computado de la nav | alfa 0.94 en los dos temas |
+
+Mirado en captura (convención 14), no solo medido: las **4 fronteras a 390 y
+1440 en ambos temas**, la unión entre las dos claras seguidas —sin banda oscura,
+que era el riesgo del `:has()`—, la nav sobre sección clara, el timeline, el FAQ
+abierto y Boletos.
+
+> **El carril del timeline era la duda**: sale de `--border` y sobre claro podía
+> desaparecer o volverse una línea dura. Con `--claro-border` a alfa 0.14 queda
+> **suave y presente**, ni tajo ni ausencia, y los puntos de conferencia
+> —rellenos de `--accent`— son lo que más resalta de la columna. Los de pausa
+> quedan huecos y discretos, que es la jerarquía que ya tenían en oscuro.
+
+> **Boletos queda entre dos claras y NO se lee como un hueco.** Al contrario:
+> saliendo del claro, el lima del CTA y el filo de acento de la tarjeta ganan
+> fuerza. Sigue siendo el punto de conversión de la página.

@@ -21,6 +21,28 @@
   --text: #f4f1ea;
   --text-muted: #9db0a6;
   --border: rgba(255, 255, 255, 0.07);
+
+  /* El fondo oscuro, accesible desde DENTRO de una sección clara.
+     --bg ahí ya está remapeado al claro, así que sin este token la banda de
+     frontera no tendría de dónde partir. Ver la sección 4 de global.css. */
+  --oscuro-bg: #0a0f0d;
+
+  /* Superficie clara — ver «Superficies claras» en global.css. */
+  --claro-bg: #efe9dc;
+  --claro-surface: #f8f4ec;
+  --claro-surface-2: #e4dccd;
+  --claro-text: #14201a;
+  --claro-text-muted: #4d5a53;
+  /* NO es el lima --accent: sobre claro da 1.24:1 y se usa como color de TEXTO
+     (eyebrows, horas del programa, títulos de bloque). Es --primary, que
+     mantiene la identidad y sí se lee. */
+  --claro-accent: #0c6047;
+  --claro-accent-ink: #f8f4ec;
+  --claro-border: rgba(20, 32, 26, 0.14);
+  /* Negro al 40-55% sobre claro se ve sucio: son tintes del propio texto. */
+  --claro-shadow-sm: 0 1px 2px rgba(20, 32, 26, 0.1);
+  --claro-shadow-md: 0 8px 30px rgba(20, 32, 26, 0.12);
+  --claro-shadow-lg: 0 24px 70px rgba(20, 32, 26, 0.16);
 }
 
 /* -----------------------------------------------------------------------------
@@ -37,6 +59,21 @@
   --text: #eaf2ff;
   --text-muted: #8fa6c6;
   --border: rgba(255, 255, 255, 0.08);
+
+  --oscuro-bg: #0a1428;
+
+  --claro-bg: #e7edf5;
+  --claro-surface: #f4f8fc;
+  --claro-surface-2: #d9e3ef;
+  --claro-text: #0d1626;
+  --claro-text-muted: #4c5b72;
+  /* El cian --accent da 1.53:1 sobre claro. Mismo criterio que en verde. */
+  --claro-accent: #1a5695;
+  --claro-accent-ink: #f4f8fc;
+  --claro-border: rgba(13, 22, 38, 0.14);
+  --claro-shadow-sm: 0 1px 2px rgba(13, 22, 38, 0.1);
+  --claro-shadow-md: 0 8px 30px rgba(13, 22, 38, 0.12);
+  --claro-shadow-lg: 0 24px 70px rgba(13, 22, 38, 0.16);
 }
 
 /* -----------------------------------------------------------------------------
