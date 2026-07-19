@@ -1623,6 +1623,15 @@ hoy con los seis retratos reales.
 del build**. Si sale en cualquiera de las dos listas, algo hay que corregir
 antes de commitear.
 
+> **LEE LA SALIDA ENTERA, no el final.** El guardián corre en
+> `astro:build:start`, así que imprime al ARRANCAR: un `tail` del log no lo ve.
+> Ya llevó una vez a concluir que la protección contra binarios pesados «no
+> existía» —con `fondo-hero.jpeg`, de 2.24 MB, siendo señalado en cada build—
+> y de ahí a proponer restaurar el bloqueo por extensión que se acababa de
+> retirar a propósito. **Ausencia de señal en un log recortado no es ausencia
+> de señal.** Es la convención 14 aplicada a la consola: mirar donde no hay
+> que mirar y creerle al hueco.
+
 ---
 
 ### Pasarela conectada — Payment Link de Stripe
@@ -2432,9 +2441,31 @@ Es una carpeta hermana del repo, **fuera de control de versiones**. Guárdala
 aparte (copia de seguridad o almacenamiento del cliente): es la única fuente si
 algún día hay que regenerar la imagen a otro tamaño.
 
-`.gitignore` bloquea `public/img/**/*.{png,jpg,jpeg,tif,tiff,psd}` para que no
-vuelva a colarse un original sin optimizar. Comprobado creando un `.png` de
-prueba: git lo ignora. **Al repo solo entran los archivos ya servibles.**
+> **ESTE CRITERIO YA NO RIGE — SE CAMBIÓ A PROPÓSITO EN LA MIGRACIÓN A DOMINIO
+> PROPIO. No lo restaures.** Lo que sigue describe cómo se hacía en la Fase 2b
+> y se conserva solo por el registro.
+>
+> En su momento, `.gitignore` bloqueaba
+> `public/img/**/*.{png,jpg,jpeg,tif,tiff,psd}` para que no volviera a colarse
+> un original sin optimizar.
+>
+> **Por qué se retiró:** la extensión no distingue el ROL. Un `.png` puede ser
+> un original de 4.79 MB o el logo final de un patrocinador, así que la regla
+> escondía las dos cosas —y en silencio—. Así fue como seis retratos de
+> ponentes quedaron invisibles para git: se veían en local y faltaban en
+> producción, porque el runner compila solo lo commiteado.
+>
+> **Qué rige hoy:** `.gitignore` bloquea solo los formatos que NUNCA se sirven
+> en una web (`.psd`, `.tif`, `.tiff`, `.ai`, `.xcf`), donde no caben falsos
+> positivos. **La protección contra el binario pesado no desapareció: cambió
+> de bloqueo silencioso a AVISO RUIDOSO.** La ejerce el guardián de assets de
+> `astro.config.mjs`, que en cada build señala por nombre y peso cualquier
+> archivo de `public/img/` que pase de 400 KB. Ver «La trampa del `.gitignore`»
+> en la migración a dominio propio, que es donde está el criterio completo.
+>
+> **Si concluyes que falta protección, mira la salida ENTERA del build.** El
+> guardián imprime al ARRANCAR, no al cerrar: un `tail` del log no lo ve y
+> parece que no existe. Ya pasó una vez.
 
 > **Cómo regenerar el WebP si hace falta:** no hay herramienta de imagen en el
 > proyecto ni se añadió ninguna dependencia. La conversión se hizo conduciendo
