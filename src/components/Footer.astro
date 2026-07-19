@@ -3,14 +3,16 @@ import site from '../data/site.json';
 import enlaces from '../data/navegacion.json';
 import { asset } from '../scripts/paths.js';
 import { fechaLarga } from '../scripts/fechas.js';
+import { whatsappUrl, whatsappLegible, MENSAJES } from '../scripts/contacto.js';
 
 /*
   Pie de página.
 
-  NINGÚN dato de contacto está confirmado: correo, teléfono y WhatsApp están en
-  null dentro de site.json. Cada uno se resuelve por separado, así que en cuanto
-  llegue UNO solo aparece él y los otros dos siguen en "Próximamente". No se
+  Cada vía de contacto se resuelve POR SEPARADO: llegan de una en una, así que
+  las que ya existen se pintan y las que faltan siguen en "Próximamente". No se
   inventa nada.
+
+  Hoy tienen valor el CORREO y el WHATSAPP; el teléfono sigue en null.
 */
 const contacto = site.contacto ?? {};
 
@@ -27,16 +29,30 @@ const vias = [
     etiqueta: 'Correo',
     valor: contacto.correo,
     href: contacto.correo ? `mailto:${contacto.correo}` : null,
+    externo: false,
+    nota: null,
   },
   {
     etiqueta: 'Teléfono',
     valor: contacto.telefono,
     href: contacto.telefono ? `tel:${soloDigitos(contacto.telefono)}` : null,
+    externo: false,
+    nota: null,
   },
   {
+    /*
+      Se PINTA el número legible («236 113 8979») y se ENLAZA el crudo, que
+      son dos cosas distintas y viven separadas en site.json. El enlace lo
+      construye contacto.js, único sitio del repo donde se arma un wa.me.
+
+      El mensaje del pie es distinto al del botón flotante a propósito: quien
+      escribe desde aquí viene de buscar un dato concreto.
+    */
     etiqueta: 'WhatsApp',
-    valor: contacto.whatsapp,
-    href: contacto.whatsapp ? `https://wa.me/${soloDigitos(contacto.whatsapp)}` : null,
+    valor: whatsappLegible,
+    href: whatsappUrl(MENSAJES.pie),
+    externo: true,
+    nota: 'abre WhatsApp en una pestaña nueva',
   },
 ];
 
@@ -80,11 +96,12 @@ const anio = new Date(site.fecha).getUTCFullYear();
                 <a
                   class="pie__enlace"
                   href={via.href}
-                  {...(via.etiqueta === 'WhatsApp'
+                  {...(via.externo
                     ? { target: '_blank', rel: 'noopener noreferrer' }
                     : {})}
                 >
                   {via.valor}
+                  {via.nota && <span class="sr-only"> ({via.nota})</span>}
                 </a>
               ) : (
                 <span class="vias__pendiente">Próximamente</span>

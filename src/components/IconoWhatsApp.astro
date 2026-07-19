@@ -1,0 +1,48 @@
+---
+/*
+  Marca de WhatsApp dibujada a mano, de trazo fino y SIN RELLENO.
+
+  Ni emoji ni librería de iconos (convención 2 y 7): son dos trazados y no
+  justifican una dependencia. Trazo de 1.5, que es el rango fino del sistema.
+
+  Son dos piezas: el globo de conversación con su cola abajo a la izquierda, y
+  el auricular dentro. El auricular va algo más fino (1.35) porque es la forma
+  pequeña: al mismo grosor que el globo se empasta y deja de leerse.
+
+  `currentColor` en los dos trazos, así que el color lo decide quien lo use y
+  el icono sirve igual sobre el lima de la barra y sobre la superficie oscura
+  del botón flotante.
+*/
+interface Props {
+  tamano?: number;
+  clase?: string;
+}
+
+const { tamano = 24, clase } = Astro.props;
+---
+
+<svg
+  class={clase}
+  width={tamano}
+  height={tamano}
+  viewBox="0 0 24 24"
+  fill="none"
+  aria-hidden="true"
+  focusable="false"
+>
+  {/* Globo + cola. El arco grande cierra el círculo y la cola son dos rectas. */}
+  <path
+    d="M12 3.4a8.6 8.6 0 0 0-7.35 13.1L3.5 20.5l4.1-1.12A8.6 8.6 0 1 0 12 3.4Z"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  {/* Auricular. */}
+  <path
+    d="M9.15 8.4c.28-.05.5.08.62.32l.72 1.44c.1.2.06.44-.1.6l-.53.52c-.16.16-.2.4-.1.6a6.05 6.05 0 0 0 2.84 2.84c.2.1.44.06.6-.1l.52-.53c.16-.16.4-.2.6-.1l1.44.72c.24.12.37.34.32.62-.15.82-.87 1.47-1.76 1.47a7.05 7.05 0 0 1-7.04-7.04c0-.89.65-1.61 1.47-1.76Z"
+    stroke="currentColor"
+    stroke-width="1.35"
+    stroke-linejoin="round"
+  />
+</svg>

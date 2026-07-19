@@ -107,24 +107,98 @@ const pilares = [
   .pilar {
     position: relative;
     isolation: isolate;
-    padding-block-start: var(--space-lg);
-    border-block-start: 1px solid var(--border);
+
+    /*
+      TARJETA, no un bloque suelto bajo una raya. Antes solo había un
+      border-block-start y la sección se leía como tres párrafos en fila.
+      La elevación es --surface sobre el --bg de la sección: un escalón, no
+      un salto, que es lo que pide la sobriedad del sitio.
+    */
+    /*
+      El padding superior es GRANDE a propósito: es la banda donde vive el
+      numeral. Con el padding normal el contorno cruzaba el título — con el
+      relleno al 7% de antes no se notaba porque no se veía nada, pero en
+      contorno visible es ruido justo encima del texto. Se vio en captura.
+    */
+    padding: var(--space-2xl) var(--space-lg) var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    /* clip para que el filo de acento respete el radio de las esquinas. */
+    overflow: clip;
+    transition:
+      transform var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      box-shadow var(--t-base) var(--ease-out);
+  }
+
+  /*
+    EL FILO SUPERIOR ES UN DEGRADADO QUE SE APAGA, no un borde plano.
+    Arranca en --accent sobre el canto izquierdo —donde está el número— y se
+    disuelve antes del otro extremo: marca el inicio de la tarjeta sin
+    encerrarla en una caja.
+  */
+  .pilar::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 2px;
+    background-image: linear-gradient(
+      to right,
+      var(--accent),
+      color-mix(in srgb, var(--accent) 35%, transparent) 45%,
+      transparent 85%
+    );
+  }
+
+  .pilar:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    box-shadow: var(--shadow-md);
   }
 
   .pilar__numero {
     position: absolute;
     z-index: -1;
-    inset-block-start: 0;
-    inset-inline-start: -0.06em;
-    color: var(--text);
+    inset-block-start: -0.22em;
+    inset-inline-start: -0.03em;
     font-family: var(--font-display);
+    /*
+      --step-4, no --step-5. A step-5 (104px medidos) el numeral no cabía en
+      su banda y se metía en el título. Este tamaño sigue siendo mayor que el
+      original en presencia —lo que cambió de verdad es el contorno, no los
+      píxeles— y deja el texto limpio.
+    */
     font-size: var(--step-4);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.05em;
-    /* Marca de agua: presente como textura, nunca compitiendo con el texto. */
-    opacity: 0.07;
     user-select: none;
+
+    /*
+      RESPALDO: relleno tenue. Es lo que se ve si el navegador no soporta el
+      contorno, y es el mismo tratamiento que había antes, así que el peor
+      caso es «como estaba» y no «un número invisible».
+    */
+    color: var(--accent);
+    opacity: 0.1;
+  }
+
+  /*
+    CIFRA DE CONTORNO. Relleno transparente y trazo fino en --accent: el
+    número gana presencia sin ganar peso, que era justo el problema —a
+    opacidad 0.07 y relleno sólido no se veía—.
+
+    Va en @supports porque -webkit-text-stroke no es estándar: donde no
+    exista manda el bloque de arriba.
+  */
+  @supports (-webkit-text-stroke: 1px currentColor) {
+    .pilar__numero {
+      color: transparent;
+      -webkit-text-stroke: 1.25px var(--accent);
+      opacity: 0.34;
+    }
   }
 
   .pilar__titulo {
@@ -139,15 +213,25 @@ const pilares = [
     color: var(--text-muted);
   }
 
+  /*
+    SIN MOVIMIENTO: la tarjeta no se levanta. El corte global neutraliza las
+    duraciones, pero transform es geometría, no tiempo, y con el puntero
+    encima se quedaría desplazada de golpe. El hover sigue informando con
+    color y sombra, que no mueven nada.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .pilar,
+    .pilar:hover {
+      transform: none;
+      transition: none;
+    }
+  }
+
   /* Desktop: tres columnas. Por debajo se apilan en el orden natural del DOM. */
   @media (min-width: 62rem) {
     .pilares__lista {
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-2xl);
-    }
-
-    .pilar {
-      padding-block-start: var(--space-xl);
+      gap: var(--space-xl);
     }
   }
 </style>

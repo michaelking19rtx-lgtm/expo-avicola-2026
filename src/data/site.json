@@ -17,9 +17,10 @@
     "lng": -97.391909
   },
   "contacto": {
-    "correo": null,
+    "correo": "contacto@visionpecuariamx.com",
     "telefono": null,
-    "whatsapp": null
+    "whatsapp": "522361138979",
+    "whatsappLegible": "236 113 8979"
   },
   "temaDefault": "green"
 }

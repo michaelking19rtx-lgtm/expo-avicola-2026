@@ -226,14 +226,39 @@ const publicos = [
 
   .publico:hover {
     transform: translateY(-2px);
-    border-color: var(--primary-bright);
-    /* Elevación mínima y difusa: da despegue sin ensuciar el fondo oscuro. */
-    box-shadow: var(--shadow-sm);
+    /* --accent y no --primary-bright: dentro de una superficie clara
+       --accent ya está remapeado al primario profundo, así que el realce
+       sigue al tema y a la superficie sin una regla aparte. */
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    /* Elevación mínima y difusa: da despegue sin ensuciar el fondo. */
+    box-shadow: var(--shadow-md);
   }
 
+  /*
+    EL ICONO VA EN UN CHIP, no suelto. Flotando sobre el fondo de la
+    tarjeta se leía como un adorno perdido en la esquina; dentro de una
+    superficie propia se lee como parte del sistema, igual que los checks
+    de la tarjeta de boletos.
+
+    El fondo plano va PRIMERO como respaldo: si el navegador no soporta
+    color-mix, la declaración de abajo se descarta al computar —lleva
+    var()— y el chip se queda en la superficie hundida en vez de
+    desaparecer.
+  */
   .publico__icono {
-    display: block;
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+    background-color: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
+    transition: background-color var(--t-base) var(--ease-out);
+  }
+
+  .publico:hover .publico__icono {
+    background-color: color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
   .publico__titulo {
@@ -248,6 +273,19 @@ const publicos = [
     color: var(--text-muted);
     font-size: var(--step--1);
     text-wrap: pretty;
+  }
+
+  /*
+    SIN MOVIMIENTO: la tarjeta no se levanta. El corte global neutraliza
+    las duraciones, pero transform es geometría y con el puntero encima se
+    quedaría desplazada de golpe. Borde, sombra y chip siguen informando.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .publico,
+    .publico:hover {
+      transform: none;
+      transition: none;
+    }
   }
 
   /*

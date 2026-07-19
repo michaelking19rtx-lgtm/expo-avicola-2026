@@ -1,5 +1,7 @@
 ---
 import boletos from '../data/boletos.json';
+import IconoWhatsApp from './IconoWhatsApp.astro';
+import { whatsappUrl, MENSAJES } from '../scripts/contacto.js';
 
 /*
   Barra de compra fija — SOLO MÓVIL.
@@ -29,10 +31,37 @@ const compraAbierta = Boolean(entrada?.disponible && entrada?.checkoutUrl);
 
 const precioTexto =
   entrada?.precio == null ? null : new Intl.NumberFormat('es-MX').format(entrada.precio);
+
+/* Sin número configurado no se pinta el icono; la barra sigue funcionando. */
+const enlaceWhatsapp = whatsappUrl(MENSAJES.flotante);
 ---
 
 {compraAbierta && precioTexto && (
   <div class="barra" data-barra-compra>
+    {/*
+      WHATSAPP VA AQUÍ DENTRO, no flotando aparte, y estaba decidido desde que
+      se construyó esta barra: dos elementos peleándose la esquina inferior
+      derecha se tapan entre sí, y en un teléfono esa esquina es justo donde
+      cae el pulgar. En escritorio esta barra no existe y el relevo lo toma
+      BotonWhatsApp.astro, que es flotante.
+
+      A la IZQUIERDA del precio: es una vía de contacto, no la acción
+      principal. El botón de comprar se queda solo en el extremo del pulgar.
+    */}
+    {enlaceWhatsapp && (
+      <a
+        class="barra__wa"
+        href={enlaceWhatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <IconoWhatsApp tamano={24} />
+        <span class="sr-only">
+          Escribir por WhatsApp (abre WhatsApp en una pestaña nueva)
+        </span>
+      </a>
+    )}
+
     {/*
       El bloque visual va ENTERO en aria-hidden y la lectura la da el sr-only.
 
@@ -176,11 +205,31 @@ const precioTexto =
     }
   }
 
+  /*
+    Área de toque de 48x48 REALES. El icono son 24, así que el resto lo pone
+    el propio botón: sin esto el blanco alrededor del trazo no es pulsable y
+    el objetivo real quedaría en 24.
+  */
+  .barra__wa {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    inline-size: 48px;
+    block-size: 48px;
+    margin-inline-start: calc(var(--space-sm) * -1);
+    border-radius: 50%;
+    color: var(--accent);
+  }
+
   .barra__precio {
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
     line-height: 1.2;
+    /* Con el icono a la izquierda, el precio se queda el hueco sobrante en
+       vez de empujar al botón de comprar. */
+    min-inline-size: 0;
+    margin-inline-end: auto;
   }
 
   .barra__cifra {

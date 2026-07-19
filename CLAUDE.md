@@ -450,9 +450,9 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | ~~1~~ | ~~**Recinto** de la sede~~ | ~~`site.recinto`~~ | **RESUELTO** — «Salón de Eventos Bugambilias» |
 | ~~2~~ | ~~**Dirección** exacta~~ | ~~`site.direccion`~~ | **RESUELTO** — López Rayón 3, Centro de la Ciudad, 75700 |
 | ~~3~~ | ~~**Mapa** de la sede~~ | ~~comentario en `Sede.astro`~~ | **RESUELTO** — iframe de Maps en lazy + enlace «Cómo llegar» |
-| 4 | **Correo** de contacto | `site.contacto.correo` | «Próximamente» en el footer |
+| ~~4~~ | ~~**Correo** de contacto~~ | ~~`site.contacto.correo`~~ | **RESUELTO** — contacto@visionpecuariamx.com. Es un PLACEHOLDER acordado, no un buzón verificado: confirmar que recibe antes de difundir |
 | 5 | **Teléfono** | `site.contacto.telefono` | «Próximamente» en el footer |
-| 6 | **WhatsApp** | `site.contacto.whatsapp` | «Próximamente» en el footer; el aviso de Boletos no promete WhatsApp |
+| ~~6~~ | ~~**WhatsApp**~~ | ~~`site.contacto.whatsapp`~~ | **RESUELTO** — +52 236 113 8979 (perfil «ingenieriaavicol»). Pie, botón flotante y barra móvil |
 | 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display. **Ojo: hay un desborde sin JS, ver abajo** |
 | ~~8~~ | ~~**Fotos de ponentes**~~ | ~~`public/img/ponentes/`~~ | **RESUELTO** — seis retratos entregados, reencuadrados y convertidos a WebP |
 | ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
@@ -1932,7 +1932,7 @@ huecos del hero. Con ellos **se retira el `noindex` y la home queda publicable**
   HORARIO. La unión sigue siendo necesaria por eso, pero por otra razón, y un
   comentario que justifica código con un hecho caducado es peor que ninguno.
 
-**LA AGENDA SIGUE CON 6 SESIONES Y HAY 7 PONENTES.** No se tocó ningún horario:
+**LA AGENDA SIGUE CON 6 SESIONES Y HAY 7 PONENCIAS.** No se tocó ningún horario:
 se le pasaron al cliente tres opciones con su coste y decide él. Ver el riesgo
 abierto «La séptima ponencia no tiene hueco en la agenda».
 
@@ -2001,7 +2001,7 @@ coffee (10:45 → 11:00) y el show (11:30 → 11:45).
 **Y el recorte no le quita escenario a nadie.** `notaDuracion` decía «30 minutos
 de exposición y 5 de preguntas»: los 35 nunca fueron 35 de exposición. Lo que
 desaparece son los 5 de preguntas de cada sesión, que el panel de la tarde ya
-cubre con los siete ponentes presentes. Es un aviso a los ponentes, no una
+cubre con los seis ponentes presentes. Es un aviso a los ponentes, no una
 renegociación.
 
 **El reparto es 4 + 3, y el orden cambió**
@@ -3009,3 +3009,139 @@ del velo, y en la entrada directa se ve la SECCIÓN DE PONENTES.
 > buena esa frase, el arreglo se habría quedado en el punto (1) —el gestor de
 > anclas— y el fallo habría seguido ahí para todo el que navega con movimiento
 > reducido.
+
+
+---
+
+### Contacto real, WhatsApp y dos secciones con más cuerpo · COMPLETADA
+
+Cinco correcciones en una pasada.
+
+#### 1 · El conteo de personas, otra vez
+
+El encargo pedía buscar «7 conferencistas» y bajarlo a 6. **Esa cadena no
+existe en el repo**: el error estaba escrito con otra palabra, en
+`programa.json` —«con los siete ponentes en el escenario»—, describiendo el
+panel de la tarde. Son **7 ponencias entre 6 personas**, porque Edgar Oliva da
+dos.
+
+| Dónde | Decía | Dice |
+| :---- | :---- | :--- |
+| `src/data/programa.json` · `notaDuracion` | «con los **siete** ponentes en el escenario» | «con los **seis** ponentes en el escenario» |
+| `CLAUDE.md` (bitácora Fase 4) | «LA AGENDA SIGUE CON 6 SESIONES Y HAY 7 **PONENTES**» | «…7 **PONENCIAS**» |
+| `CLAUDE.md` (bitácora, recorte a 30 min) | «cubre con los **siete** ponentes presentes» | «…los **seis** ponentes presentes» |
+
+**«7 conferencias» y «siete conferencias» se quedan como están**, que es lo
+correcto, y siguen siendo DERIVADAS de `programa.json` vía
+`totalConferencias()`. El JSON-LD tampoco tenía el fallo: `ponentes()` de
+`schema.js` acumula en un `Set`, así que ya emitía 6 `performer`.
+
+> **La búsqueda literal que pide el encargo no habría encontrado nada.** Un
+> conteo equivocado no se busca por la cifra sino por lo que cuenta: hay que
+> barrer los sinónimos —ponentes, conferencistas, expertos, especialistas— y
+> después contrastar contra los datos, no contra la memoria.
+
+#### 2 · Contacto real en el pie
+
+- `site.json`: `whatsapp` (crudo, `522361138979`), `whatsappLegible`
+  («236 113 8979») y `correo`. **El crudo y el legible viven separados a
+  propósito**: agrupar un teléfono es una decisión de lectura, no un cálculo, y
+  derivarlo con una expresión regular se rompe en cuanto cambie la lada.
+- `src/scripts/contacto.js`, **nuevo**: único sitio del repo donde se arma un
+  `wa.me`. Existe por la misma lección que el conteo de conferencias, que
+  estuvo copiado en cinco sitios de cuatro archivos.
+- El pie pinta el legible, enlaza el crudo, abre en pestaña nueva y lleva su
+  `.sr-only`. El teléfono sigue en «Próximamente» porque sigue en null.
+
+#### 3 · WhatsApp: un botón por contexto, nunca dos a la vez
+
+- `IconoWhatsApp.astro`: globo + auricular, trazo 1.5 y 1.35, sin relleno,
+  `currentColor`. Dibujado a mano — ni emoji ni dependencia.
+- **Móvil:** dentro de la barra de compra, a la izquierda del precio, 48×48
+  reales. Estaba anotado como decisión desde que se construyó la barra: dos
+  elementos peleándose la esquina inferior derecha se tapan entre sí, y en un
+  teléfono esa esquina es donde cae el pulgar.
+- **Escritorio:** `BotonWhatsApp.astro`, flotante abajo a la derecha, 52×52,
+  en `--surface` con solo el icono en `--accent` — el CTA de la página es
+  comprar, no escribir.
+- **El relevo es exacto**: los dos usan el corte de 48rem, así que donde
+  termina uno empieza el otro. Comprobado: en móvil el flotante computa
+  `display: none`; en escritorio la barra no existe.
+- Aparece al salir el hero, con `IntersectionObserver` y nunca un listener de
+  scroll (lo conduce Lenis).
+- Mensajes distintos por origen, y `encodeURIComponent` en vez de escribir los
+  `%C3%A1` a mano.
+
+#### 4 · Pilares
+
+Sin tocar contenido ni las tres columnas:
+
+- **Numerales de contorno.** `-webkit-text-stroke` en `--accent` sobre relleno
+  transparente, opacidad 0.34. Antes eran relleno sólido al 0.07 — es decir,
+  invisibles. Con respaldo en `@supports`: donde no exista el contorno queda el
+  relleno tenue de antes, así que el peor caso es «como estaba».
+- **Tarjetas de verdad**: `--surface` sobre el `--bg` de la sección, borde,
+  radio y hover que levanta 3px con sombra.
+- **Filo superior en degradado** de `--accent` que se apaga antes del otro
+  extremo, en vez del borde plano.
+
+> **LA PRIMERA VERSIÓN ESTABA MAL Y SOLO SE VIO EN CAPTURA.** A `--step-5` el
+> numeral no cabía en su banda y **el contorno cruzaba el título**. Con el
+> relleno al 0.07 de antes daba igual —no se veía nada—, pero un contorno
+> visible por encima del texto es ruido. Se bajó a `--step-4` y el padding
+> superior de la tarjeta pasó a `--space-2xl` para darle banda propia. Ninguna
+> comprobación numérica lo habría cazado: el contraste del texto no cambia
+> porque le pase una línea por encima.
+
+#### 5 · ¿Para quién es?
+
+Sin tocar contenido ni el 3+2 centrado:
+
+- **Los iconos van en un chip** de 44×44, `--accent` al 12%, que sube al 20%
+  en hover. Sueltos se leían como un adorno perdido en la esquina.
+- **Hover**: borde mezclado con `--accent` y `--shadow-md`. Se usa `--accent`
+  y no `--primary-bright` porque dentro de una superficie clara `--accent` ya
+  está remapeado al primario profundo, así que el realce sigue al tema y a la
+  superficie sin una regla aparte.
+- El fondo plano del chip va declarado ANTES del `color-mix`, como respaldo:
+  sin `color-mix` la declaración se descarta al computar —lleva `var()`— y el
+  chip caería a transparente.
+
+> **EL «NICE-TO-HAVE» DE ILUMINAR EL PERFIL DEL COMPRADOR NO SE HIZO, Y NO ES
+> CUESTIÓN DE COMPLEJIDAD: NO HAY CON QUÉ.** El checkout es un Payment Link
+> hospedado por Stripe y este sitio no tiene backend ni webhook, así que la
+> página nunca llega a saber qué perfil eligió nadie —ni antes de pagar ni
+> después—. No es un detalle caro: es un dato que no existe de este lado.
+> Requeriría capturar el perfil en la propia landing antes de mandar a Stripe,
+> que es otra funcionalidad y otra decisión de producto.
+
+**Verificado — 4 anchos × 2 temas, con `prefers-reduced-motion`**
+
+| Comprobación | Resultado |
+| :----------- | :-------- |
+| Contraste del texto, leído del PÍXEL | todo **≥ 4.5:1**; peor par **6.46:1** |
+| Desborde horizontal (360/768/1024/1440) | **0** |
+| Flotante en el hero | oculto; aparece al pasarlo |
+| Flotante en móvil | `display: none` |
+| Icono en la barra | dentro de la barra, **48×48**, a la izquierda del precio |
+| Enlaces WhatsApp | `target=_blank`, `rel=noopener noreferrer`, mensaje codificado |
+| Movimiento reducido | sin `translate` ni transición en tarjetas y flotante |
+
+Mirado en captura además de medido, en los dos temas.
+
+> **EL ARNÉS FALLÓ TRES VECES MÁS, y conviene tenerlas juntas porque son la
+> misma familia: recortar una captura en el sistema de coordenadas equivocado.**
+>
+> 1. `[data-barra-compra]` es `position: fixed`, así que sumarle `scrollY`
+>    apunta a un sitio del documento donde no está: el recorte salió con el
+>    retrato de un ponente.
+> 2. El recorte del texto sin `captureBeyondViewport` devolvía imágenes en
+>    blanco, y el histograma daba **ratio 1.00** — que se lee como «no hay
+>    contraste» cuando en realidad significa «no hay imagen».
+> 3. A 360 px el documento mide 16 731 px y el recorte llegaba antes de que el
+>    layout se asentara: tres pares dieron 1.00 y 1.32. Con 900 ms de espera
+>    los mismos tres dan 15.30, 6.59 y 6.46.
+>
+> **Un ratio de 1.00 no es un fallo de contraste, es un fallo de medición**: un
+> color plano contra sí mismo. Cuando aparezca, mirar la captura ANTES de tocar
+> el CSS — las tres veces el diseño estaba bien.

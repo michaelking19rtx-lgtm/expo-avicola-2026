@@ -14,6 +14,7 @@ import Faq from '../components/Faq.astro';
 import CtaFinal from '../components/CtaFinal.astro';
 import Footer from '../components/Footer.astro';
 import BarraCompra from '../components/BarraCompra.astro';
+import BotonWhatsApp from '../components/BotonWhatsApp.astro';
 ---
 
 {/*
@@ -72,4 +73,8 @@ import BarraCompra from '../components/BarraCompra.astro';
       pie, y además así ninguna sección clara la alcanza: es contenido del
       sitio, no de la sección que tenga debajo — el mismo criterio que la nav. */}
   <BarraCompra />
+
+  {/* Botón flotante de WhatsApp. Solo escritorio: en móvil el contacto vive
+      DENTRO de la barra de compra, para no pelearse la esquina del pulgar. */}
+  <BotonWhatsApp />
 </Base>
