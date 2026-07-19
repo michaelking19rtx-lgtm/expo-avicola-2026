@@ -531,6 +531,28 @@ const IMG_H = 960;
     que estas reglas no tocan el modo sin JS.
   */
   .ficha:modal {
+    /*
+      `position: fixed` NO SOBRA: sin ella el modal se abre donde el usuario NO
+      está y le arrastra la página.
+
+      `.ficha[open]` declara `position: static` para que el modo sin JS
+      funcione, y `showModal()` también pone el atributo `open`, así que esa
+      regla alcanza AL MODAL. Un elemento de la capa superior con `static` se
+      trata como absolutamente posicionado, pero contra el BLOQUE CONTENEDOR
+      INICIAL —el documento—, no contra el viewport. Medido: con la página a
+      2299 px, al abrir el modal su rect quedaba en y≈45 del DOCUMENTO, y el
+      foco que `showModal()` mueve al diálogo hacía que el navegador lo
+      trajera a la vista desplazando la página a 0.
+
+      Se declara aquí, y no acotando la regla de arriba con `:not(:modal)`,
+      para no arriesgar el modo sin JS: un navegador que no entienda `:modal`
+      descarta este bloque entero y `.ficha[open]` sigue dando `static`, que es
+      exactamente lo que ese navegador necesita. Al revés, el selector inválido
+      se llevaría por delante el `static` y con él las tres roturas sin JS.
+    */
+    position: fixed;
+    inset: 0;
+
     max-inline-size: min(56rem, calc(100vw - 2 * var(--gutter)));
     max-block-size: min(90dvh, 56rem);
     margin: auto;
@@ -847,12 +869,52 @@ const IMG_H = 960;
     Quien abre un enlace de WhatsApp con #ponente-slug tiene que ver esa ficha
     abierta. Se cubre la carga y también el hashchange (volver con «Atrás»).
   */
-  const desdeHash = () => {
-    const id = location.hash.slice(1);
-    if (id.startsWith('ponente-')) abrir(id);
+
+  /**
+   * Lleva la vista a la SECCIÓN de ponentes.
+   *
+   * ES EL ÚNICO CAMINO EN QUE EL SCROLL SE MUEVE, y solo en la llegada directa
+   * con hash: quien abre un enlace compartido merece ver el contexto detrás
+   * del modal. Pulsando desde dentro de la página no se mueve nada.
+   *
+   * Va a la sección y NO a la ficha. Con `showModal()` la ficha está en la capa
+   * superior, donde se posiciona contra el viewport y su offsetTop resuelve a
+   * ~0: desplazarse «hasta ella» es irse al principio de la página.
+   *
+   * Usa scroll nativo porque este componente no conoce a Lenis. Si Lenis está
+   * activo, `bindAnchors()` recoloca por su vía en cuanto arranca —al mismo
+   * sitio—, así que no hay pelea ni doble recorrido.
+   */
+  const llevarALaSeccion = () => {
+    if (!seccion) return;
+    const nav = document.querySelector<HTMLElement>('[data-nav]');
+    const y =
+      seccion.getBoundingClientRect().top +
+      window.scrollY -
+      (nav ? nav.offsetHeight : 0);
+    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
   };
-  desdeHash();
-  window.addEventListener('hashchange', desdeHash);
+
+  const desdeHash = (inicial = false) => {
+    const id = location.hash.slice(1);
+
+    if (id.startsWith('ponente-') && porId.has(id)) {
+      abrir(id);
+      if (inicial) requestAnimationFrame(llevarALaSeccion);
+      return;
+    }
+
+    /*
+      El hash ya no apunta a ninguna ficha. Pasa al volver con «Atrás» después
+      de abrir una: como al abrir se hizo pushState, la entrada anterior es la
+      URL sin hash, y lo que el usuario espera de «Atrás» es que el modal se
+      cierre. Sin esto se quedaba abierto con la URL ya limpia.
+    */
+    for (const f of fichas) if (f.open) f.close();
+  };
+
+  desdeHash(true);
+  window.addEventListener('hashchange', () => desdeHash());
 
   /*
     PASO 5 — el movimiento, que es mejora progresiva.

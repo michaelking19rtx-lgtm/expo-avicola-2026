@@ -2205,6 +2205,10 @@ JavaScript la página enseña la rejilla y debajo las seis fichas completas, y
 JavaScript el script los cierra al arrancar y a partir de ahí usa
 `showModal()`.
 
+> **EL MODAL SE ABRE IN SITU Y NO MUEVE EL SCROLL.** Lo de arriba sigue siendo
+> cierto, pero el comportamiento al pulsar cambió: ver «El modal se abría
+> llevándose al usuario» al final de la bitácora.
+
 **`showModal()` da gratis lo que costaría cientos de líneas:** foco atrapado,
 Escape, `aria-modal`, resto de la página inerte, capa superior por encima de
 cualquier `z-index`, y **el foco de vuelta al elemento que lo abrió**. No se
@@ -2895,3 +2899,113 @@ precio en tema azul). El precio: 12.86:1 en verde y 10.55:1 en azul.
 > 0.04)` y un parser de enteros saca basura de los decimales. **El contraste se
 > lee del píxel**, por histograma de la caja del elemento: el color más
 > frecuente es el fondo y el más lejano con presencia ≥1.5% es la tinta.
+
+
+---
+
+### El modal se abría llevándose al usuario · CORREGIDO
+
+Pulsar una figura del hero —o una tarjeta de la sección— abría la ficha PERO
+además desplazaba la página. El modal debe abrirse **in situ**, sin tocar el
+scroll.
+
+**Eran DOS fallos independientes, y el segundo es el gordo**
+
+**(1) El gestor de anclas se desplazaba a la ficha.** `bindAnchors()` de
+`animations.js` intercepta todo `a[href^="#"]` cuyo destino EXISTA, y el
+`<dialog id="ponente-slug">` existe. Hacía `lenis.scrollTo(ficha)`. El
+`preventDefault()` que ya hacía `Ponentes.astro` frena la navegación nativa,
+pero **no frena a otro listener**.
+
+Y no llevaba a la sección de Ponentes, como parecía: **llevaba al PRINCIPIO de
+la página.** Con la ficha ya en la capa superior su `offsetTop` resuelve a ~0,
+así que «desplázate hasta ella» significa «vete a 0». Medido: con la página a
+2299 px, tras el clic quedaba en 4.
+
+**(2) El modal no era `position: fixed`, y el foco arrastraba la página.**
+Este es el de verdad, porque **pasa aunque no haya Lenis**.
+
+`.ficha[open]` declara `position: static` —lo que hace posible el modo sin
+JS— y `showModal()` **también pone el atributo `open`**, así que esa regla
+alcanzaba al modal. Un elemento de la capa superior con `static` se trata como
+absolutamente posicionado, pero **contra el bloque contenedor inicial, que es
+el DOCUMENTO, no el viewport**.
+
+Medido con movimiento reducido, para aislarlo de Lenis:
+
+| | Antes | Después |
+| :-- | --: | --: |
+| scroll antes de abrir | 2299 | 2299 |
+| scroll tras `showModal()` | **0** | **2299** |
+| `rect.top` de la ficha tras abrir | 45 | 45 |
+| `rect.top` tras forzar scroll a 2000 | **−1955** | **45** |
+| `position` computada | `absolute` | `fixed` |
+
+Esa cuarta fila es la prueba: la ficha **se movía con el documento**. Estaba
+dibujada en y≈45 del DOCUMENTO, y como `showModal()` mueve el foco al diálogo,
+el navegador lo traía a la vista desplazando la página hasta 0.
+
+**Qué se hizo**
+
+- `Ponentes.astro`, CSS: **`position: fixed; inset: 0` en `.ficha:modal`**.
+  Se declara ahí y NO acotando la regla de arriba con `:not(:modal)`: un
+  navegador que no entienda `:modal` descarta este bloque entero y
+  `.ficha[open]` sigue dando `static`, que es justo lo que ese navegador
+  necesita. Al revés, un selector inválido se llevaría por delante el `static`
+  y con él las tres roturas sin JS de la Fase 3.
+- `animations.js`: `fichaDeHash()`. Si el destino de un ancla es una ficha,
+  `bindAnchors()` **se sale sin `preventDefault()`** y no toca el scroll.
+  Sin cancelar a propósito: si el script de Ponentes no corriera, el `<a>`
+  tiene que seguir siendo un ancla normal. Y no depende del orden de registro
+  de los dos listeners —los dos en documento y en burbuja—, porque cualquiera
+  de los dos órdenes da el mismo resultado.
+- `animations.js`, deep-link: llegar con `#ponente-slug` desplaza a
+  **`#ponentes`**, la sección, no a la ficha.
+- `Ponentes.astro`: `llevarALaSeccion()` hace lo mismo por la vía nativa, que
+  es la que queda cuando no hay Lenis (movimiento reducido).
+- `Ponentes.astro`: **«Atrás» ahora cierra el modal.** Al abrir se hace
+  `pushState`, así que la entrada anterior es la URL sin hash; antes el
+  `hashchange` solo sabía abrir y la ficha se quedaba abierta con la URL ya
+  limpia.
+
+**Verificado — 7 casos × 2 modos de movimiento, con clics y teclas REALES**
+
+No llamando a `abrir()` por dentro: la queja era sobre lo que pasa al pulsar,
+y eso solo sale ejercitando el evento de verdad.
+
+| | Caso | Resultado |
+| - | :--- | :-------- |
+| 1 | Clic en figura del hero | modal abre · **scroll delta 0** · hash puesto |
+| 2 | Clic en tarjeta de la sección | modal abre · **delta 0** (antes −2295) |
+| 3 | Escape | cierra · hash limpio · **scroll intacto** |
+| 4 | Entrada directa con hash | modal abierto · **scroll en `#ponentes`** |
+| 5 | Sin JavaScript | ancla normal · 6 fichas en el flujo · `position: static` |
+| 6 | Botón de cerrar | cierra · hash limpio · scroll intacto |
+| 7 | «Atrás» | cierra · hash limpio · scroll intacto |
+
+Los 7 pasan **con movimiento y con `prefers-reduced-motion`** (convención 15:
+el camino sin Lenis es otro camino, y el fallo (2) solo se veía ahí en limpio).
+Mirado en captura además de medido: tras pulsar en el hero se ve el HERO detrás
+del velo, y en la entrada directa se ve la SECCIÓN DE PONENTES.
+
+> **EL ARNÉS FALLÓ DOS VECES ANTES QUE EL PRODUCTO, y las dos son la 14.**
+>
+> **(1) Clic al vacío contado como fallo del producto.** El enlace de la
+> tarjeta estaba en y=887 con 28 px de alto: su BORDE caía dentro de una
+> ventana de 900, su CENTRO en y=901, fuera. El clic se enviaba a coordenadas
+> vacías, `elementFromPoint` daba `null` y el caso salía como «el modal no
+> abre». Ahora `clicEn()` comprueba que el punto **aterriza en el enlace** y
+> revienta si no, en vez de mentir.
+>
+> **(2) El primer diagnóstico acusó al elemento equivocado.** Con la página en
+> el tope (scrollY 0) el caso del hero salía OK —desplazarse a 0 desde 0 no se
+> ve—, así que el fallo parecía no existir. Solo apareció midiendo desde una
+> posición desplazada. **Un caso que pasa en el origen de coordenadas no prueba
+> nada sobre un fallo de desplazamiento.**
+
+> **Y la premisa del encargo era falsa, que es lo que más costó.** El encargo
+> decía «el modal ya es `position: fixed`, así que el contenido de fondo no
+> debería moverse». No lo era: computaba `absolute`. Si se hubiera dado por
+> buena esa frase, el arreglo se habría quedado en el punto (1) —el gestor de
+> anclas— y el fallo habría seguido ahí para todo el que navega con movimiento
+> reducido.

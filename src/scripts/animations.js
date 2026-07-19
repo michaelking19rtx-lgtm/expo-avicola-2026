@@ -228,11 +228,38 @@ function enfocarDestino(destino) {
 }
 
 /**
+ * ¿El destino de este hash es una ficha de ponente, es decir, un MODAL?
+ *
+ * Las fichas son `<dialog data-ficha>` y con JavaScript se abren con
+ * `showModal()`, que las manda a la capa superior. Una vez ahí **su posición
+ * en el documento deja de significar nada**: se posicionan contra el viewport,
+ * así que su `offsetTop` resuelve a ~0. Pedirle a Lenis que se desplace hasta
+ * una de ellas equivale a pedirle que se vaya al principio de la página.
+ *
+ * @param {string} hash
+ * @returns {Element | null} la ficha, o null si el destino no es una.
+ */
+function fichaDeHash(hash) {
+  const destino = destinoDeHash(hash);
+  return destino instanceof Element && destino.matches('dialog[data-ficha]')
+    ? destino
+    : null;
+}
+
+/** La sección de Ponentes, que es el contexto de cualquier ficha. */
+function seccionPonentes() {
+  return document.querySelector('#ponentes');
+}
+
+/**
  * Enlaces ancla dentro de la página, compensando la altura de la nav fija.
  *
  * Solo intercepta cuando el destino EXISTE: durante las fases intermedias hay
  * enlaces a secciones aún no construidas (#ponentes, #programa…) y deben
  * quedarse quietos en vez de saltar al inicio.
+ *
+ * **LAS FICHAS DE PONENTE SON LA EXCEPCIÓN Y NO SE TOCAN AQUÍ.** Las abre
+ * `Ponentes.astro` como modal, sin mover el scroll. Ver `fichaDeHash`.
  */
 export function bindAnchors() {
   const lenis = getLenis();
@@ -246,7 +273,17 @@ export function bindAnchors() {
     rehacer el posicionamiento por la vía de Lenis. `immediate` evita que se
     vea el recorrido.
   */
-  const inicial = destinoDeHash(window.location.hash);
+  const hashInicial = window.location.hash;
+  /*
+    LLEGAR CON #ponente-slug ES EL ÚNICO CASO EN QUE EL SCROLL SE MUEVE, y se
+    mueve a la SECCIÓN, no a la ficha. Quien abre un enlace de WhatsApp merece
+    ver el contexto detrás del modal; desplazarse a la ficha en sí llevaría al
+    principio de la página, por lo que explica `fichaDeHash`.
+  */
+  const inicial = fichaDeHash(hashInicial)
+    ? seccionPonentes()
+    : destinoDeHash(hashInicial);
+
   if (inicial) {
     requestAnimationFrame(() => {
       lenis.scrollTo(/** @type {HTMLElement} */ (inicial), {
@@ -262,7 +299,23 @@ export function bindAnchors() {
     const link = event.target.closest('a[href^="#"]');
     if (!(link instanceof HTMLAnchorElement)) return;
 
-    const destino = destinoDeHash(link.getAttribute('href') ?? '');
+    const href = link.getAttribute('href') ?? '';
+
+    /*
+      FICHA DE PONENTE: NI SCROLL NI preventDefault. Se sale sin tocar nada y
+      manda `Ponentes.astro`, que abre el modal in situ.
+
+      Se sale SIN preventDefault a propósito, y no es un descuido: si el script
+      de Ponentes no llegara a correr, el <a> tiene que seguir siendo un ancla
+      normal al id de la ficha. Cancelar aquí lo dejaría muerto.
+
+      Y no depende del orden de registro de los dos listeners: los dos están en
+      el documento y en burbuja, y cualquiera de los dos órdenes da el mismo
+      resultado —este se desentiende, el otro cancela y abre—.
+    */
+    if (fichaDeHash(href)) return;
+
+    const destino = destinoDeHash(href);
 
     if (!destino) {
       // Sección todavía inexistente: no ensuciamos la URL ni saltamos.
