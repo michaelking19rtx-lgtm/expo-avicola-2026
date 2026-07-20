@@ -3502,3 +3502,101 @@ en el componente, siguiendo el mismo criterio que `pie` y `flotante`: un
 
 Cerrado mirando las capturas de la tarjeta y de la FAQ abierta en los cuatro
 anchos, no solo los números (convención 14).
+
+---
+
+### Foto nueva de Ricardo (ponente-04) — retrato y figura del hero · COMPLETADA
+
+Ricardo cambió de foto. Se reemplazan los dos usos de su imagen —el retrato de
+`Ponentes.astro` y la figura de cuerpo completo del hero— sin tocar CSS, JS ni
+datos: exactamente el caso que la Fase 2c dejó preparado ("solo datos e
+imágenes").
+
+**Herramienta usada.** No hay librería de imagen en el proyecto ni se añadió
+ninguna (convención 7). Se instaló `sharp` en un scratchpad FUERA del repo,
+igual de espíritu que el Chrome headless de las fases 2b/2c: una herramienta
+del lado del asistente para producir los archivos, no una dependencia del
+sitio. `package.json` no cambia.
+
+**1. Retrato (`public/img/ponentes/retrato-04.webp`)**
+
+- Fuente: `retrato-04.jpeg` nuevo, 1792×2400, igual que el resto — mismo
+  estudio, mismo encuadre de origen.
+- Recorte medido, no adivinado: se localizó la cabeza sobre una rejilla de
+  coordenadas superpuesta (mismo método que "mirar la hoja de contacto" de la
+  Fase 3, porque los tres detectores automáticos de esa fase ya demostraron no
+  ser de fiar). Hairline en y≈335, mentón en y≈900 del original.
+- **Medida de referencia: altura de cabeza (nacimiento del pelo → mentón) como
+  % de los 960 px de salida**, comparada contra los cinco retratos ya
+  publicados (excluyendo el 01, cuya barba hace subir el mentón aparente y lo
+  invalida como referencia — la misma contaminación por vello que ya advertía
+  la Fase 3 sobre a Alejandro y su sombrero):
+
+  | id | altura de cabeza |
+  | :- | ----: |
+  | 03 | 34.4% |
+  | 05 | 33.3% |
+  | 06 | 33.9% |
+  | **04 nuevo** | **34.4%** |
+
+  A 0.53 puntos de la media de los otros tres — dentro del 2% pedido sin
+  necesidad de reencuadrar.
+- WebP calidad 90 (pedida así, sin optimizar por energía de alta frecuencia
+  como en la Fase 3): **40 556 B**. Con los otros cinco sin tocar, el total de
+  `Ponentes` sube de 235.0 a **248.0 KB** — sigue bajo el presupuesto de 250 KB
+  de la Fase 3, por 2 KB.
+- El JPEG original sale del repo a la carpeta hermana de originales.
+
+**2. Figura del hero (`public/img/hero/ponente-04.webp`)**
+
+- Fuente: `ponente-04-nuevo.png`, 1792×2400, **ya con fondo transparente** —
+  comprobado por estadística de canal alfa antes de asumirlo (67.4%
+  transparente, 32.3% opaco, solo 0.3% de píxeles a medio camino en el
+  antialiasing de los bordes) y confirmado componiendo la figura sobre
+  `--bg` real: **sin ningún parche ni halo blanco**. No hizo falta quitar
+  fondo.
+- El pie de la persona ya tocaba el borde inferior del PNG de origen
+  (`bottomGapPx: 0`), así que "pegada al borde inferior" salió gratis del
+  recorte: solo hubo que fijar el ancho (proporción 56:75) y decidir cuánto
+  torso mostrar por arriba.
+- Ricardo va en la fila de FONDO, junto a `06` (lateral) y `02` (centro,
+  sombrero). Se midió la **coronilla como % de los 900 px de salida** —mismo
+  método que documentó la Fase 2c— contra `06`, su compañero lateral:
+
+  | id | coronilla | vs. `06` |
+  | :- | ----: | ----: |
+  | 06 (lateral) | 11.44% | — |
+  | 02 (centro, sombrero) | 4.44% | sigue siendo el más alto de la fila |
+  | **04 nuevo (lateral)** | **11.44%** | **0.00 puntos** |
+
+  Antes, `04` estaba a 13.96% y la pareja lateral quedaba a 2.38% de
+  diferencia —fuera del 2%, aceptado en su momento por no haber mejor reparto
+  con esas seis fotos—. Con la foto nueva la pareja lateral queda a un 0.00%
+  de diferencia. **Ajuste: se subió la coronilla de Ricardo 2.52 puntos
+  porcentuales** (de 13.96% a 11.44%) recortando el encuadre para que
+  coincidiera con `06`.
+- WebP 672×900 calidad 90: **37 622 B** (el anterior pesaba 27 190 B; sigue en
+  el rango de sus hermanos, 38–68 KB).
+- El PNG original sale del repo a la carpeta hermana de originales.
+
+**Ambos originales anteriores (la foto vieja de Ricardo) se conservaron** con
+sufijo `-anterior` en la carpeta de originales, en vez de sobrescribirlos: no
+hacía falta perderlos para hacer sitio a los nuevos.
+
+**Verificación**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run check` / `npm run build` | 0 errores, 0 avisos |
+| Guardián de `public/img/` (`avisaDeAssetsDePublic`) | **silencioso** — los originales pesados ya no están en `public/img/` |
+| `public/img/` tras la limpieza | solo WebP + `.gitkeep`, ningún JPEG/PNG suelto |
+| El arco del hero | Edgar al frente y centro, seis caras distinguibles, Ricardo legible en la fila de fondo pese al blazer negro sobre fondo oscuro (comparado con `02` y `06`, que también visten oscuro y se leen bien) |
+| Tarjeta de Ricardo, ambos temas | degradado de disolución correcto, sin borde duro, nombre legible |
+| Modal desde la figura del hero | abre `dialog#ponente-ricardo-olmos-rivera` |
+| Modal desde la tarjeta de Ponentes | abre el mismo `dialog`, mismo contenido |
+| Capturas | 390×844 y 1440×900, temas green y blue, **con `prefers-reduced-motion: reduce`** — la lección de la Fase 2c: la flotación oscila ±10px y falsea cualquier medida de coronilla tomada con movimiento activo |
+| Desborde 402>390 a 390px | el mismo footer de siempre, ya documentado como riesgo abierto preexistente — no lo causó este cambio |
+
+Cerrado mirando las capturas de los ocho escenarios, no solo los porcentajes
+(convención 14): el arco se lee bien, ninguna cara compite con Edgar, y
+Ricardo no se pierde contra el fondo oscuro pese a ir de negro.
