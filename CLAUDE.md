@@ -3434,3 +3434,71 @@ implementado, a la espera de decisión: mostrar el precio con descuento más
 bajo en la barra fija podría leerse como engañoso para quien no califica, o
 como más atractivo para el tráfico frío de WhatsApp. Requiere decidir antes
 de tocar `BarraCompra.astro`.
+
+---
+
+### Los códigos de descuento salen del HTML — se piden por WhatsApp · COMPLETADA
+
+Los códigos `SOCIO` y `COMUNIDAD` de la entrada anterior de esta bitácora
+estaban a la vista de cualquiera en la tarjeta de boletos: quien leyera
+"Aplica código SOCIO al pagar" se lo aplicaba sin ser socio de nada. Se
+cierra ese hueco sustituyendo el código visible por una vía de contacto.
+
+**1. Tarjeta de boletos**
+
+- Donde decía "Aplica código SOCIO/COMUNIDAD al pagar" ahora dice "Solicita tu
+  código por WhatsApp", enlazado a `wa.me` con un mensaje distinto por
+  perfil: uno para socios IPCI, otro para estudiantes y exalumnos.
+- **El código NUNCA llega al objeto que consume la plantilla.** `entradas` en
+  `Boletos.astro` reconstruye cada descuento CAMPO A CAMPO —`nombre`,
+  `final`, `enlaceWhatsapp`— y no con un spread (`...d`), que sí habría
+  colado `codigo` y `descuento` (la resta en pesos) al marcado. El mapeo de
+  qué mensaje corresponde a qué código (`MENSAJE_POR_CODIGO`) vive en el
+  frontmatter, que corre en build: el código se LEE ahí para elegir el
+  mensaje, pero no se ESCRIBE en ningún sitio del HTML.
+- Verificado en `dist/index.html`: **0 apariciones de "SOCIO" y de
+  "COMUNIDAD"**, en ningún atributo ni texto.
+- `boletos.json` **no se tocó**: los códigos se quedan tal cual, porque son
+  el dato que necesita el backend (`vigilante.js` los usa como identificador
+  del descuento; ver la entrada anterior sobre `PRICE_ID_WHITELIST`).
+
+**2. Mensajes de WhatsApp — por perfil, no por código**
+
+`contacto.js` gana tres entradas nuevas en `MENSAJES`:
+`descuentoSocioIPCI`, `descuentoEstudiante` y `descuentoGeneral` (esta
+última para la FAQ, que no distingue perfil). Van ahí y no como texto suelto
+en el componente, siguiendo el mismo criterio que `pie` y `flotante`: un
+único sitio para todos los mensajes predefinidos.
+
+**3. FAQ — pregunta nueva, después de "¿Cómo puedo pagar?"**
+
+- `faq.json` gana *"¿Hay descuentos disponibles?"*, con un campo
+  `enlaceWhatsapp: { texto, mensaje }` aparte de `respuesta`, y un token
+  literal `{enlaceWhatsapp}` dentro del texto marcando dónde va el enlace.
+- **Por qué un token y no incrustar el `<a>` en el JSON como HTML:** la
+  alternativa —guardar el `<a>` ya armado en `respuesta` y volcarlo con
+  `set:html`— habría abierto la puerta a que cualquier cosa que acabe en ese
+  campo se interprete como marcado. `Faq.astro` parte el texto con
+  `.split('{enlaceWhatsapp}')` y teje un `<a>` real entre las dos mitades:
+  el HTML nunca sale del componente, el JSON solo aporta texto.
+- Se resuelve en el frontmatter (`items = faq.map(...)`), no en la
+  plantilla: el JSX de cada `<details>` solo lee `item.antes` / `item.despues`
+  / `item.enlaceHref`, ya listos — mismo patrón que `entradas` en
+  `Boletos.astro`.
+- Sin `site.contacto.whatsapp` configurado, el enlace se degrada a texto
+  plano (mismo criterio que el aviso de "venta en línea" de Boletos: no
+  prometer un canal que no existe).
+
+**Medido en el build real:**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run check` / `npm run build` | 0 errores, 0 avisos |
+| `"SOCIO"` / `"COMUNIDAD"` en `dist/index.html` | **0** apariciones de cada uno |
+| Enlaces `wa.me` en el HTML | 4 mensajes distintos, cada uno con su `?text=` propio |
+| Orden de la FAQ | *"¿Cómo puedo pagar?"* antes que *"¿Hay descuentos disponibles?"* |
+| CLS en 360/768/1024/1440 | **0.0000** en los 4 |
+| Desborde 401>360 a 360px | el mismo de siempre — footer, ya documentado, no lo causó este cambio |
+
+Cerrado mirando las capturas de la tarjeta y de la FAQ abierta en los cuatro
+anchos, no solo los números (convención 14).

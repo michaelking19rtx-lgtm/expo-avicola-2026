@@ -54,4 +54,16 @@ export function whatsappUrl(mensaje) {
 export const MENSAJES = {
   pie: 'Hola, tengo una pregunta sobre la Expo Avícola Productiva del 7 de agosto',
   flotante: 'Hola, estoy viendo la página del congreso y tengo una duda',
+  /*
+    Descuentos: el código de promoción (SOCIO, COMUNIDAD) vive solo en
+    boletos.json, para que el backend lo lea — nunca en un texto que llegue
+    al HTML. Estos tres mensajes son la vía pública para conseguirlo: cada
+    quien pide el suyo por WhatsApp y se lo dan a mano, así que el mensaje
+    identifica el PERFIL (socio, estudiante), no el código.
+  */
+  descuentoSocioIPCI:
+    'Hola, soy socio IPCI y quiero solicitar mi código de descuento para el congreso',
+  descuentoEstudiante:
+    'Hola, soy estudiante/exalumno y quiero solicitar mi código de descuento para el congreso',
+  descuentoGeneral: 'Hola, quiero solicitar mi código de descuento para el congreso',
 };

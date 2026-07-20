@@ -26,5 +26,13 @@
   {
     "pregunta": "¿Cómo puedo pagar?",
     "respuesta": "Ya puedes comprar en línea con tarjeta de crédito o débito, o pagando en efectivo en OXXO. El cobro lo procesa Stripe y recibes tu confirmación por correo. Si eliges OXXO, la acreditación puede tardar algunos días."
+  },
+  {
+    "pregunta": "¿Hay descuentos disponibles?",
+    "respuesta": "Sí. Tenemos precios especiales para socios de las consultoras IPCI ($650) y para estudiantes y exalumnos de nuestros programas de formación ($550). Para obtener tu código de descuento, {enlaceWhatsapp} y te lo proporcionamos.",
+    "enlaceWhatsapp": {
+      "texto": "escríbenos por WhatsApp",
+      "mensaje": "Hola, quiero solicitar mi código de descuento para el congreso"
+    }
   }
 ]

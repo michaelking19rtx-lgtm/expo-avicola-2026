@@ -1,6 +1,7 @@
 ---
 import faq from '../data/faq.json';
 import { conConteo } from '../scripts/programa.js';
+import { whatsappUrl } from '../scripts/contacto.js';
 
 /*
   Preguntas frecuentes.
@@ -12,6 +13,24 @@ import { conConteo } from '../scripts/programa.js';
   cerrado en los navegadores modernos. Nada de esto habría salido gratis
   reimplementándolo.
 */
+
+/*
+  `respuesta` es texto plano, salvo cuando el ítem trae `enlaceWhatsapp`: ahí
+  lleva el token literal `{enlaceWhatsapp}` de marcador. Partirlo en dos
+  mitades y tejer una `<a>` real entre ellas es a propósito: la alternativa
+  —inyectar el `<a>` como parte del string y volcarlo con `set:html`— abriría
+  la puerta a que cualquier cosa que acabe en `respuesta` se interprete como
+  marcado. Con `.split()` el HTML nunca sale de este componente.
+
+  Se resuelve aquí, en build, y no en la plantilla: así el JSX solo lee campos
+  ya listos (antes/después/href), igual que `entradas` en Boletos.astro.
+*/
+const items = faq.map((item) => {
+  const texto = conConteo(item.respuesta);
+  if (!item.enlaceWhatsapp) return { ...item, antes: texto, despues: null, enlaceHref: null };
+  const [antes, despues] = texto.split('{enlaceWhatsapp}');
+  return { ...item, antes, despues, enlaceHref: whatsappUrl(item.enlaceWhatsapp.mensaje) };
+});
 ---
 
 <section class="faq" id="faq" {...Astro.props}>
@@ -22,7 +41,7 @@ import { conConteo } from '../scripts/programa.js';
     </header>
 
     <div class="faq__lista">
-      {faq.map((item) => (
+      {items.map((item) => (
         <details class="item" data-anim>
           <summary class="item__pregunta">
             <span class="item__texto">{item.pregunta}</span>
@@ -45,7 +64,26 @@ import { conConteo } from '../scripts/programa.js';
           <div class="item__respuesta">
             {/* conConteo: la respuesta del boleto lleva {conferenciasPalabra},
                 que sale de contar las ponencias de programa.json. */}
-            <p>{conConteo(item.respuesta)}</p>
+            <p>
+              {item.antes}
+              {item.enlaceWhatsapp && (
+                item.enlaceHref ? (
+                  <a
+                    class="item__enlace"
+                    href={item.enlaceHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.enlaceWhatsapp.texto}
+                  </a>
+                ) : (
+                  // Sin número de WhatsApp configurado, texto plano: no se
+                  // promete un canal que no existe.
+                  item.enlaceWhatsapp.texto
+                )
+              )}
+              {item.despues}
+            </p>
           </div>
         </details>
       ))}
@@ -174,6 +212,13 @@ import { conConteo } from '../scripts/programa.js';
     padding-block-end: var(--space-lg);
     padding-inline-end: var(--space-2xl);
     color: var(--text-muted);
+  }
+
+  .item__enlace {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   /*

@@ -2,6 +2,7 @@
 import boletos from '../data/boletos.json';
 import site from '../data/site.json';
 import { conConteo } from '../scripts/programa.js';
+import { whatsappUrl as construirEnlaceWhatsapp, MENSAJES } from '../scripts/contacto.js';
 
 /*
   Punto de conversión del sitio. TODO sale de src/data/boletos.json y
@@ -43,6 +44,19 @@ const avisoTexto = whatsappUrl
   ? 'La venta en línea abre muy pronto. Mientras tanto puedes apartar tu lugar por WhatsApp.'
   : 'La venta en línea abre muy pronto. En cuanto se active, este botón te llevará directo al pago seguro.';
 
+/*
+  Un mensaje de WhatsApp por PERFIL, no por código. El `codigo` de cada
+  descuento (SOCIO, COMUNIDAD) existe en boletos.json para que el backend lo
+  use — hoy nada lo consume ahí, pero es donde vive por si el vigilante o un
+  futuro flujo automatizado lo necesita— y NUNCA debe llegar al marcado: quien
+  lo vea podría aplicárselo sin pedirlo. Por eso el mapeo vive aquí, en build,
+  y `entradas` más abajo reconstruye cada descuento SIN el campo `codigo`.
+*/
+const MENSAJE_POR_CODIGO: Record<string, string> = {
+  SOCIO: MENSAJES.descuentoSocioIPCI,
+  COMUNIDAD: MENSAJES.descuentoEstudiante,
+};
+
 const entradas = boletos.map((boleto) => ({
   ...boleto,
   // precio null es un estado válido: la tarjeta muestra "Por definir".
@@ -56,6 +70,19 @@ const entradas = boletos.map((boleto) => ({
     era un COMENTARIO, no código. Rellenar el JSON no habría cambiado nada.
   */
   compraAbierta: Boolean(boleto.disponible && boleto.checkoutUrl),
+  /*
+    Reconstruido a propósito, campo a campo, y no un spread: un `...d` habría
+    colado `codigo` (y `descuento`, la resta en pesos) al objeto que consume
+    la plantilla. Verificado en el HTML compilado: ni "SOCIO" ni "COMUNIDAD"
+    aparecen en dist/index.html.
+  */
+  descuentos: (boleto.descuentos ?? []).map((d) => ({
+    nombre: d.nombre,
+    final: d.final,
+    enlaceWhatsapp: construirEnlaceWhatsapp(
+      MENSAJE_POR_CODIGO[d.codigo] ?? MENSAJES.descuentoGeneral
+    ),
+  })),
 }));
 ---
 
@@ -146,9 +173,23 @@ const entradas = boletos.map((boleto) => ({
                       </span>
                       <span class="descuentos__etiqueta">{d.nombre}</span>
                     </p>
-                    <p class="descuentos__codigo">
-                      Aplica código <strong>{d.codigo}</strong> al pagar
-                    </p>
+                    {d.enlaceWhatsapp ? (
+                      <p class="descuentos__nota">
+                        <a
+                          class="descuentos__enlace"
+                          href={d.enlaceWhatsapp}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Solicita tu código por WhatsApp
+                        </a>
+                      </p>
+                    ) : (
+                      // Sin número de WhatsApp configurado no se promete un
+                      // canal que no existe (mismo criterio que el aviso de
+                      // arriba: prometer sin poder cumplir es peor que callar).
+                      <p class="descuentos__nota">Escríbenos para solicitar tu código</p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -591,15 +632,21 @@ const entradas = boletos.map((boleto) => ({
     font-weight: 500;
   }
 
-  .descuentos__codigo {
+  .descuentos__nota {
     margin-block-start: 0.15rem;
     color: color-mix(in srgb, var(--accent-ink) 70%, var(--accent));
     font-size: var(--step--1);
   }
 
-  .descuentos__codigo strong {
-    font-weight: 700;
-    letter-spacing: 0.04em;
+  .descuentos__enlace {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .descuentos__enlace:hover {
+    color: var(--accent-ink);
   }
 
   /* Lista de lo incluido --------------------------------------------------- */
