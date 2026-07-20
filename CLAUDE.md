@@ -3289,3 +3289,148 @@ verificado **con y sin JavaScript**, y antes y después de pulsar play.
 > la segunda. Las capturas lo delataron —salían idénticas—, que es otra vez la
 > convención 14 haciendo su trabajo. Para probar el tema hay que sembrar
 > `localStorage`, no el `prefers-color-scheme`.
+
+---
+
+### Precio a $750, descuentos por código y autoplay silencioso del video · COMPLETADA
+
+Tres cambios independientes en una sola pasada: precio y checkout nuevos,
+descuentos visibles en la tarjeta, y el video pasa de manual a autoplay
+silencioso al entrar en pantalla.
+
+**1. Precio: $699 → $750**
+
+- `boletos.json`: `precio: 750`, `checkoutUrl` al nuevo Payment Link
+  (`.../dRmcN56up7PG4vHh275c409`), `descripcion` con una frase nueva al final:
+  *"Precio de acceso general: $750 MXN."*
+- El precio y la URL de `BarraCompra.astro` y del `Offer` del JSON-LD **no se
+  tocaron en código**: los dos leen de `boletos.json` en build, que es
+  justo el contrato que dejó escrito la Fase 5. Solo se corrigió un
+  comentario de `BarraCompra.astro` que citaba el precio viejo a mano.
+- Verificado en el HTML compilado: **0 apariciones de 699**, el `Offer` sale
+  con `"price":750` y la URL nueva, la barra de compra pinta `$750 MXN` con
+  el `href` nuevo.
+
+**2. Descuentos por código — mismo checkout, distinto precio mostrado**
+
+- `boletos.json` gana `descuentos: [{ nombre, codigo, descuento, final }]`:
+  Socios IPCI ($650, código `SOCIO`) y Estudiantes y exalumnos ($550, código
+  `COMUNIDAD`). **Los tres precios apuntan al mismo `checkoutUrl`** — no son
+  productos aparte, así que no hay nada que crear en Stripe más allá de los
+  códigos de promoción.
+- `Boletos.astro`: la lista de descuentos se pinta DEBAJO del precio
+  principal, dentro del mismo panel de acento, con cifra y tipografía menores
+  que `.precio` a propósito — es la letra chica de "también hay estos
+  precios", no una segunda oferta a la misma altura que compita con
+  "Comprar mi boleto". El CTA no se tocó.
+- El JSON-LD **no** gana ofertas nuevas: sigue siendo un único `Offer` a
+  $750, porque no son productos distintos. Si algún día Stripe crea Prices
+  separados por segmento, ahí sí tocaría revisar `ofertas()` en `schema.js`.
+
+**3. Video: autoplay silencioso al entrar en viewport — sin el atributo `autoplay`**
+
+> **Se probó antes de implementar, y el resultado cambió el diseño.** La
+> primera idea era literal: añadir `autoplay muted loop` al `<video
+> preload="none">`. Se montó un servidor de prueba con el archivo real y
+> Playwright, con el video FUERA de la pantalla al cargar, y se midió: **1
+> petición a `promo.mp4` de inmediato**, sin haber hecho scroll. El atributo
+> `autoplay` le gana a `preload="none"` — el navegador entiende que tiene que
+> reproducir cuanto antes y empieza a traer el archivo en cuanto lo pinta,
+> viewport o no. Es exactamente lo que este proyecto lleva evitando desde que
+> el video es local (ver la entrada anterior de esta bitácora).
+>
+> Se probó también el reverso — `muted loop` SIN `autoplay` — y ahí sí:
+> **0 peticiones**. Esos dos atributos, solos, no piden nada.
+
+Con eso decidido: el marcado lleva `muted` y `loop` estáticos, pero
+**`autoplay` no está en el HTML**. La reproducción la dispara un
+`IntersectionObserver` en el `<script>` del componente — código esencial, sin
+esperar al chunk de GSAP — que llama a `.play()` la primera vez que el
+reproductor entra al viewport (umbral 50%), y es ESE `.play()` el que empieza
+la descarga real, no antes.
+
+- **`prefers-reduced-motion: reduce` no registra el observer.** El video se
+  queda quieto sobre el póster; solo se reproduce si alguien pulsa play a
+  mano con los controles nativos. Verificado con
+  `reducedMotion: 'reduce'` de Playwright: `paused: true`, `currentTime: 0`,
+  **0 peticiones** al mp4 incluso "entrando" en la sección.
+- **Botón de sonido**, circular, 44×44 reales, con dos iconos SVG de trazo
+  fino (bocina con ondas / bocina con cruz) que alternan según
+  `[data-muted]` en el propio botón. Al pulsarlo alterna `video.muted` y
+  actualiza icono + `aria-label` ("Activar sonido" / "Silenciar el video").
+  **Gateado tras `[data-js]`**, igual que `.barra` en `BarraCompra.astro`:
+  sin JavaScript el botón no tiene con qué reaccionar a un clic, así que ni
+  se pinta — el video se queda con sus controles nativos, que ya traen
+  volumen.
+- El estado inicial del botón (`data-muted` presente en el marcado) coincide
+  con el real en los dos casos —autoplay muted normal, o `muted` estático
+  esperando play manual con reduced-motion—, así que no hay parpadeo de icono
+  al cargar: el script solo CONFIRMA el estado leyendo `video.muted`, no lo
+  adivina.
+
+**Medido con Playwright, contra el build real:**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run check` / `npm run build` | 0 errores, 0 avisos |
+| Peticiones a `promo.mp4` tras cargar, sin llegar a la sección | **0** |
+| Video tras entrar en viewport (motion normal) | `paused:false`, `muted:true`, `readyState:4` |
+| Tras pulsar el botón de sonido | `video.muted:false`, icono y `aria-label` actualizados |
+| Tamaño del botón de sonido | **44×44** exactos |
+| Con `prefers-reduced-motion: reduce` | `paused:true`, `currentTime:0`, **0** peticiones |
+| Sin JavaScript | botón oculto (`display:none`), video quieto y muted, sin desbordar |
+| CLS en 360/768/1024/1440 × green/blue | **0.0000** en los 8 |
+| Desborde 401>360 a 360px | el mismo de siempre — es el footer, ya documentado como riesgo abierto, no lo introdujo este cambio |
+
+**Backend — NO se tocó, y aquí importa por qué**
+
+El encargo original era "`src/datos-evento.js` tiene el precio viejo,
+actualízalo". Se clonó `teccapitalweb/expo-avicola-backend` para hacerlo y
+**la premisa no era correcta**: `datos-evento.js` no tiene ni `precio` ni
+`checkoutUrl` — nunca los tuvo. El correo de confirmación no cita un precio
+fijo; lo saca en vivo de `session.amount_total` del propio evento de Stripe
+en `webhook.js`. Y `vigilante.js` —el proceso que compara el sitio contra el
+espejo cada 6 horas— tampoco compara precio ni `checkoutUrl`: solo
+`evento.*`, `boleto.nombre`, `boleto.incluye` y `contacto.*`. **No hay nada
+que cambiar ahí para este encargo, y el vigilante no iba a alertar de
+todos modos.**
+
+Lo que SÍ es una acción real y pendiente, fuera del repo:
+
+> **`PRICE_ID_WHITELIST`** es una variable de entorno en Railway (no vive en
+> ningún repo) con el `price_id` de Stripe que el webhook acepta. Un Payment
+> Link nuevo casi siempre implica un Price nuevo —los Price de Stripe son
+> inmutables, no se edita el importe de uno existente— y el checkout cambió
+> de `.../fZufZh9GB2vm6DPeTZ5c408` a `.../dRmcN56up7PG4vHh275c409`. **Si el
+> `price_id` detrás del checkout nuevo no está en esa whitelist, el webhook
+> descarta en silencio cualquier compra a $750 (o con descuento): responde
+> 200, no manda las dos correos, y solo queda un log `DESCARTADO: ningún
+> price_id en la whitelist`.** Nadie lo notaría hasta que un comprador
+> reclamara no haber recibido su confirmación.
+>
+> Se avisó al usuario: hay que entrar a Stripe → Payment Links → el nuevo →
+> producto → precio, copiar el `price_id` (empieza por `price_`), y
+> actualizar `PRICE_ID_WHITELIST` en las variables del servicio en Railway.
+> Es un cambio de config de Railway, no de código, y no se hizo aquí.
+
+**De paso, dos cosas encontradas al leer el backend, sin tocar tampoco:**
+
+1. `BOLETO.incluye` en `datos-evento.js` sigue diciendo *"Acceso a las 6
+   conferencias especializadas"*; el sitio ya está en 7. Es una divergencia
+   preexistente, no causada por este cambio, y el propio `vigilante.js`
+   debería estar alertando de ella cada ciclo (compara `boleto.incluye`
+   campo a campo).
+2. `vigilante.js` no proyecta ni compara precio. Si se quiere que una
+   divergencia de precio dispare alerta igual que nombre/incluye, hace falta
+   añadir el campo a `proyectarSitio()` / `proyectarEspejo()` en ese archivo
+   — no se implementó por no ser parte de este encargo; queda propuesto.
+
+**FAQ**: ninguna respuesta de `faq.json` menciona precio, así que no había
+nada que actualizar. Se propuso —sin implementar— añadir una pregunta sobre
+los descuentos por código; pendiente de decisión editorial.
+
+**Barra de compra — "desde $550" en vez de $750**: propuesto y NO
+implementado, a la espera de decisión: mostrar el precio con descuento más
+bajo en la barra fija podría leerse como engañoso para quien no califica, o
+como más atractivo para el tráfico frío de WhatsApp. Requiere decidir antes
+de tocar `BarraCompra.astro`.

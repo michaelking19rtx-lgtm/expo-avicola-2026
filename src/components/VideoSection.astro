@@ -7,17 +7,27 @@ import { asset } from '../scripts/paths.js';
 
   El video es un archivo LOCAL servido desde /public, no un embed. Es un MP4
   de 1920×1080 y 26 MB, así que la regla que gobierna este bloque es que
-  nada de eso se descargue hasta que el usuario decida verlo:
+  nada de eso se descargue hasta que hace falta:
 
   - `preload="none"` — sin esto el navegador se trae al menos las cabeceras y,
     según implementación, el primer tramo del archivo. A este tamaño eso es
     inaceptable en datos móviles, que es como llega la mayor parte del tráfico
     de este sitio (ver «Revisión de móvil» en la bitácora).
-  - `poster` — un WebP de 37 KB es TODO lo que pesa la sección hasta el play.
-    Además es lo que reserva el fotograma: sin él, la caja quedaría vacía.
+  - `poster` — un WebP de 37 KB es TODO lo que pesa la sección hasta que se
+    reproduce algo. Además es lo que reserva el fotograma: sin él, la caja
+    quedaría vacía.
   - El `aspect-ratio: 16/9` del contenedor ya evitaba el CLS con el
     placeholder y lo sigue haciendo con el `<video>`; el poster comparte esa
     proporción exacta (960×540), así que no hay reencuadre ni salto.
+
+  AUTOPLAY SILENCIOSO — SIN el atributo `autoplay` del marcado. Se probó a
+  propósito (`<video autoplay muted loop preload="none">` fuera de la vista):
+  el navegador pide el archivo igual, de inmediato, sin esperar a que entre en
+  el viewport. `autoplay` le gana a `preload="none"`, así que aquí el disparo
+  de la reproducción es manual, con un IntersectionObserver en el `<script>` de
+  abajo, y es su `.play()` el que arranca la descarga — no antes. `muted` y
+  `loop` sí son atributos estáticos: se probó también y, solos, sin
+  `autoplay`, no piden nada (medido: 0 peticiones a `promo.mp4` sin ese play).
 */
 
 /*
@@ -48,6 +58,8 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
         controls
         preload="none"
         playsinline
+        muted
+        loop
         poster={asset('video/poster.webp')}
         width="1920"
         height="1080"
@@ -55,12 +67,135 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
         <source src={asset('video/promo.mp4')} type="video/mp4" />
         Tu navegador no puede reproducir este video.
       </video>
+
+      {/*
+        Botón de sonido. Gateado tras [data-js] en el CSS: sin autoplay no hace
+        falta —el video sigue con controles nativos que ya traen volumen— y sin
+        JS no tiene con qué reaccionar al clic.
+
+        data-muted arranca PRESENTE a propósito: coincide con el estado real en
+        el caso común (recién pintado, el video parte muted) y con
+        prefers-reduced-motion —donde tampoco cambia, el atributo `muted` del
+        marcado sigue muted hasta que alguien le dé play—. El script solo
+        confirma el estado real al cargar, no lo adivina.
+      */}
+      <button
+        type="button"
+        class="intro__sonido"
+        data-sonido
+        data-muted
+        aria-label="Activar sonido"
+      >
+        <svg
+          class="intro__sonido-on"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M4 9.5v5h3.2l4.8 3.6V5.9L7.2 9.5H4Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M15.8 9.2a3.6 3.6 0 0 1 0 5.6"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+          <path
+            d="M18.1 6.8a7 7 0 0 1 0 10.4"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+        <svg
+          class="intro__sonido-off"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M4 9.5v5h3.2l4.8 3.6V5.9L7.2 9.5H4Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M15.5 9.5l5 5M20.5 9.5l-5 5"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
     </div>
   </div>
 </section>
 
 <script>
   const seccion = document.querySelector<HTMLElement>('.intro');
+  const video = document.querySelector<HTMLVideoElement>('.intro__media');
+  const botonSonido = document.querySelector<HTMLButtonElement>('[data-sonido]');
+
+  // ---------------------------------------------------------------------
+  // Botón de sonido. Esencial, sin dependencia de la capa de movimiento:
+  // silenciar o activar el audio tiene que funcionar aunque GSAP no llegue.
+  // ---------------------------------------------------------------------
+  function actualizarBotonSonido(): void {
+    if (!botonSonido || !video) return;
+    botonSonido.toggleAttribute('data-muted', video.muted);
+    botonSonido.setAttribute(
+      'aria-label',
+      video.muted ? 'Activar sonido' : 'Silenciar el video'
+    );
+  }
+
+  if (botonSonido && video) {
+    botonSonido.addEventListener('click', () => {
+      video.muted = !video.muted;
+      actualizarBotonSonido();
+    });
+    // Confirma el estado real al cargar: no se asume, se lee del propio video.
+    actualizarBotonSonido();
+  }
+
+  // ---------------------------------------------------------------------
+  // Autoplay silencioso al entrar en viewport (ver el comentario grande del
+  // frontmatter: NO es el atributo `autoplay`, es este `.play()` manual).
+  // ---------------------------------------------------------------------
+  const prefiereMenosMovimiento = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+
+  if (video && !prefiereMenosMovimiento) {
+    const observadorVideo = new IntersectionObserver(
+      (entradas, obs) => {
+        for (const entrada of entradas) {
+          if (!entrada.isIntersecting) continue;
+          video.play().catch(() => {
+            /*
+              Alguna política de autoplay lo bloqueó pese a `muted`. El video
+              se queda en el póster, listo para el play manual con los
+              controles nativos — nunca es un error visible.
+            */
+          });
+          obs.disconnect();
+          return;
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observadorVideo.observe(video);
+  }
+  // Con prefers-reduced-motion no se registra observer: el video se queda
+  // quieto en el póster hasta que alguien pulse play a mano.
 
   // Import dinámico, igual que en Nav y Hero: la capa de movimiento es mejora
   // progresiva y no debe poder tumbar nada esencial.
@@ -133,6 +268,7 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
 
   /* Reproductor ------------------------------------------------------------ */
   .intro__player {
+    position: relative;
     max-width: var(--media-max);
     margin-inline: auto;
     border: 1px solid var(--border);
@@ -161,5 +297,53 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
     /* El poster es 16/9 igual que la caja: `cover` no recorta nada, solo
        blinda el caso de que algún día se cambie por uno de otra proporción. */
     object-fit: cover;
+  }
+
+  /*
+    Botón de sonido. Oculto sin JS —igual que .barra en BarraCompra.astro—:
+    sin autoplay el video ya trae volumen en sus controles nativos, así que un
+    botón inerte aquí sería puro ruido visual.
+  */
+  .intro__sonido {
+    display: none;
+  }
+
+  :global([data-js]) .intro__sonido {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    z-index: 1;
+
+    display: grid;
+    place-items: center;
+    /* 44×44 reales: el mínimo de área de toque, igual que .barra__cta. */
+    inline-size: 44px;
+    block-size: 44px;
+
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--bg) 55%, transparent);
+    color: var(--text);
+    transition: background-color var(--t-base) var(--ease-out);
+  }
+
+  :global([data-js]) .intro__sonido:hover {
+    background-color: color-mix(in srgb, var(--bg) 75%, transparent);
+  }
+
+  /* Un icono a la vez: cuál se ve depende de si el botón lleva data-muted. */
+  .intro__sonido-on {
+    display: none;
+  }
+
+  .intro__sonido:not([data-muted]) .intro__sonido-on {
+    display: block;
+  }
+
+  .intro__sonido[data-muted] .intro__sonido-off {
+    display: block;
+  }
+
+  .intro__sonido:not([data-muted]) .intro__sonido-off {
+    display: none;
   }
 </style>

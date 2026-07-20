@@ -120,6 +120,39 @@ const entradas = boletos.map((boleto) => ({
             )}
 
             <p class="tarjeta__nota">Precio por persona · Cupo limitado</p>
+
+            {/*
+              DESCUENTOS: mismo checkout, distinto código de promoción. No son
+              boletos aparte —boleto.checkoutUrl es el único enlace de compra
+              que existe, para los tres precios— así que aquí solo se enseña
+              la cifra final y el código; el enlace real vive en el CTA de la
+              mitad derecha.
+
+              Van DEBAJO del precio principal, en el mismo panel de acento
+              pero más pequeños y sin botón propio: es información de precio,
+              no una segunda decisión que compita con "Comprar mi boleto".
+            */}
+            {boleto.descuentos?.length > 0 && (
+              <ul class="descuentos" role="list">
+                {boleto.descuentos.map((d) => (
+                  <li class="descuentos__item">
+                    <p class="descuentos__precio">
+                      <span aria-hidden="true">
+                        <span class="descuentos__simbolo">$</span>
+                        {formatoNumero.format(d.final)}
+                      </span>
+                      <span class="sr-only">
+                        {formatoNumero.format(d.final)} pesos {boleto.moneda}
+                      </span>
+                      <span class="descuentos__etiqueta">{d.nombre}</span>
+                    </p>
+                    <p class="descuentos__codigo">
+                      Aplica código <strong>{d.codigo}</strong> al pagar
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div class="panel-detalle">
@@ -517,6 +550,56 @@ const entradas = boletos.map((boleto) => ({
     margin-block-start: var(--space-sm);
     color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
     font-size: var(--step--1);
+  }
+
+  /* Descuentos --------------------------------------------------------------
+     Deliberadamente menores que .precio en todo: tamaño de cifra, peso y
+     separación. El principal domina por tamaño (convención de esta tarjeta);
+     estos son la letra chica de "también hay estos precios", no una segunda
+     oferta a la misma altura. */
+  .descuentos {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-lg);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid color-mix(in srgb, var(--accent-ink) 20%, transparent);
+  }
+
+  .descuentos__precio {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .descuentos__simbolo {
+    margin-inline-end: 0.05em;
+    font-size: 0.75em;
+    font-weight: 500;
+  }
+
+  .descuentos__etiqueta {
+    margin-inline-start: var(--space-2xs);
+    color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+  }
+
+  .descuentos__codigo {
+    margin-block-start: 0.15rem;
+    color: color-mix(in srgb, var(--accent-ink) 70%, var(--accent));
+    font-size: var(--step--1);
+  }
+
+  .descuentos__codigo strong {
+    font-weight: 700;
+    letter-spacing: 0.04em;
   }
 
   /* Lista de lo incluido --------------------------------------------------- */
