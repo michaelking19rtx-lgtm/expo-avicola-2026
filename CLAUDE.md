@@ -3600,3 +3600,64 @@ hacía falta perderlos para hacer sitio a los nuevos.
 Cerrado mirando las capturas de los ocho escenarios, no solo los porcentajes
 (convención 14): el arco se lee bien, ninguna cara compite con Edgar, y
 Ricardo no se pierde contra el fondo oscuro pese a ir de negro.
+
+---
+
+### Audio a la primera interacción y botón de sonido más visible · COMPLETADA
+
+**1. Audio en el primer gesto.** Un listener en `document` —click, touchstart,
+scroll o keydown, el que llegue primero— desmutea el video. Los cuatro se
+registran con `{ once: true }` y el propio handler quita los otros tres al
+disparar uno, para no dejar tres escuchando de por vida.
+
+> **Se encontró una regresión real al probarlo, no se adivinó.** Con
+> Playwright: clic real en la nav + scroll → **audio, reproduciendo**. Pero
+> "solo scroll, sin clic" desmuteaba el video ANTES de que el
+> `IntersectionObserver` intentara reproducirlo, y un autoplay que arranca ya
+> sin silenciar, sin gesto fuerte detrás, Chrome lo bloquea ENTERO —el video
+> se quedaba parado sin cargar nada, peor que antes de esta tarea, que sí
+> reproducía mudo—. Arreglado: el autoplay ahora fuerza `muted=true` justo
+> antes de `.play()` —eso nunca lo bloquea nadie— y el intento de sonido va
+> DESPUÉS, cuando `.play()` ya resolvió.
+>
+> **Medido en Chromium — "solo scroll" tras el arreglo:** el video carga y
+> reproduce un instante muted, el intento de desmutear posterior dispara la
+> intervención de autoplay de Chrome y el video queda **pausado, ya
+> desmuteado** (no vuelve a muted, se detiene). Es decir: en Chromium el
+> scroll NO cuenta como gesto suficiente para sostener audio — el botón
+> manual (o un clic real) sigue siendo necesario. No se probó Firefox/Safari
+> por no tener el navegador disponible en este entorno; puede diferir.
+
+**2. Botón más visible.** 52×52 (antes 44×44), esquina inferior derecha sobre
+el video, fondo semitranslúcido con blur (mismo `@supports` doble que la
+nav). Icono + texto "Activar sonido" en muted; icono solo al activarse.
+
+> **El primer offset probado quedaba encima de los controles nativos.**
+> Verificado con captura (controles forzados por `:hover`): a `--space-md`
+> del borde, el botón se montaba sobre el icono nativo de pantalla completa.
+> Chrome dibuja su barra de controles ~48px de alto pegada al borde inferior
+> del `<video>`; el offset subió a `calc(var(--space-md) + 48px)` y la
+> captura de control confirma que ya no hay solape.
+
+**3. Pulso de 3 s**, CSS puro (`@keyframes`, 2 iteraciones de 1.5s, se detiene
+solo). Sin guardián local de `prefers-reduced-motion`: el corte global de
+`global.css` ya fuerza duración a 0.01ms e iteración a 1, así que basta con no
+repetir la comprobación (convención 5). El selector exige `[data-muted]` A LA
+VEZ que `[data-pulso]`, así que si el video ya se desmuteó —a mano o por la
+primera interacción— antes de los 3s, el pulso se apaga en el acto.
+
+**Verificado:**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run check` / `npm run build` | 0 errores, 0 avisos |
+| Clic en nav + scroll al video | `muted:false, paused:false` — audio real |
+| Botón manual | sigue alternando `video.muted`, aria-label correcto |
+| Tamaño del botón, 4 escenarios (390/1440 × green/blue) | **52×52** exactos |
+| Botón vs. controles nativos (`:hover`) | sin solape tras el ajuste de offset |
+| `prefers-reduced-motion`, sin scroll | `paused:true, muted:true` — sin autoplay |
+| Pulso con `prefers-reduced-motion` | `animationDuration: 1e-05s` — imperceptible |
+| Pulso en motion normal | presente a 600ms, ausente (`data-pulso` retirado) a 3.8s |
+
+Cerrado mirando las capturas de los cuatro escenarios y la del solape con los
+controles nativos (convención 14).

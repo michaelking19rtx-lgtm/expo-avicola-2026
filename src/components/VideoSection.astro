@@ -78,12 +78,19 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
         prefers-reduced-motion —donde tampoco cambia, el atributo `muted` del
         marcado sigue muted hasta que alguien le dé play—. El script solo
         confirma el estado real al cargar, no lo adivina.
+
+        data-pulso también arranca PRESENTE: el pulso de aviso solo dura los
+        primeros 3 s (lo retira el <script> de abajo) y solo se ve mientras el
+        botón también lleva data-muted (ver el selector combinado en el
+        <style>), así que si el visitante ya desmuteó el video —a mano o por
+        la primera interacción— el pulso no llega a dibujarse.
       */}
       <button
         type="button"
         class="intro__sonido"
         data-sonido
         data-muted
+        data-pulso
         aria-label="Activar sonido"
       >
         <svg
@@ -134,6 +141,10 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
             stroke-linecap="round"
           />
         </svg>
+        {/* Visible SOLO en muted, junto al icono tachado — la regla del
+            encargo es "icono + texto" en un estado y "icono solo" en el
+            otro, así que el texto va aparte del aria-label. */}
+        <span class="intro__sonido-texto" aria-hidden="true">Activar sonido</span>
       </button>
     </div>
   </div>
@@ -164,6 +175,51 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
     });
     // Confirma el estado real al cargar: no se asume, se lee del propio video.
     actualizarBotonSonido();
+
+    /*
+      El pulso solo llama la atención 3 s y se detiene solo. No hace falta
+      guardar prefers-reduced-motion aquí: el corte global de global.css ya
+      fuerza animation-duration a 0.01ms y animation-iteration-count a 1 en
+      *, así que la animación de abajo queda anulada sin escribir un segundo
+      guardián — solo las animaciones IMPERATIVAS (GSAP) necesitan consultarlo
+      a mano, según la convención 5.
+    */
+    window.setTimeout(() => botonSonido.removeAttribute('data-pulso'), 3000);
+  }
+
+  // ---------------------------------------------------------------------
+  // Audio a la primera interacción del visitante con la página.
+  //
+  // Los navegadores bloquean el autoplay CON sonido, pero lo permiten en
+  // cuanto hay un gesto real del usuario. En vez de esperar a que alguien
+  // pulse el botón de sonido, un solo listener en `document` — click,
+  // touchstart, scroll o keydown, el que llegue primero — desmutea el video
+  // en cuanto se dispara. Si para entonces el video ya está reproduciéndose
+  // (autoplay silencioso, más abajo), sigue sin cortes pero con audio.
+  //
+  // "Falla en silencio" a propósito: `video.muted = false` es una asignación
+  // de propiedad, no una promesa — no hay nada que rechazar. Si el navegador
+  // decide no permitir el audio (o directamente pausa el video porque el
+  // gesto no cuenta como activación real, que es el caso típico de `scroll`
+  // fuera de Chrome), el video se queda como estaba y el botón manual sigue
+  // siendo el respaldo.
+  // ---------------------------------------------------------------------
+  if (video) {
+    const gestos = ['click', 'touchstart', 'scroll', 'keydown'] as const;
+    const activarAudio = () => {
+      // Se quitan los CUATRO de una vez: `{ once: true }` solo autoelimina el
+      // que disparó, y los otros tres seguirían escuchando de por vida.
+      for (const gesto of gestos) document.removeEventListener(gesto, activarAudio);
+      try {
+        video.muted = false;
+        actualizarBotonSonido();
+      } catch {
+        /* Sin soporte o rechazado: el botón manual sigue ahí. */
+      }
+    };
+    for (const gesto of gestos) {
+      document.addEventListener(gesto, activarAudio, { once: true, passive: true });
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -179,13 +235,39 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
       (entradas, obs) => {
         for (const entrada of entradas) {
           if (!entrada.isIntersecting) continue;
-          video.play().catch(() => {
-            /*
-              Alguna política de autoplay lo bloqueó pese a `muted`. El video
-              se queda en el póster, listo para el play manual con los
-              controles nativos — nunca es un error visible.
-            */
-          });
+          /*
+            Fuerza muted=true justo antes del play(), pase lo que pase antes.
+
+            Probado y era necesario: si el gesto de la sección anterior ya
+            desmuteó el video ANTES de que este observer disparara —el caso
+            típico es "solo scroll", sin clic ni tecla—, un autoplay que
+            arranca ya sin silenciar es autoplay CON SONIDO sin un gesto
+            fuerte real detrás, y el navegador lo bloquea entero: el video se
+            queda parado en el póster, sin cargar nada. Es PEOR que el
+            comportamiento de antes de esta tarea, que sí reproducía
+            silenciado.
+
+            Por eso el autoplay SIEMPRE arranca muted —eso nunca lo bloquea
+            nadie— y el intento de sonido, si el visitante ya lo había pedido,
+            va DESPUÉS, cuando play() ya resolvió.
+          */
+          const sonidoQuerido = !video.muted;
+          video.muted = true;
+          video
+            .play()
+            .then(() => {
+              if (sonidoQuerido) {
+                video.muted = false;
+                actualizarBotonSonido();
+              }
+            })
+            .catch(() => {
+              /*
+                Alguna política de autoplay lo bloqueó pese a `muted`. El video
+                se queda en el póster, listo para el play manual con los
+                controles nativos — nunca es un error visible.
+              */
+            });
           obs.disconnect();
           return;
         }
@@ -303,6 +385,12 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
     Botón de sonido. Oculto sin JS —igual que .barra en BarraCompra.astro—:
     sin autoplay el video ya trae volumen en sus controles nativos, así que un
     botón inerte aquí sería puro ruido visual.
+
+    Esquina INFERIOR derecha, no superior: el encargo lo pide ahí para que se
+    note de inmediato sobre el video, que es justo donde antes vivía discreto
+    arriba. Se deja `--space-md` de margen a los dos bordes —más que el
+    `--space-sm` de antes— para no montarse encima de los controles nativos,
+    que Chrome dibuja pegados al borde inferior del `<video>`.
   */
   .intro__sonido {
     display: none;
@@ -310,24 +398,66 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
 
   :global([data-js]) .intro__sonido {
     position: absolute;
-    inset-block-start: var(--space-sm);
-    inset-inline-end: var(--space-sm);
+    /*
+      El offset NO es --space-md a secas: medido en captura con los
+      controles nativos forzados (:hover), a --space-md el botón caía
+      encima del icono nativo de pantalla completa. Los controles de Chrome
+      miden ~48px de alto pegados al borde inferior del <video>, así que se
+      suma ese alto al margen para dejarlos libres del todo.
+    */
+    inset-block-end: calc(var(--space-md) + 48px);
+    inset-inline-end: var(--space-md);
     z-index: 1;
 
-    display: grid;
-    place-items: center;
-    /* 44×44 reales: el mínimo de área de toque, igual que .barra__cta. */
-    inline-size: 44px;
-    block-size: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    /* 52×52 reales: por encima del mínimo de 44 de .barra__cta, a propósito
+       más prominente — es el pedido del encargo, no el mínimo de toque. */
+    min-inline-size: 52px;
+    min-block-size: 52px;
+    padding-inline: var(--space-sm);
 
-    border-radius: 50%;
-    background-color: color-mix(in srgb, var(--bg) 55%, transparent);
+    border-radius: var(--radius-pill);
+    /* Fallback sin blur: sólido y legible, igual criterio que .nav. */
+    background-color: var(--bg);
     color: var(--text);
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 600;
+    white-space: nowrap;
     transition: background-color var(--t-base) var(--ease-out);
   }
 
+  /*
+    Semitranslúcido SOLO donde el navegador soporta blur de verdad, mismo
+    doble @supports que la nav (convención ya escrita en BarraCompra.astro):
+    color-mix() con var() dentro no se descarta al parsear en un navegador sin
+    soporte, se invalida al COMPUTAR, y el fondo caería a transparent en vez
+    del --bg opaco de arriba.
+
+    72%, no el 55% que llevaba el botón chico: sobre un fotograma claro del
+    video (el póster es cielo y casetas blancas) un fondo más traslúcido se
+    leía apagado. Con esto se lee igual de bien sobre cualquier fotograma.
+  */
+  @supports (backdrop-filter: blur(1px)) and
+    (background-color: color-mix(in srgb, red 50%, transparent)) {
+    :global([data-js]) .intro__sonido {
+      background-color: color-mix(in srgb, var(--bg) 72%, transparent);
+      backdrop-filter: blur(var(--nav-blur));
+    }
+  }
+
   :global([data-js]) .intro__sonido:hover {
-    background-color: color-mix(in srgb, var(--bg) 75%, transparent);
+    background-color: var(--bg);
+  }
+
+  @supports (backdrop-filter: blur(1px)) and
+    (background-color: color-mix(in srgb, red 50%, transparent)) {
+    :global([data-js]) .intro__sonido:hover {
+      background-color: color-mix(in srgb, var(--bg) 88%, transparent);
+    }
   }
 
   /* Un icono a la vez: cuál se ve depende de si el botón lleva data-muted. */
@@ -345,5 +475,45 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
 
   .intro__sonido:not([data-muted]) .intro__sonido-off {
     display: none;
+  }
+
+  /*
+    El texto "Activar sonido" SOLO en muted. Activado, el botón se queda en
+    icono solo — es la forma que pide el encargo, y de paso encoge la píldora
+    a un círculo otra vez (el ancho ya no lo empuja ningún texto).
+  */
+  .intro__sonido-texto {
+    display: none;
+  }
+
+  .intro__sonido[data-muted] .intro__sonido-texto {
+    display: inline;
+  }
+
+  /*
+    Pulso de aviso, 3 s y se detiene solo (lo retira el <script>). El
+    selector exige data-muted A LA VEZ que data-pulso: si el visitante ya
+    desmuteó el video —a mano o por la primera interacción— antes de que
+    pasen los 3 s, el pulso deja de dibujarse en el acto, no sigue llamando
+    la atención sobre algo que ya pasó.
+
+    Sin guardián local de prefers-reduced-motion: el corte global de
+    global.css ya fuerza animation-duration a 0.01ms y
+    animation-iteration-count a 1 en *, así que aquí no hace falta repetirlo
+    (convención 5: solo las animaciones IMPERATIVAS, como GSAP, necesitan
+    consultarlo a mano).
+  */
+  @keyframes intro-sonido-pulso {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 10px transparent;
+    }
+  }
+
+  :global([data-js]) .intro__sonido[data-muted][data-pulso] {
+    animation: intro-sonido-pulso 1.5s ease-in-out 2;
   }
 </style>
