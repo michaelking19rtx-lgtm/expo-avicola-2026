@@ -140,6 +140,22 @@ const anio = new Date(site.fecha).getUTCFullYear();
     padding-inline: var(--gutter);
   }
 
+  /*
+    Los tres bloques del pie (marca, nav, contacto) son items de grid de
+    `.pie__inner`, y un item de grid trae `min-width: auto` de fábrica: no
+    puede encoger por debajo del min-content de su contenido. Medido a 360px:
+    el correo `contacto@visionpecuariamx.com` no tiene ningún punto de corte
+    —es una sola palabra sin espacios ni guiones— así que su min-content es
+    el ancho de la palabra entera, y ESE ancho forzaba la pista de la grid
+    (y con ella todo el pie) a 381px en un viewport de 360. `min-width: 0`
+    aquí es lo que le permite a la pista encoger de verdad.
+  */
+  .pie__marca,
+  .pie__nav,
+  .pie__contacto {
+    min-width: 0;
+  }
+
   /* Marca ------------------------------------------------------------------ */
   .pie__wordmark {
     display: inline-block;
@@ -223,6 +239,22 @@ const anio = new Date(site.fecha).getUTCFullYear();
     grid-template-columns: 6.5rem 1fr;
     gap: var(--space-sm);
     align-items: baseline;
+  }
+
+  /*
+    min-width: 0 en la columna del valor (mismo motivo que .pie__contacto
+    arriba, un nivel más adentro: `.vias__fila` es OTRA grid, y la celda del
+    valor es OTRO item que por defecto no encoge). `overflow-wrap: anywhere`
+    en el propio texto es la mitad que faltaba: sin un punto de corte, el
+    correo simplemente NO CABE en 265px por ancho que se le dé a la columna,
+    así que además de poder encoger, el texto tiene que poder partirse a
+    media palabra cuando no hay otra opción. Es la propiedad que SÍ reduce el
+    min-content en el cálculo de layout (a diferencia de `word-break:
+    break-word`, que solo fuerza el corte visual sin achicar el mínimo).
+  */
+  .vias__valor {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .vias__etiqueta {

@@ -347,7 +347,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
 
-### El footer desborda 41 px a 360 px · ABIERTO · PREEXISTENTE
+### El footer desborda 41 px a 360 px · CERRADO — ver bitácora
 
 A 360 px de ancho el documento mide **401 px** y hay scroll horizontal. Los
 culpables son todos del footer —`.pie__marca`, `.pie__cuando`, `.pie__nav`,
@@ -3735,3 +3735,37 @@ existe.
 **Sin URL para Prosermat.** Se buscó en EXIF/IPTC/XMP del JPEG original y no
 había metadatos; tampoco hay URL impresa en el propio logo. Se queda sin
 enlace (`url: null`), como ya estaba.
+
+---
+
+### El footer desborda 41 px a 360 px · CERRADO
+
+Medido, no asumido: los elementos `.pie__*` con desborde (401.1 en 360)
+compartían todos el mismo ancho fraccionario, **381.109px** — huella clásica
+de un "grid blowout". `.pie__inner` es una grid de una sola columna en móvil
+y sus tres bloques (`.pie__marca`, `.pie__nav`, `.pie__contacto`) son items
+de grid con `min-width: auto` de fábrica: no pueden encoger por debajo del
+min-content de su contenido.
+
+**El min-content lo marcaba el correo, `contacto@visionpecuariamx.com`.** Es
+una sola palabra sin espacios ni guiones, así que sin un punto de corte su
+min-content es el ancho de la cadena entera — más de lo que cabe en 320px de
+columna — y ese ancho forzaba la pista de `.pie__inner` (y con ella el pie
+completo) a 381px.
+
+**Arreglo, dos partes, en `Footer.astro`:**
+1. `min-width: 0` en `.pie__marca`, `.pie__nav`, `.pie__contacto` y en
+   `.vias__valor` (la celda de `.vias__fila`, que es OTRA grid con el mismo
+   problema un nivel más adentro) — deja que las pistas encojan de verdad.
+2. `overflow-wrap: anywhere` en `.vias__valor` — permite partir el correo a
+   media palabra cuando no hay otro punto de corte. Se usó `anywhere` y no
+   `word-break: break-word` a propósito: `break-word` fuerza el corte visual
+   pero NO reduce el min-content en el cálculo de layout (es legado,
+   pensado para compatibilidad), así que por sí solo no habría bastado para
+   arreglar el blowout — `anywhere` sí participa en ese cálculo.
+
+**Verificado con Playwright, 6 anchos × 2 temas (320/360/375/390/768/1440 ×
+green/blue): 0 px de desborde en los 12.** Desktop no se tocó —768 y 1440 ya
+estaban en 0 y siguen en 0, con la grid de tres columnas intacta. Cerrado
+mirando la captura (convención 14): a 360px el correo se parte en dos líneas
+dentro de su columna, sin romper el layout ni salirse del viewport.
