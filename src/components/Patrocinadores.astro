@@ -5,8 +5,11 @@ import { asset } from '../scripts/paths.js';
 /*
   Patrocinadores.
 
-  Los archivos de logo TODAVÍA NO EXISTEN en /public. Se aplica el mismo reparto
-  entre CSS y JS que la imagen del hero:
+  Los logos ya llegaron (WebP con transparencia, fondo blanco quitado a mano
+  porque venían horneados en JPEG). Se CONSERVA el reparto entre CSS y JS que
+  ya traía el hero y los retratos de Ponentes, a propósito y no por inercia:
+  un logo puede volver a dar 404 el día que se sustituya por uno nuevo, y ese
+  día es exactamente cuando este mecanismo vuelve a ganarse el puesto.
 
     - Sin JS ([data-js] ausente): manda el <img>. Si falta, el navegador pinta
       su icono de imagen rota, pero es el único escenario donde no podemos
@@ -14,8 +17,8 @@ import { asset } from '../scripts/paths.js';
     - Con JS: manda el marco punteado con el nombre de la empresa, y la imagen
       solo aparece cuando se confirma que cargó.
 
-  Así el sitio nunca enseña un icono de imagen rota mientras los logos no
-  lleguen, y el nombre de la empresa siempre se lee.
+  Así el sitio nunca enseña un icono de imagen rota mientras un logo esté
+  roto, y el nombre de la empresa siempre se lee.
 */
 ---
 
@@ -47,13 +50,19 @@ import { asset } from '../scripts/paths.js';
                   navegador una proporción con la que reservar la caja antes de
                   que el archivo llegue. Sin ellos, el logo aparece de golpe y
                   empuja la descripción hacia abajo.
+
+                  200×200: los dos WebP son cuadrados de verdad (Avipork
+                  200×200, Prosermat 190×190) — ya no es el 320×120 inventado
+                  de cuando no había archivo. Da igual que .patro__logo fuerce
+                  width/height al 100% de la caja (ver el <style>): esto solo
+                  documenta la proporción real, no decide el tamaño final.
                 */}
                 <img
                   class="patro__logo"
                   src={asset(patro.logo)}
                   alt={`Logotipo de ${patro.nombre}`}
-                  width="320"
-                  height="120"
+                  width="200"
+                  height="200"
                   loading="lazy"
                   decoding="async"
                   data-logo-img
@@ -200,17 +209,51 @@ import { asset } from '../scripts/paths.js';
   }
 
   .patro__caja {
+    /*
+      Un token propio del componente, no --space-*: esta altura la comparte
+      .patro__caja y .patro__logo (ver por qué abajo), y un valor compartido
+      solo debe escribirse una vez.
+    */
+    --patro-alto: 5.5rem;
+
     position: relative;
     display: grid;
-    place-items: center;
-    /* Altura fija: los logos llegarán con proporciones distintas y la fila
-       tiene que leerse pareja pase lo que pase. */
-    height: 5.5rem;
+    /*
+      `stretch`, no `place-items: center`. Con `center` el `<img>` (el item de
+      grid) no se estira a la altura de la fila; probado, sin efecto visible
+      por sí solo (ver la nota grande de `.patro__logo`), pero es la base
+      correcta para que el resto del arreglo tenga algo de lo que partir.
+    */
+    place-items: stretch;
+    height: var(--patro-alto);
   }
 
+  /*
+    ALTO EN `var(--patro-alto)`, NO EN `height: 100%`. Se probó con los logos
+    reales y `height: 100%` NO FUNCIONABA: el logo salía a 302×302 —cuadrado,
+    el tamaño intrínseco del WebP (200×200 o 190×190)— y se derramaba sobre
+    la descripción de la tarjeta, aunque `.patro__caja` medía los 88px
+    correctos y `place-items: stretch` ya estaba puesto.
+
+    La causa es una rareza real de CSS Grid: un porcentaje de alto en un
+    elemento reemplazado (`<img>`) dentro de un item de grid NO se resuelve
+    contra el alto "estirado" de la pista, aunque `getComputedStyle` del
+    propio item ya reporte ese alto como definido. Comprobado quitando la
+    variable de la ecuación: fijando `height: 88px` a mano (unidad absoluta,
+    no porcentaje) el logo SÍ respeta la caja; con el mismo `88px` puesto
+    como porcentaje (`height: 100%` de un contenedor de 88px), no. También se
+    descartó que fuera el `aspect-ratio` implícito de los atributos
+    `width`/`height` del `<img>` —persistía igual quitándolos del marcado—,
+    así que la causa es específicamente la resolución del porcentaje, no el
+    aspect-ratio.
+
+    `width: 100%` SÍ resuelve bien (no es un elemento reemplazado con alto
+    intrínseco en juego de la misma forma), así que solo el alto necesitó
+    salir del porcentaje.
+  */
   .patro__logo {
-    max-height: 100%;
-    width: auto;
+    width: 100%;
+    height: var(--patro-alto);
     object-fit: contain;
   }
 

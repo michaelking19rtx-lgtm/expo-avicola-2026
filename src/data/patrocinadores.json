@@ -2,13 +2,13 @@
   {
     "nombre": "Avipork",
     "descripcion": "Equipos y sistemas para automatización avícola, porcícola y ganadera",
-    "logo": "img/patrocinadores/avipork.png",
+    "logo": "img/patrocinadores/avipork.webp",
     "url": "https://www.avipork.com"
   },
   {
     "nombre": "Prosermat",
     "descripcion": "Agrominerales y complejos mineralizados para nutrición animal",
-    "logo": "img/patrocinadores/prosermat.png",
+    "logo": "img/patrocinadores/prosermat.webp",
     "url": null
   }
 ]

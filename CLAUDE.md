@@ -482,7 +482,7 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | ~~4~~ | ~~**Correo** de contacto~~ | ~~`site.contacto.correo`~~ | **RESUELTO** — contacto@visionpecuariamx.com. Es un PLACEHOLDER acordado, no un buzón verificado: confirmar que recibe antes de difundir |
 | 5 | **Teléfono** | `site.contacto.telefono` | «Próximamente» en el footer |
 | ~~6~~ | ~~**WhatsApp**~~ | ~~`site.contacto.whatsapp`~~ | **RESUELTO** — +52 236 113 8979 (perfil «ingenieriaavicol»). Pie, botón flotante y barra móvil |
-| 7 | **Logos** de patrocinadores | `public/img/patrocinadores/{avipork,prosermat}.png` | Marco punteado con el nombre en display. **Ojo: hay un desborde sin JS, ver abajo** |
+| ~~7~~ | ~~**Logos** de patrocinadores~~ | ~~`public/img/patrocinadores/{avipork,prosermat}.png`~~ | **RESUELTO** — WebP con transparencia, fondo blanco quitado a mano. Ver bitácora |
 | ~~8~~ | ~~**Fotos de ponentes**~~ | ~~`public/img/ponentes/`~~ | **RESUELTO** — seis retratos entregados, reencuadrados y convertidos a WebP |
 | ~~9~~ | ~~**Imagen del hero**~~ | ~~`public/img/hero/ponentes.png`~~ | **RESUELTO y luego SUSTITUIDO** — la grupal se retiró en la Fase 2b; hoy son 3 figuras individuales |
 | ~~9b~~ | ~~**Nombre real de UNA figura del hero**~~ | ~~`hero-ponentes.json`~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera. Con él se retiró el `noindex` |
@@ -500,7 +500,7 @@ promete siete conferencias y la pantalla de Stripe, a un clic de distancia,
 sigue prometiendo seis. Con el 8 resuelto ya no queda nada que bloquee una fase
 entera: lo que falta son piezas sueltas (video, logos, contacto, OG, privacidad).
 
-### El logo roto de patrocinadores desborda sin JS · ABIERTO · va con el pendiente 7
+### El logo roto de patrocinadores desborda sin JS · CERRADO · resuelto con los logos reales
 
 **No es de la Fase 3 y no se arregló ahí a propósito.** Se detectó midiendo
 Ponentes sin JavaScript y conviene tenerlo escrito antes de tocar los logos.
@@ -529,6 +529,12 @@ Probado sin JS, tres candidatos:
 `width: 100%; height: 100%` en `.patro__logo`. Corrige ancho y alto a la vez y,
 con el `object-fit: contain` que ya está, un logo real se ajusta dentro de la
 caja sin deformarse. Deja de depender de que corra JavaScript.
+
+> **Se aplicó, y con logos reales no bastó — la altura al 100% no resuelve
+> contra un item de grid estirado.** Es un problema distinto del que este
+> bloque describe (aquel era sobre el `<img>` ROTO; este pasa con el `<img>`
+> ya cargando bien). El arreglo completo, con la causa exacta, está en la
+> entrada «Logos de patrocinadores — pendiente 7 resuelto» de la bitácora.
 
 ### La séptima ponencia · CERRADO · las 7 sesiones están en la agenda
 
@@ -3661,3 +3667,71 @@ primera interacción— antes de los 3s, el pulso se apaga en el acto.
 
 Cerrado mirando las capturas de los cuatro escenarios y la del solape con los
 controles nativos (convención 14).
+
+---
+
+### Logos de patrocinadores — pendiente 7 resuelto · COMPLETADA
+
+Avipork y Prosermat llegaron como JPEG 1024×1024 (138 KB y 300 KB, sin canal
+alfa — JPEG no admite transparencia, es el formato). Fondo blanco horneado en
+los dos, logotipo oscuro/verde, ninguno en versión clara ilegible.
+
+**Fondo quitado a mano, no solo convertido.** Un JPEG de fondo blanco puro
+sobre `--claro-surface` (`#f8f4ec` verde / `#f4f8fc` azul, no blanco puro)
+deja un halo rectangular. Sin herramienta de recorte con IA disponible, se
+implementó un un-blend contra matte blanco conocido (estilo Smith-Blinn):
+`alpha = 255 − min(R,G,B)`, y el color se desmezcla (no solo se recorta) para
+no dejar fleco blanco en los bordes antialiased. Verificado a resolución
+nativa con zoom en los trazos más finos y arriesgados —el anillo verde claro
+de Prosermat, el swoosh negro de Avipork— sobre las dos superficies claras
+reales del sitio: sin halo, sin fleco, sin caja visible.
+
+WebP con alfa a 200×200 (Avipork, q90, 10.14 KB) y 190×190 (Prosermat, q75,
+17.05 KB) — **27.19 KB total**, bajo el presupuesto de 30. Prosermat pesa más
+a igual calidad por su detalle de color (campos y anillo con más tonos); se
+le bajó calidad a propósito para no gastar el presupuesto en el que menos lo
+necesita, mismo criterio que la calidad por imagen de los retratos en Fase 3.
+
+**Un bug real de CSS Grid, no solo el desborde documentado.** El Riesgo
+abierto de este pendiente decía sustituir `width: auto` por `width: 100%;
+height: 100%` en `.patro__logo`, y se aplicó. Con los logos reales el logo
+se salía igual: 302×302 —el tamaño intrínseco cuadrado del WebP— tapando la
+descripción de la tarjeta. Dos causas, encontradas con pruebas dirigidas, no
+adivinadas:
+
+1. `.patro__caja` tenía `place-items: center`, así que el `<img>` (item de
+   grid) no se estiraba a la altura de la fila. Se cambió a
+   `place-items: stretch`. Necesario, no suficiente.
+2. **Un porcentaje de alto en un elemento reemplazado dentro de un item de
+   grid no resuelve contra el alto "estirado" de la pista**, aunque
+   `getComputedStyle` del item ya reporte ese alto como definido. Probado
+   aislando la variable: `height: 88px` (unidad absoluta) sí funcionaba;
+   `height: 100%` de ese mismo contenedor de 88px, no. Se descartó también
+   que fuera el `aspect-ratio` implícito de los atributos `width`/`height`
+   del `<img>` —persistía igual quitándolos del marcado—. La solución final:
+   una variable `--patro-alto` compartida entre `.patro__caja` y
+   `.patro__logo`, con `height: var(--patro-alto)` en vez de `100%`.
+
+**Verificado:**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run check` / `npm run build` | 0 errores, 0 avisos |
+| Peso total de los dos logos | **27.19 KB**, bajo el presupuesto de 30 |
+| Transparencia | confirmada, sin halo, verificado con zoom a resolución nativa |
+| Tamaño del logo en la caja, 8 escenarios (390/768/1024/1440 × green/blue) | correcto, sin deformar, sin desbordar |
+| Sin JavaScript | `302×88` en los dos logos, **0 px** de desborde |
+| Desborde en los 4 anchos | el mismo del footer, ya documentado — 0 elementos `.patro*` en la lista de culpables |
+| Guardián de `public/img/` | silencioso; los JPEG salieron a la carpeta hermana |
+
+**Limpieza:** los JPEG originales (138 KB y 300 KB, ambos sobre 100 KB) salieron
+a `../expo-avicola-2026-assets-originales/patrocinadores/`. No había ningún
+logo placeholder que quitar —la sección ya usaba el mismo mecanismo de
+marco-punteado-hasta-confirmar-carga que el hero y los retratos—. Ese
+fallback **se conservó a propósito**: un logo puede volver a dar 404 el día
+que se sustituya por uno nuevo, y es exactamente el escenario para el que
+existe.
+
+**Sin URL para Prosermat.** Se buscó en EXIF/IPTC/XMP del JPEG original y no
+había metadatos; tampoco hay URL impresa en el propio logo. Se queda sin
+enlace (`url: null`), como ya estaba.
