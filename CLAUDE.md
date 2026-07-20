@@ -347,6 +347,35 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 
 > Revisa esta sección antes de dar por publicable cualquier fase.
 
+### El footer desborda 41 px a 360 px · ABIERTO · PREEXISTENTE
+
+A 360 px de ancho el documento mide **401 px** y hay scroll horizontal. Los
+culpables son todos del footer —`.pie__marca`, `.pie__cuando`, `.pie__nav`,
+`.pie__titulo`, `.pie__enlaces` y sus `<li>`—, todos con `left: 20` y
+`right: 401.1`, es decir **381.1 px de ancho dentro de un viewport de 360**.
+Apunta a un ancho fijo (o un `min-width`) en el bloque del footer que no cede
+por debajo de ~381 px.
+
+**No lo causó el video**: se midió con y sin el cambio de `VideoSection.astro`
+—compilando la versión anterior a propósito— y el desborde es idéntico, 401 px
+en las dos. Es la convención 17 usada como control: si el número no se mueve al
+quitar lo que acabas de tocar, lo que has medido es otra cosa.
+
+A 768, 1024 y 1440 no hay desborde. Se detectó integrando el video y se dejó
+sin tocar por no mezclar dos cosas en un commit. **Toca arreglarlo aparte**, en
+`Footer.astro`.
+
+### El guardián de assets no mira `public/video/` · ABIERTO
+
+`avisaDeAssetsDePublic()` en `astro.config.mjs` solo recorre `public/img`. El
+MP4 de 89.6 MiB entró en el árbol y **el build no dijo absolutamente nada** —
+el aviso que existe justo para eso no se enteró porque estaba en otra carpeta.
+
+Extenderlo a `public/video/` necesita un umbral propio: `PESO_MAXIMO` está
+calibrado para imágenes y cualquier video lo dispararía siempre. Lo razonable
+es un límite por tipo (p. ej. imágenes a lo que está hoy, video a ~30 MB) y de
+paso hacer que el aviso mencione el límite de 100 MiB por archivo de GitHub.
+
 ### Los nombres del hero · CERRADO · EL `noindex` SE RETIRÓ
 
 **Los seis ponentes llevan ya su nombre real y su tema real.** Llegaron los dos
@@ -679,8 +708,8 @@ horizontal; menú móvil ejercitado con clics y teclado; con
 | Archivo | Para qué | Notas |
 | :------ | :------- | :---- |
 | ~~`public/img/hero/ponentes.png`~~ | Imagen de ponentes del hero | **ENTREGADA y luego RETIRADA.** Se optimizó a `ponentes.webp` (125 KB) y se sirvió hasta la Fase 2b, que la sustituyó por tres figuras individuales. `.hero__frame` ya no existe. |
-| `public/video/congreso.mp4` y `.webm` | Video de la sección "El congreso" | Sustituir el bloque `.intro__placeholder` por el marcado ya escrito en el comentario de `VideoSection.astro`. |
-| `public/img/hero/poster-congreso.jpg` | Póster del video | Mismo 16:9 del reproductor. |
+| ~~`public/video/congreso.mp4` y `.webm`~~ | Video de la sección "El congreso" | **ENTREGADO.** Llegó como `promo.mp4`; se sirve reencodado a 26.1 MiB y sin WebM. Ver «El video del congreso» al final de la bitácora. |
+| ~~`public/img/hero/poster-congreso.jpg`~~ | Póster del video | **RESUELTO sin entrega.** No hizo falta pedirlo: se extrajo del propio video y vive en `public/video/poster.webp` (37 KB). |
 
 ~~**DATO PENDIENTE:** el recinto de la sede.~~ **RESUELTO** — confirmado y
 rellenado. Ver «Sede confirmada» al final de la bitácora.
@@ -3145,3 +3174,118 @@ Mirado en captura además de medido, en los dos temas.
 > **Un ratio de 1.00 no es un fallo de contraste, es un fallo de medición**: un
 > color plano contra sí mismo. Cuando aparezca, mirar la captura ANTES de tocar
 > el CSS — las tres veces el diseño estaba bien.
+
+---
+
+### El video del congreso — archivo local, `preload="none"` y póster · COMPLETADA
+
+Cierra el último asset pendiente de la Fase 2. La sección «El congreso» deja de
+tener placeholder: sirve el promocional real desde `/public`.
+
+**Qué se hizo**
+
+- `public/video/promo.mp4` — 1920×1080, 59.75 s, **27 347 739 B (26.1 MiB)**.
+- `public/video/poster.webp` — 960×540, **37 678 B**. Es un fotograma del
+  propio video en el segundo 5.8, la tarjeta de marca «1er Expo AVIPRO» sobre
+  la panorámica aérea de las casetas. Se eligió mirando once fotogramas
+  candidatos: es el único que identifica el evento sin pillar a nadie a media
+  frase.
+- `VideoSection.astro` — fuera el bloque `.intro__placeholder`, el icono de play
+  y el texto «Video próximamente». Entra un `<video controls preload="none"
+  playsinline poster width="1920" height="1080">` con un solo `<source>` MP4.
+  La ruta va por `asset()`, como manda la convención 9.
+
+**Decisiones**
+
+- **`preload="none"`, no `"metadata"`.** El comentario que quedó escrito en la
+  Fase 2 proponía `metadata`; se descartó. Con `metadata` el navegador abre el
+  archivo para leer cabeceras y, según implementación, se trae el primer tramo.
+  Sobre 26 MB y con el grueso del tráfico llegando por WhatsApp en datos
+  móviles (ver «Revisión de móvil»), eso es peso que nadie pidió. Medido: **0
+  peticiones a `promo.mp4` hasta que se pulsa play**, en los ocho escenarios.
+- **Un solo `<source>` MP4, sin WebM.** El comentario de la Fase 2 preveía los
+  dos. H.264/AAC en MP4 lo reproduce todo lo que este sitio soporta, y un
+  segundo encode duplicaría el peso del repo para no ganar ninguna
+  compatibilidad real. Si algún día entra AV1/WebM, va como `<source>` ANTES
+  del MP4, no en lugar de él.
+- **El póster es WebP, no JPG.** El comentario de la Fase 2 decía
+  `poster-congreso.jpg`. WebP baja a 37 KB lo que en JPG comparable pasaba de
+  60, y el soporte de `poster` con WebP es universal en el parque objetivo.
+- **`width`/`height` en el marcado + `height: auto` en el CSS.** Los atributos
+  dan la proporción intrínseca y el CSS impide que se lean como tamaño fijo.
+  Con eso la caja está reservada antes de que llegue el póster. **`max-width:
+  100%` NO es redundante con `width: 100%`**: un `<video width="1920">` toma
+  ese valor como base intrínseca y sin el tope desborda el contenedor angosto
+  de móvil.
+
+**EL VIDEO SE REENCODÓ ANTES DE ENTRAR AL REPO — y el motivo importa**
+
+El archivo entregado eran **93 956 637 B (89.6 MiB) a 12.6 Mbps**, unas cinco
+veces el bitrate que necesita una entrega web de 1080p. Se reencodó a
+**libx264 CRF 23, preset slow, `-movflags +faststart`, AAC 128k**:
+
+| | original | servido |
+| :--- | ---: | ---: |
+| bytes | 93 956 637 | 27 347 739 |
+| MiB | 89.6 | 26.1 |
+| bitrate | 12.6 Mbps | ~3.5 Mbps |
+
+**SSIM medido contra el original: 0.9808** (Y 0.976 / U 0.992 / V 0.990), y
+comparado además a ojo en fotogramas sueltos: sin diferencia visible. De
+propina, `+faststart` bajó de **3 peticiones de rango a 1** al arrancar la
+reproducción.
+
+El original vive fuera del repo, en
+`../expo-avicola-2026-assets-originales/promo-original-12.6mbps.mp4`, igual que
+el resto de los pesados.
+
+> **POR QUÉ NO SE COMMITEÓ EL ORIGINAL, aunque «cabía».** 89.6 MiB pasa por
+> debajo del límite duro de 100 MiB de GitHub, así que era técnicamente
+> posible. Se rechazó por dos razones que conviene no volver a discutir:
+>
+> 1. **Un binario commiteado no se puede «quitar después».** El plan de rescate
+>    que se planteó —si el clone pesa demasiado, se migra a YouTube no listado,
+>    se cambia el `<video>` por un iframe y se borra el archivo— **no reduce el
+>    peso del clone**. El blob se queda en el historial y cada `git clone` lo
+>    sigue bajando. Deshacerlo de verdad exige `git filter-repo` y un
+>    force-push que invalida todos los clones existentes. Es exactamente lo que
+>    advierte el comentario de `.gitignore`, escrito para las imágenes.
+> 2. **A 89.6 MiB no quedaba margen.** Cualquier reexportación un poco más
+>    larga habría chocado con los 100 MiB y bloqueado el push, con el archivo
+>    ya en la historia.
+>
+> Con 26.1 MiB el problema deja de existir y **la migración a YouTube ya no
+> hace falta**. Si aun así algún día se quisiera: subir como *no listado*,
+> sustituir el `<video>` por un iframe con `loading="lazy"` y borrar
+> `promo.mp4`. Pero hacerlo para aligerar el clone **no funcionará** salvo que
+> se reescriba el historial; la única ventana limpia era esta, antes del primer
+> commit.
+
+**Estado — medido en Chrome (Playwright), 360/768/1024/1440 × temas green y blue**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run check` / `npm run build` | 0 errores, 0 avisos |
+| **CLS** | **0.0000** en los 8 escenarios |
+| **Elemento LCP** | `IMG.figura__img` (hero) en los 8 — **el video nunca es el LCP** |
+| LCP | 452–680 ms |
+| Peticiones a `promo.mp4` antes de play | **0** en los 8 |
+| Peticiones a `poster.webp` | 1 |
+| Proporción del video | **1.7778 exacto** (16/9) en los 8 |
+| Video vs contenedor | 318/320 · 689/691 · 920/922 · 978/980 (los 2 px son el borde) |
+| Tras pulsar play | `paused:false`, `readyState:4`, 1920×1080, `duration:59.75` |
+| Sin JavaScript | video visible, `opacity:1`, 919.6×517.3, sin desbordamiento |
+
+Convención 13 respetada: se verificó **qué** elemento mide el LCP, no solo el
+número — y no cambia de elemento entre versiones. Convención 14: cerrado
+mirando las capturas de los 8 escenarios, no solo los números. Convención 15:
+verificado **con y sin JavaScript**, y antes y después de pulsar play.
+
+> **El arnés midió el tema equivocado en la primera pasada.** Se fijó
+> `colorScheme: 'dark'|'light'` de Playwright creyendo que eso conmutaba el
+> tema. No lo hace: los dos temas de este proyecto son `green` y `blue`, **los
+> dos oscuros**, y van por `data-theme` sembrado desde `localStorage`
+> (`expo-theme`). La primera corrida midió `green` dos veces y llamó `claro` a
+> la segunda. Las capturas lo delataron —salían idénticas—, que es otra vez la
+> convención 14 haciendo su trabajo. Para probar el tema hay que sembrar
+> `localStorage`, no el `prefers-color-scheme`.

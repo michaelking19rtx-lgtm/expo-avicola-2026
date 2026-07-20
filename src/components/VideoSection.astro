@@ -1,12 +1,23 @@
 ---
 import { totalConferencias, enPalabra } from '../scripts/programa.js';
+import { asset } from '../scripts/paths.js';
 
 /*
   Sección de introducción al congreso.
 
-  El video todavía no existe. En su lugar va un placeholder con la misma caja
-  16:9, para que al sustituirlo no cambie el layout. El marcado definitivo
-  queda escrito abajo en un comentario de Astro (no llega al HTML servido).
+  El video es un archivo LOCAL servido desde /public, no un embed. Es un MP4
+  de 1920×1080 y 26 MB, así que la regla que gobierna este bloque es que
+  nada de eso se descargue hasta que el usuario decida verlo:
+
+  - `preload="none"` — sin esto el navegador se trae al menos las cabeceras y,
+    según implementación, el primer tramo del archivo. A este tamaño eso es
+    inaceptable en datos móviles, que es como llega la mayor parte del tráfico
+    de este sitio (ver «Revisión de móvil» en la bitácora).
+  - `poster` — un WebP de 37 KB es TODO lo que pesa la sección hasta el play.
+    Además es lo que reserva el fotograma: sin él, la caja quedaría vacía.
+  - El `aspect-ratio: 16/9` del contenedor ya evitaba el CLS con el
+    placeholder y lo sigue haciendo con el `<video>`; el poster comparte esa
+    proporción exacta (960×540), así que no hay reencuadre ni salto.
 */
 
 /*
@@ -32,36 +43,18 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
     </header>
 
     <div class="intro__player" data-anim>
-      {/*
-        SUSTITUIR este bloque .intro__placeholder por el reproductor real
-        cuando existan los archivos. Requiere importar `asset` desde
-        ../scripts/paths.js en el frontmatter:
-
-        <video
-          class="intro__media"
-          controls
-          preload="metadata"
-          poster={asset('img/hero/poster-congreso.jpg')}
-        >
-          <source src={asset('video/congreso.webm')} type="video/webm" />
-          <source src={asset('video/congreso.mp4')} type="video/mp4" />
-          Tu navegador no puede reproducir este video.
-        </video>
-      */}
-      <div class="intro__placeholder">
-        <span class="intro__play" aria-hidden="true">
-          <svg viewBox="0 0 48 48" width="48" height="48">
-            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="1.5" />
-            <path
-              d="M20 17.2 32.4 24 20 30.8V17.2Z"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
-        <p class="intro__soon">Video próximamente</p>
-      </div>
+      <video
+        class="intro__media"
+        controls
+        preload="none"
+        playsinline
+        poster={asset('video/poster.webp')}
+        width="1920"
+        height="1080"
+      >
+        <source src={asset('video/promo.mp4')} type="video/mp4" />
+        Tu navegador no puede reproducir este video.
+      </video>
     </div>
   </div>
 </section>
@@ -147,35 +140,26 @@ const Cuantas = cuantas.charAt(0).toUpperCase() + cuantas.slice(1);
     overflow: hidden;
   }
 
-  .intro__media,
-  .intro__placeholder {
+  /*
+    `width: 100%` + `height: auto` para que los atributos width/height del
+    marcado sirvan de proporción intrínseca y no de tamaño fijo: el navegador
+    reserva la caja antes de tener el poster y el video nunca desborda su
+    contenedor. El `aspect-ratio` explícito lo sostiene igualmente si el
+    poster fallara.
+
+    `max-width: 100%` no es redundante con `width: 100%`: un `<video>` con
+    atributo `width="1920"` toma ese valor como base intrínseca y, en el
+    contenedor angosto de móvil, sin el tope llegaría a desbordar.
+  */
+  .intro__media {
     display: block;
     width: 100%;
+    max-width: 100%;
+    height: auto;
     aspect-ratio: 16 / 9;
-  }
-
-  .intro__placeholder {
-    display: grid;
-    align-content: center;
-    justify-items: center;
-    gap: var(--space-md);
     background-color: var(--surface);
-  }
-
-  .intro__play {
-    display: block;
-    color: var(--text-muted);
-    transition: color var(--t-base) var(--ease-out);
-  }
-
-  .intro__placeholder:hover .intro__play {
-    color: var(--accent);
-  }
-
-  .intro__soon {
-    color: var(--text-muted);
-    font-size: var(--step--1);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    /* El poster es 16/9 igual que la caja: `cover` no recorta nada, solo
+       blinda el caso de que algún día se cambie por uno de otra proporción. */
+    object-fit: cover;
   }
 </style>
