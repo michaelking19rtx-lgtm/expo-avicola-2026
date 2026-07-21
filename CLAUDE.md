@@ -3769,3 +3769,48 @@ green/blue): 0 px de desborde en los 12.** Desktop no se tocó —768 y 1440 ya
 estaban en 0 y siguen en 0, con la grid de tres columnas intacta. Cerrado
 mirando la captura (convención 14): a 360px el correo se parte en dos líneas
 dentro de su columna, sin romper el layout ni salirse del viewport.
+
+---
+
+### Tercer patrocinador — TEC CAPITAL Group · COMPLETADA
+
+Logo nuevo, JPEG 1024×1024 sin alfa (mismo motivo que Avipork/Prosermat: es
+JPEG). Un "T" en 3D, cara frontal blanca y canto azul, con sombra suave.
+
+**El mismo un-blend de siempre reveló un problema nuevo: el fondo NO era
+blanco puro.** Medido en las esquinas del lienzo: 233–253 en vez de 255. Es
+un degradado/viñeta suave típico de render 3D, no un blanco plano. La fórmula
+`alpha = 255 − min(R,G,B)` le daba a ESE degradado un alfa bajo pero
+distinto de cero en TODO el lienzo, y el resultado —comprobado componiendo
+sobre las dos superficies claras reales— era una caja rectangular tenue del
+tamaño exacto del lienzo original, visible por la diferencia de tono contra
+`--claro-surface`. Los otros dos logos no lo sufrían porque su fondo SÍ era
+`(255,255,255)` uniforme.
+
+**Arreglo: umbral antes del un-blend.** `alpha = 0` si `255 − min(R,G,B) ≤
+25`; el resto se reescala para no perder rango en los bordes reales de la
+letra. Verificado componiendo de nuevo sobre las dos superficies: sin caja.
+El único costo es que la cara frontal blanca de la letra —con sombreado muy
+sutil, cerca del umbral— queda casi transparente, pero la "T" se sigue
+leyendo con nitidez por el canto azul y el contorno.
+
+WebP 190×190 calidad 90: **4.23 KB** (bajó de los ~14 KB sin el umbral,
+porque hay mucha menos variación de alfa que codificar). **Total de los tres
+logos: 31.86 KB**, bajo el presupuesto de 45.
+
+**Sin URL.** `teccapital.com` redirige a una página de venta de dominio
+(HugeDomains) — no es el sitio de la empresa. Se deja `url: null`, como pide
+el encargo para el caso de una URL incorrecta.
+
+**Integración:** `patrocinadores.json` gana el tercer objeto (con `slug`, que
+los otros dos no traían — no rompe nada, el componente solo lee los campos
+que usa). La rejilla ya estaba pensada para esto desde la Fase 6:
+`auto-fit`/`minmax` con `justify-content: center` reparte 1, 2 o 3 tarjetas
+sin rediseño — en desktop entran las tres en una fila, en 360–768 se apilan
+2+1 sin desbordar.
+
+**Verificado:** `npm run check`/`build` limpios, guardián de assets
+silencioso (el JPEG de 260 KB salió a la carpeta hermana), 0 px de desborde
+en 320/360/768/1024/1440 × green/blue, los tres logos proporcionados entre sí
+sin deformarse. Cerrado mirando la captura: sin la caja del primer intento,
+las tres tarjetas se leen parejas.

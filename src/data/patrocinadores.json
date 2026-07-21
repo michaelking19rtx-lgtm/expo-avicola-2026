@@ -10,5 +10,12 @@
     "descripcion": "Agrominerales y complejos mineralizados para nutrición animal",
     "logo": "img/patrocinadores/prosermat.webp",
     "url": null
+  },
+  {
+    "nombre": "TEC CAPITAL Group",
+    "slug": "teccapital",
+    "descripcion": "Desarrollo de software a la medida para el sector avícola",
+    "logo": "img/patrocinadores/teccapital.webp",
+    "url": null
   }
 ]
