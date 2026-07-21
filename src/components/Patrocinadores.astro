@@ -33,7 +33,7 @@ import { asset } from '../scripts/paths.js';
       {patrocinadores.map((patro) => {
         return (
           <li class="patro" data-anim>
-            <div class="patro__marco">
+            <div class="patro__marco" data-fondo-propio={patro.fondoPropio ? '' : undefined}>
               <div class="patro__caja" data-logo-frame>
                 {/*
                   width/height declarados aunque el CSS mande: le dan al
@@ -199,6 +199,16 @@ import { asset } from '../scripts/paths.js';
     transform: translateY(-4px);
     border-color: var(--primary-bright);
     box-shadow: var(--shadow-md);
+  }
+
+  /*
+    Fondo propio: para logos que ya traen su propio fondo artístico (sin
+    recortar a transparente), la tarjeta necesita blanco fijo, NO la
+    --surface clara de la sección, para leerse como marca propia y no como
+    un recorte fallido sobre el fondo de la sección.
+  */
+  [data-fondo-propio] {
+    background-color: var(--blanco-marca);
   }
 
   @media (prefers-reduced-motion: reduce) {

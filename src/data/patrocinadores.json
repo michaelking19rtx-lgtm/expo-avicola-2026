@@ -17,5 +17,13 @@
     "descripcion": "Desarrollo de software a la medida para el sector avícola",
     "logo": "img/patrocinadores/teccapital.webp",
     "url": null
+  },
+  {
+    "nombre": "Promo Hogar",
+    "slug": "promo-hogar",
+    "descripcion": "Rifas y promociones de electrodomésticos para el hogar",
+    "logo": "img/patrocinadores/promo-hogar.webp",
+    "url": null,
+    "fondoPropio": true
   }
 ]

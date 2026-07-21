@@ -3670,6 +3670,57 @@ controles nativos (convención 14).
 
 ---
 
+### Cuarto patrocinador — Promo Hogar, fondo propio · COMPLETADA
+
+Logo nuevo, JPEG 1024×1024 (0.60 MB), a diferencia de los tres anteriores
+**a propósito no se le quitó el fondo.** Trae un fondo artístico (pinceladas
++ dados 3D) sin borde limpio contra el logotipo — el un-blend de los tres
+logos previos asume un fondo (casi) plano y aquí no aplica: el resultado
+habría sido un recorte irregular con restos de pincelada colgando.
+
+**Tratamiento distinto, con precedente propio.** Se recortó (con `sharp`,
+sin ninguna herramienta de IA) a un cuadrado de 910×910 centrado en el
+conjunto texto+icono de casa, quitando el margen gris plano de las esquinas
+que no aporta nada, y se redujo a 260×260 — de sobra para su tamaño real en
+pantalla (`--patro-alto`: 88px, ×2 DPR). A quality 90 pesa **17.31 KB**,
+dentro del presupuesto de 20. Se probó también a 700×700 (75.9 KB, muy por
+encima) y 320×320 (23.1 KB, ligeramente por encima); 260 fue el primer
+tamaño bajo presupuesto sin notarse borroso a la escala real de la tarjeta.
+
+**`fondoPropio: true` en el JSON, nuevo token `--blanco-marca`.** El
+componente lee el campo y pone `data-fondo-propio` en `.patro__marco`; la
+regla `[data-fondo-propio] { background-color: var(--blanco-marca) }` le da
+blanco fijo, NO la `--surface` clara de la sección (que aquí es un beige/azul
+tenue, no blanco puro) — necesario para que el logo, que ya trae su propio
+blanco de fondo, no muestre un recuadro perceptible contra la superficie
+clara de Patrocinadores. `--blanco-marca` es un token nuevo porque no había
+ninguno de blanco puro fijo en `tokens.css` (regla 1: nada de hex fuera de
+`tokens.css`). No depende de `[data-js]`: se ve igual con y sin JavaScript.
+
+**La rejilla no se tocó.** El `auto-fit`/`minmax(16rem, 22rem)` que ya
+existía para 2–3 patrocinadores absorbió el cuarto sin cambios: a 1440px cae
+en 2×2 (el `minmax` con máximo definido hace que el navegador calcule el
+número de columnas contra el MÁXIMO, no el mínimo — con 4 tarjetas de hasta
+22rem no caben 3 en los ~1072px de ancho útil, así que da 2). Se verificó
+visualmente que 2×2 se ve más equilibrado que forzar 4 en línea (las tarjetas
+quedarían muy angostas); se acepta como la resolución natural del sistema,
+no una regla nueva escrita para "4". De 768px para abajo sigue apilando a
+una columna, igual que antes.
+
+**El original (0.60 MB) salió del repo** a
+`../expo-avicola-2026-assets-originales/patrocinadores/promo-hogar.jpeg`,
+mismo criterio que los otros tres.
+
+**Verificado:** `npm run build` / `npm run check` limpios (0/0/0), guardián
+de `public/img/` silencioso tras mover el JPEG. Capturado con Chrome DevTools
+Protocol (Edge headless, sin Playwright instalado) a 1440/1024/768/360/320px
+en los dos temas — 2×2 en desktop, apilado en móvil, tarjeta blanca de Promo
+Hogar visible y distinguible en las dos superficies claras (verde y azul),
+0 px de desbordamiento horizontal en los cinco anchos. Cerrado mirando la
+captura (convención 14), no solo los números de `docWidth`.
+
+---
+
 ### Logos de patrocinadores — pendiente 7 resuelto · COMPLETADA
 
 Avipork y Prosermat llegaron como JPEG 1024×1024 (138 KB y 300 KB, sin canal

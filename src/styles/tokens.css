@@ -162,4 +162,9 @@
   /* Muestras de tema (fijas: previsualizan cada tema, no el activo) --------- */
   --swatch-green: #12a87c;
   --swatch-blue: #2e7bd6;
+
+  /* Blanco fijo, NO --surface: lo usan tarjetas con logo de fondo propio
+     (Patrocinadores, `fondoPropio`) que necesitan destacar de la superficie
+     clara de su sección en vez de heredarla. */
+  --blanco-marca: #ffffff;
 }
