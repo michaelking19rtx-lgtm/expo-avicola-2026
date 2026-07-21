@@ -31,19 +31,9 @@ import { asset } from '../scripts/paths.js';
 
     <ul class="patros__lista" role="list">
       {patrocinadores.map((patro) => {
-        const Marco = patro.url ? 'a' : 'div';
-        const propsEnlace = patro.url
-          ? {
-              href: patro.url,
-              target: '_blank',
-              rel: 'noopener noreferrer',
-              'aria-label': `${patro.nombre} — ${patro.descripcion} (abre en una pestaña nueva)`,
-            }
-          : {};
-
         return (
           <li class="patro" data-anim>
-            <Marco class="patro__marco" {...propsEnlace}>
+            <div class="patro__marco">
               <div class="patro__caja" data-logo-frame>
                 {/*
                   width/height declarados aunque el CSS mande: le dan al
@@ -68,8 +58,8 @@ import { asset } from '../scripts/paths.js';
                   data-logo-img
                 />
                 {/*
-                  aria-hidden: el nombre ya lo anuncia el alt del <img> o el
-                  aria-label del enlace. Sin esto se leería dos veces.
+                  aria-hidden: el nombre ya lo anuncia el alt del <img>.
+                  Sin esto se leería dos veces.
                 */}
                 <span class="patro__respaldo" aria-hidden="true">
                   {patro.nombre}
@@ -77,7 +67,7 @@ import { asset } from '../scripts/paths.js';
               </div>
 
               <p class="patro__desc">{patro.descripcion}</p>
-            </Marco>
+            </div>
           </li>
         );
       })}
@@ -200,12 +190,21 @@ import { asset } from '../scripts/paths.js';
     text-align: center;
     transition:
       border-color var(--t-base) var(--ease-out),
+      box-shadow var(--t-base) var(--ease-out),
       transform var(--t-base) var(--ease-out);
   }
 
-  a.patro__marco:hover {
-    transform: translateY(-2px);
+  .patro__marco:hover,
+  .patro__marco:active {
+    transform: translateY(-4px);
     border-color: var(--primary-bright);
+    box-shadow: var(--shadow-md);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .patro__marco {
+      transition: none;
+    }
   }
 
   .patro__caja {
