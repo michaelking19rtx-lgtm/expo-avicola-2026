@@ -328,7 +328,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
 | 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
 | 7    | SEO técnico, datos estructurados, indexación y rendimiento                | **COMPLETADA** |
-| 8    | `/admin` real: autenticación y persistencia global del tema               | Pendiente      |
+| 8    | `/admin` real: Firebase Auth + lista de asistentes desde Stripe          | **Código COMPLETADO — pendiente de configuración externa** (ver bitácora) |
 | —    | Superficies claras: cuatro secciones invertidas (las bandas se retiraron) | **COMPLETADA** |
 
 > **La numeración cambió al empezar la Fase 4.** El plan original metía
@@ -3814,3 +3814,152 @@ silencioso (el JPEG de 260 KB salió a la carpeta hermana), 0 px de desborde
 en 320/360/768/1024/1440 × green/blue, los tres logos proporcionados entre sí
 sin deformarse. Cerrado mirando la captura: sin la caja del primer intento,
 las tres tarjetas se leen parejas.
+
+---
+
+### Fase 8 — `/admin` real: Firebase Auth + lista de asistentes desde Stripe · CÓDIGO COMPLETADO, PENDIENTE DE CONFIGURACIÓN EXTERNA
+
+Todo el código está escrito, compila y se verificó por captura. **No se puede
+dar por cerrada la fase** porque necesita cuentas y claves que solo existen en
+consolas externas (Firebase, Stripe) a las que este entorno no tiene acceso —
+ver «LO QUE FALTA, fuera del repo» al final de esta entrada.
+
+**Dos decisiones de arquitectura se consultaron ANTES de escribir código**,
+porque el encargo original chocaba con un hecho del proyecto que no era obvio
+desde fuera: el sitio es 100% estático (sin adaptador, sin backend, GitHub
+Pages), así que «que /admin no sea accesible sin login, ni siquiera el HTML
+estático» es, literalmente, imposible — cualquiera puede descargar ese HTML.
+Se preguntó y se confirmaron las dos opciones recomendadas:
+
+1. **Gating por JS, no por servidor.** `/admin` sirve un HTML que de partida
+   NO contiene ningún dato — solo el formulario de login. Firebase Auth
+   decide qué se pide después. `noindex` se conserva y el panel sigue fuera
+   del sitemap, que es la única protección real contra que alguien lo
+   encuentre por buscador.
+2. **La Restricted Key de Stripe vive en Firestore, no en una variable
+   `PUBLIC_*`.** Una `PUBLIC_*` de Astro/Vite se hornea en el JS público en
+   BUILD: cualquiera que visite el sitio, sin loguearse, podría extraerla del
+   bundle y leer todos los datos de clientes de Stripe sin pasar por Firebase
+   Auth en absoluto. Firestore solo entrega `config/stripe.restrictedKey` a
+   quien ya tiene sesión de Firebase válida (`firestore.rules`), y como no
+   hay registro público —cada cuenta la crea a mano quien administra el
+   proyecto—, «estar autenticado» y «estar autorizado» son la misma cosa
+   aquí: no hizo falta una lista de UIDs aparte.
+
+**Qué se hizo**
+
+- `src/scripts/admin/firebase.js`: arranque de Firebase, **importado de forma
+  DINÁMICA** desde `admin.astro` — misma convención que `animations.js` con
+  GSAP/Lenis. El SDK completo pesa varias decenas de KB (medido: **~716 KB**
+  repartidos en 4 chunks) y NO tiene por qué tocar la landing pública; solo
+  se descarga en `/admin`, y solo tras cargar el HTML mínimo del login.
+- `src/scripts/admin/asistentes.js`: lee la clave de Firestore, pagina la
+  lista de Checkout Sessions de Stripe (`api.stripe.com` acepta CORS para
+  llamadas de navegador con clave restringida — lo documenta el propio
+  Stripe, por eso no hace falta backend para LEER), y normaliza cada sesión a
+  `{ nombre, correo, teléfono, empresa, cantidad, importe, moneda, método,
+  estado, fecha }`. `estado` sale de cruzar `session.status` y
+  `payment_status`: `pagado` / `pendiente` / `pendiente_oxxo` / `fallido`.
+- `src/pages/admin.astro`: reescrito. Máquina de tres estados en
+  `[data-auth]` sobre `<main>` — `cargando` (único visible por defecto, sin
+  flash) → `out` (login) → `in` (panel). Login con correo/contraseña,
+  persistencia `browserLocalPersistence` (pidió sesión que sobreviva a
+  recargar), botón de cerrar sesión, resumen de métricas, buscador,
+  exportación CSV y tabla que se convierte en tarjetas apiladas bajo 46rem.
+  El segmento de tema de la Fase 1 se conserva dentro de un `<details>`
+  «Ajustes», sin tocar su lógica.
+- `firestore.rules`: reglas para `config/stripe` (lectura con sesión válida,
+  escritura siempre denegada) y todo lo demás cerrado por defecto.
+- `.env.example`, `src/env.d.ts` y `.github/workflows/deploy.yml`: las
+  cuatro variables públicas de configuración de Firebase (`apiKey`,
+  `authDomain`, `projectId`, `appId`) viajan como `PUBLIC_*` — a propósito, y
+  sin contradecir la decisión de arriba: **Firebase documenta que esos
+  cuatro valores NO son secretos**, la seguridad la ponen las reglas de
+  Auth/Firestore, no ocultar esos IDs. Es la Restricted Key de Stripe la que
+  nunca debe ir en una `PUBLIC_*`, no cualquier config pública.
+
+**Dependencia nueva (justificación exigida por la convención 7):** `firebase`
+(SDK modular oficial). Es la única vía soportada para Auth + Firestore desde
+el navegador sin escribir a mano el protocolo; se importa dinámicamente para
+no pesar en la landing.
+
+**Un bug real, encontrado por la propia convención 14 — «cerrar mirando, no
+solo leyendo los asertos».** La primera versión pintaba la tabla y las
+tarjetas con `element.innerHTML = ...` desde `asistentes.js`/el `<script>` de
+`admin.astro`, y el `<style>` del componente les aplicaba `white-space:
+nowrap`, padding y bordes con selectores normales (`.tabla td`,
+`.tarjeta-asistente`, `.estado`...). Compilaba limpio y no había ningún
+asertos que lo detectara. **En la captura, la tabla salía rota**: nombres
+partidos en dos líneas, celdas de correo y teléfono pegadas sin espacio.
+Es la misma trampa que ya documentó `Sede.astro` con su iframe (case 3 de la
+convención 14): **un elemento inyectado por JS no lleva el atributo
+`data-astro-cid-*` con el que Astro acota los estilos del componente**, así
+que ninguna regla sin `:global()` le llega. Arreglo: todo lo que
+`asistentes.js`/el script pintan en runtime (`td`, `tr`, `.estado`,
+`.tarjeta-asistente` y sus descendientes) pasó a `:global()`, siguiendo el
+mismo patrón que `.mapa__marco :global(.mapa__iframe)` de `Sede.astro`. De
+paso, `.tabla-wrap` cambió de `overflow: hidden` (recortaba la tabla) a
+`overflow-x: auto` (scroll horizontal solo si hace falta, sin romper el
+layout de la página).
+
+**Verificado con Playwright, contra el dev server real (Chromium 1228,
+headless):**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run build` / `npm run check` | 0 errores, 0 avisos, 0 hints |
+| Sin credenciales de Firebase (`.env` vacío) | cae con gracia a un mensaje legible, sin pantalla en blanco ni error de JS sin capturar — solo el error esperado de `firebase.js` en consola |
+| Estado por defecto (`data-auth="cargando"`) | único visible al cargar, sin flash de login ni de datos |
+| Login (1440 y 390px) | formulario legible, glassmorphism consistente con `Nav.astro` |
+| Mensaje de error de login | texto claro, sin distinguir «no existe» de «contraseña mal» (evita enumeración de cuentas) |
+| Dashboard con datos de prueba (1440 y 390px) | métricas, buscador, CSV y tabla/tarjetas correctos tras el arreglo de `:global()` |
+| Tabla → tarjetas bajo 46rem | confirmado por captura, etiqueta:valor como pedía el encargo |
+| Buscador (interacción real, evento `input`) | no revienta con caché vacía |
+| Botón «Exportar CSV» (interacción real) | dispara una descarga con nombre `asistentes-expo-avicola-2026-AAAA-MM-DD.csv` |
+| Ajustes → tema | segmento de la Fase 1 intacto, sin regresión |
+
+**Lo que NO se pudo verificar, y por qué:** el flujo real de login (correo
+autorizado → sesión → datos reales de Stripe) necesita un proyecto Firebase
+configurado y una Restricted Key real; ninguno de los dos existe en este
+entorno. Se simuló forzando `data-auth` a mano para verificar el CSS/JS de cada
+estado, pero **eso no reemplaza probar la cadena completa** una vez estén
+las credenciales. Queda como primer paso de verificación en cuanto lleguen.
+
+> **LO QUE FALTA, fuera del repo — son pasos en consolas externas, no código:**
+>
+> 1. **Firebase**: en el proyecto `gymteck-1708f`, registrar una app WEB si no
+>    existe una todavía (Configuración del proyecto → Tus apps → `</>`), y
+>    copiar `apiKey`/`authDomain`/`projectId`/`appId` a un `.env` local (ver
+>    `.env.example`) y a los secrets del repo en GitHub (`Settings → Secrets
+>    and variables → Actions`) con esos mismos cuatro nombres.
+> 2. **Firebase Authentication**: activar el proveedor Email/Contraseña
+>    (Authentication → Sign-in method) y crear a mano cada cuenta autorizada
+>    (Authentication → Users → Add user). No hay registro público: quien no
+>    tenga una cuenta creada aquí, no entra.
+> 3. **Firestore**: crear la base de datos si no existe (modo nativo),
+>    pegar las reglas de `firestore.rules` en Firestore Database → Reglas (o
+>    `firebase deploy --only firestore:rules` desde una máquina con el CLI
+>    autenticado), y crear a mano el documento `config/stripe` con el campo
+>    `restrictedKey` (string, empieza con `rk_`).
+> 4. **Stripe**: crear una Restricted Key de solo lectura sobre Checkout
+>    Sessions y Customers (Developers → API keys → Create restricted key) y
+>    pegar su valor en el documento de Firestore del punto 3 — nunca en el
+>    repo.
+> 5. **Payment Link de Stripe** (el mismo que usa `checkoutUrl` en
+>    `boletos.json`): revisar que tenga activada la recolección de teléfono
+>    (Collect customer's phone number) y un campo personalizado de texto
+>    para «Empresa / granja» (Custom fields). **Si no están activados, la
+>    tabla los mostrará como «—» para todos** — no es un bug del panel, es
+>    que Stripe nunca capturó ese dato.
+>
+> Con los cinco pasos hechos, el primer login real con una cuenta autorizada
+> es la prueba que falta — y conviene repetirla con una compra de prueba en
+> modo test de Stripe antes de fiarse de los datos de producción.
+
+**Nota aparte, no tocada en esta fase:** el repo `teccapitalweb/expo-avicola-
+backend` (Railway) ya tiene acceso de servidor a Stripe vía su webhook —
+podría exponer en el futuro un endpoint propio para esto, evitando que la
+Restricted Key viaje al navegador aunque sea de un admin ya autenticado. No
+se propuso como alternativa aquí porque el encargo pedía explícitamente
+«llamada desde el navegador con clave restringida», pero queda anotado por si
+una fase futura quiere cerrar esa última superficie.

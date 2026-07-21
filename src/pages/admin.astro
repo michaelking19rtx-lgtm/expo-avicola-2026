@@ -2,113 +2,627 @@
 import Base from '../layouts/Base.astro';
 import site from '../data/site.json';
 
-const opciones = [
+const opcionesTema = [
   { value: 'green', label: 'Verde', swatch: 'var(--swatch-green)' },
   { value: 'blue', label: 'Azul', swatch: 'var(--swatch-blue)' },
 ] as const;
 ---
 
-{/* noindex: el panel interno no tiene por qué aparecer en buscadores. También
-    queda fuera del sitemap (ver el filtro en astro.config.mjs). */}
-<Base title={`Panel de administración — ${site.nombre}`} noindex>
-  <main class="admin">
-    <section class="panel" aria-labelledby="admin-title">
-      <p class="panel__eyebrow">{site.nombre}</p>
-      <h1 class="panel__title" id="admin-title">Panel de administración</h1>
+{/*
+  Panel de administración — Fase 8.
 
-      <div class="field">
-        <p class="field__label" id="tema-label">Tema del sitio</p>
-        <div class="segment" role="radiogroup" aria-labelledby="tema-label">
-          <span class="segment__thumb" aria-hidden="true"></span>
-          {
-            opciones.map((opcion) => (
-              <button
-                type="button"
-                role="radio"
-                class="segment__option"
-                data-theme-option={opcion.value}
-                aria-checked={opcion.value === site.temaDefault ? 'true' : 'false'}
-                tabindex={opcion.value === site.temaDefault ? 0 : -1}
-              >
-                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="6.25"
-                    stroke="currentColor"
-                    stroke-width="1.25"
-                    opacity="0.4"
-                  />
-                  <circle cx="8" cy="8" r="3.25" fill={opcion.swatch} />
-                </svg>
-                <span>{opcion.label}</span>
-              </button>
-            ))
-          }
+  Gateado por JS, no por servidor: el sitio es 100% estático (sin adaptador,
+  sin backend) y este HTML es descargable por cualquiera que pida la URL. Lo
+  que impide ver datos reales es que:
+
+    1. El HTML de partida no contiene NINGÚN dato de asistentes — solo un
+       formulario de login. No hay nada que "filtrar" en el marcado.
+    2. Firebase Auth confirma la sesión antes de que el código pida nada.
+    3. La clave de Stripe vive en Firestore, legible solo con sesión de
+       Firebase válida (ver firestore.rules). Sin sesión, no hay clave;
+       sin clave, no hay llamada a Stripe.
+
+  `noindex` se conserva y /admin sigue fuera del sitemap (astro.config.mjs).
+*/}
+<Base title={`Panel de administración — ${site.nombre}`} noindex>
+  <main class="admin" data-auth="cargando">
+    <noscript>
+      <p class="admin__noscript">Este panel necesita JavaScript para funcionar.</p>
+    </noscript>
+
+    {/* Estado 1 de 3: resolviendo si hay sesión. Es el único visible hasta
+        que Firebase responde, así que no hay flash de login ni de datos. */}
+    <section class="vista vista--cargando" aria-live="polite">
+      <svg class="spinner" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.75" opacity="0.25" />
+        <path d="M21.5 12a9.5 9.5 0 0 0-9.5-9.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+      </svg>
+      <p id="cargando-texto">Comprobando sesión…</p>
+    </section>
+
+    {/* Estado 2 de 3: sin sesión. */}
+    <section class="vista vista--login" aria-labelledby="login-title">
+      <div class="panel">
+        <p class="panel__eyebrow">{site.nombre}</p>
+        <h1 class="panel__title" id="login-title">Panel de administración</h1>
+
+        <form id="form-login" novalidate>
+          <div class="campo">
+            <label for="login-correo">Correo</label>
+            <input id="login-correo" name="correo" type="email" autocomplete="username" required />
+          </div>
+          <div class="campo">
+            <label for="login-clave">Contraseña</label>
+            <input id="login-clave" name="clave" type="password" autocomplete="current-password" required />
+          </div>
+
+          <p class="login__error" id="login-error" role="alert" hidden></p>
+
+          <button class="boton boton--primario" type="submit" id="login-enviar">
+            <span class="boton__texto">Entrar</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    {/* Estado 3 de 3: sesión confirmada. */}
+    <section class="vista vista--dashboard" aria-labelledby="dash-title">
+      <header class="dash__head">
+        <div>
+          <p class="panel__eyebrow">{site.nombre}</p>
+          <h1 class="dash__title" id="dash-title">Asistentes</h1>
+        </div>
+        <button class="boton boton--fantasma" type="button" id="btn-logout">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+            <path
+              d="M7.5 17.5h-3a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 4.5 2.5h3M13 14l4-4-4-4M17 10H7.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Cerrar sesión
+        </button>
+      </header>
+
+      <p class="dash__mensaje" id="dash-mensaje" role="status" hidden></p>
+
+      <div class="metricas" id="metricas" hidden>
+        <div class="metrica">
+          <p class="metrica__etiqueta">Boletos vendidos</p>
+          <p class="metrica__valor" id="metrica-boletos">—</p>
+        </div>
+        <div class="metrica">
+          <p class="metrica__etiqueta">Ingreso total</p>
+          <p class="metrica__valor" id="metrica-ingreso">—</p>
+        </div>
+        <div class="metrica metrica--alerta" id="metrica-oxxo-caja" hidden>
+          <p class="metrica__etiqueta">OXXO pendiente</p>
+          <p class="metrica__valor" id="metrica-oxxo">—</p>
         </div>
       </div>
+
+      <div class="controles" id="controles" hidden>
+        <div class="buscador">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="m17 17-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+          <label for="buscador" class="sr-only">Buscar por nombre o empresa</label>
+          <input id="buscador" type="search" placeholder="Buscar por nombre o empresa" autocomplete="off" />
+        </div>
+
+        <button class="boton boton--linea" type="button" id="btn-csv">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <path
+              d="M10 2.5v10m0 0-3.5-3.5M10 12.5 13.5 9M3.5 15v1.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Exportar CSV
+        </button>
+      </div>
+
+      <div class="tabla-wrap" id="tabla-wrap" hidden>
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Correo</th>
+              <th scope="col">Teléfono</th>
+              <th scope="col">Empresa / granja</th>
+              <th scope="col">Boletos</th>
+              <th scope="col">Importe</th>
+              <th scope="col">Método</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-cuerpo"></tbody>
+        </table>
+
+        <ul class="tarjetas" id="tarjetas" role="list"></ul>
+      </div>
+
+      <details class="ajustes">
+        <summary>Ajustes</summary>
+
+        <div class="field">
+          <p class="field__label" id="tema-label">Tema del sitio</p>
+          <div class="segment" role="radiogroup" aria-labelledby="tema-label">
+            <span class="segment__thumb" aria-hidden="true"></span>
+            {
+              opcionesTema.map((opcion) => (
+                <button
+                  type="button"
+                  role="radio"
+                  class="segment__option"
+                  data-theme-option={opcion.value}
+                  aria-checked={opcion.value === site.temaDefault ? 'true' : 'false'}
+                  tabindex={opcion.value === site.temaDefault ? 0 : -1}
+                >
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25" opacity="0.4" />
+                    <circle cx="8" cy="8" r="3.25" fill={opcion.swatch} />
+                  </svg>
+                  <span>{opcion.label}</span>
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      </details>
     </section>
   </main>
 </Base>
 
 <script>
   import { setTheme, getTheme, isTheme } from '../scripts/theme.js';
+  import { firebaseListo } from '../scripts/admin/firebase.js';
+  import { obtenerAsistentes } from '../scripts/admin/asistentes.js';
 
-  const options = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('[data-theme-option]')
-  );
+  const main = document.querySelector<HTMLElement>('.admin');
 
-  /** Refleja el tema activo en el grupo de radios. */
-  function sync() {
-    const active = getTheme();
-    options.forEach((option) => {
-      const selected = option.dataset.themeOption === active;
-      option.setAttribute('aria-checked', String(selected));
-      option.tabIndex = selected ? 0 : -1;
+  // ---------------------------------------------------------------------
+  // Tema (Ajustes) — igual que antes de la Fase 8, sin cambios de fondo.
+  // ---------------------------------------------------------------------
+  const opcionesTema = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme-option]'));
+
+  function sincronizarTema() {
+    const activo = getTheme();
+    opcionesTema.forEach((opcion) => {
+      const seleccionado = opcion.dataset.themeOption === activo;
+      opcion.setAttribute('aria-checked', String(seleccionado));
+      opcion.tabIndex = seleccionado ? 0 : -1;
     });
   }
 
-  options.forEach((option, index) => {
-    option.addEventListener('click', () => {
-      const value = option.dataset.themeOption;
-      if (isTheme(value)) setTheme(value);
+  opcionesTema.forEach((opcion, indice) => {
+    opcion.addEventListener('click', () => {
+      const valor = opcion.dataset.themeOption;
+      if (isTheme(valor)) setTheme(valor);
     });
 
-    // Navegación con flechas, como espera un role="radiogroup".
-    option.addEventListener('keydown', (event) => {
-      const step =
-        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+    opcion.addEventListener('keydown', (evento) => {
+      const paso =
+        evento.key === 'ArrowRight' || evento.key === 'ArrowDown'
           ? 1
-          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+          : evento.key === 'ArrowLeft' || evento.key === 'ArrowUp'
             ? -1
             : 0;
-      if (step === 0) return;
-      event.preventDefault();
-      const next = options[(index + step + options.length) % options.length];
-      next.focus();
-      next.click();
+      if (paso === 0) return;
+      evento.preventDefault();
+      const siguiente = opcionesTema[(indice + paso + opcionesTema.length) % opcionesTema.length];
+      siguiente.focus();
+      siguiente.click();
     });
   });
 
-  document.addEventListener('themechange', sync);
-  sync();
+  document.addEventListener('themechange', sincronizarTema);
+  sincronizarTema();
+
+  // ---------------------------------------------------------------------
+  // Autenticación + datos de Stripe.
+  // ---------------------------------------------------------------------
+  const formLogin = document.querySelector<HTMLFormElement>('#form-login');
+  const inputCorreo = document.querySelector<HTMLInputElement>('#login-correo');
+  const inputClave = document.querySelector<HTMLInputElement>('#login-clave');
+  const loginError = document.querySelector<HTMLParagraphElement>('#login-error');
+  const botonLogin = document.querySelector<HTMLButtonElement>('#login-enviar');
+  const botonLogout = document.querySelector<HTMLButtonElement>('#btn-logout');
+
+  const dashMensaje = document.querySelector<HTMLParagraphElement>('#dash-mensaje');
+  const cajaMetricas = document.querySelector<HTMLDivElement>('#metricas');
+  const metricaBoletos = document.querySelector<HTMLParagraphElement>('#metrica-boletos');
+  const metricaIngreso = document.querySelector<HTMLParagraphElement>('#metrica-ingreso');
+  const cajaOxxo = document.querySelector<HTMLDivElement>('#metrica-oxxo-caja');
+  const metricaOxxo = document.querySelector<HTMLParagraphElement>('#metrica-oxxo');
+  const controles = document.querySelector<HTMLDivElement>('#controles');
+  const tablaWrap = document.querySelector<HTMLDivElement>('#tabla-wrap');
+  const tablaCuerpo = document.querySelector<HTMLTableSectionElement>('#tabla-cuerpo');
+  const tarjetas = document.querySelector<HTMLUListElement>('#tarjetas');
+  const buscador = document.querySelector<HTMLInputElement>('#buscador');
+  const botonCsv = document.querySelector<HTMLButtonElement>('#btn-csv');
+
+  const ETIQUETAS_ESTADO: Record<string, string> = {
+    pagado: 'Pagado',
+    pendiente: 'Pendiente',
+    pendiente_oxxo: 'Pendiente OXXO',
+    fallido: 'Fallido',
+  };
+
+  const ETIQUETAS_METODO: Record<string, string> = {
+    card: 'Tarjeta',
+    oxxo: 'OXXO',
+  };
+
+  const formatoFecha = new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  /** @type {any[]} */
+  let asistentesCache: any[] = [];
+
+  function formatoImporte(importe: number, moneda: string) {
+    try {
+      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(importe);
+    } catch {
+      return `$${importe.toFixed(2)} ${moneda}`;
+    }
+  }
+
+  function pintar(lista: any[]) {
+    if (!tablaCuerpo || !tarjetas) return;
+
+    tablaCuerpo.innerHTML = '';
+    tarjetas.innerHTML = '';
+
+    for (const a of lista) {
+      const fecha = a.fecha ? formatoFecha.format(a.fecha) : '—';
+      const importe = formatoImporte(a.importe, a.moneda);
+      const metodo = a.metodo ? (ETIQUETAS_METODO[a.metodo] ?? a.metodo) : '—';
+      const estadoTexto = ETIQUETAS_ESTADO[a.estado] ?? a.estado;
+
+      const fila = document.createElement('tr');
+      fila.innerHTML = `
+        <td>${escapaHtml(a.nombre)}</td>
+        <td>${a.correo ? escapaHtml(a.correo) : '—'}</td>
+        <td>${a.telefono ? escapaHtml(a.telefono) : '—'}</td>
+        <td>${a.empresa ? escapaHtml(a.empresa) : '—'}</td>
+        <td>${a.cantidad}</td>
+        <td>${importe}</td>
+        <td>${metodo}</td>
+        <td><span class="estado" data-estado="${a.estado}">${estadoTexto}</span></td>
+        <td>${fecha}</td>
+      `;
+      tablaCuerpo.appendChild(fila);
+
+      const tarjeta = document.createElement('li');
+      tarjeta.className = 'tarjeta-asistente';
+      tarjeta.innerHTML = `
+        <p class="tarjeta-asistente__nombre">${escapaHtml(a.nombre)}</p>
+        <dl>
+          <div><dt>Correo</dt><dd>${a.correo ? escapaHtml(a.correo) : '—'}</dd></div>
+          <div><dt>Teléfono</dt><dd>${a.telefono ? escapaHtml(a.telefono) : '—'}</dd></div>
+          <div><dt>Empresa / granja</dt><dd>${a.empresa ? escapaHtml(a.empresa) : '—'}</dd></div>
+          <div><dt>Boletos</dt><dd>${a.cantidad}</dd></div>
+          <div><dt>Importe</dt><dd>${importe}</dd></div>
+          <div><dt>Método</dt><dd>${metodo}</dd></div>
+          <div><dt>Estado</dt><dd><span class="estado" data-estado="${a.estado}">${estadoTexto}</span></dd></div>
+          <div><dt>Fecha</dt><dd>${fecha}</dd></div>
+        </dl>
+      `;
+      tarjetas.appendChild(tarjeta);
+    }
+  }
+
+  function escapaHtml(texto: string) {
+    return texto
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function pintarMetricas(lista: any[]) {
+    if (!cajaMetricas || !metricaBoletos || !metricaIngreso || !cajaOxxo || !metricaOxxo) return;
+
+    const pagados = lista.filter((a) => a.estado === 'pagado');
+    const boletos = pagados.reduce((total, a) => total + a.cantidad, 0);
+    const ingreso = pagados.reduce((total, a) => total + a.importe, 0);
+    const moneda = pagados[0]?.moneda ?? 'MXN';
+
+    const pendientesOxxo = lista.filter((a) => a.estado === 'pendiente_oxxo');
+    const boletosOxxo = pendientesOxxo.reduce((total, a) => total + a.cantidad, 0);
+
+    metricaBoletos.textContent = String(boletos);
+    metricaIngreso.textContent = formatoImporte(ingreso, moneda);
+
+    if (boletosOxxo > 0) {
+      cajaOxxo.hidden = false;
+      metricaOxxo.textContent = String(boletosOxxo);
+    } else {
+      cajaOxxo.hidden = true;
+    }
+
+    cajaMetricas.hidden = false;
+  }
+
+  function filtrar(texto: string) {
+    const q = texto.trim().toLowerCase();
+    if (!q) return asistentesCache;
+    return asistentesCache.filter(
+      (a) => a.nombre.toLowerCase().includes(q) || (a.empresa ?? '').toLowerCase().includes(q)
+    );
+  }
+
+  buscador?.addEventListener('input', () => {
+    pintar(filtrar(buscador.value));
+  });
+
+  function aCsv(lista: any[]) {
+    const encabezados = [
+      'Nombre',
+      'Correo',
+      'Teléfono',
+      'Empresa/granja',
+      'Boletos',
+      'Importe',
+      'Moneda',
+      'Método',
+      'Estado',
+      'Fecha',
+    ];
+
+    const celda = (valor: unknown) => `"${String(valor ?? '').replace(/"/g, '""')}"`;
+
+    const filas = lista.map((a) =>
+      [
+        a.nombre,
+        a.correo ?? '',
+        a.telefono ?? '',
+        a.empresa ?? '',
+        a.cantidad,
+        a.importe.toFixed(2),
+        a.moneda,
+        a.metodo ? (ETIQUETAS_METODO[a.metodo] ?? a.metodo) : '',
+        ETIQUETAS_ESTADO[a.estado] ?? a.estado,
+        a.fecha ? a.fecha.toISOString() : '',
+      ]
+        .map(celda)
+        .join(',')
+    );
+
+    return [encabezados.map(celda).join(','), ...filas].join('\r\n');
+  }
+
+  botonCsv?.addEventListener('click', () => {
+    // Exporta SIEMPRE la lista completa, no el resultado del buscador: es
+    // para los gafetes del día del evento y un filtro a medio escribir no
+    // debe poder dejar gente fuera por accidente.
+    const csv = '﻿' + aCsv(asistentesCache);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    const fecha = new Date().toISOString().slice(0, 10);
+    enlace.href = url;
+    enlace.download = `asistentes-${site_nombre_slug()}-${fecha}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(url);
+  });
+
+  function site_nombre_slug() {
+    return 'expo-avicola-2026';
+  }
+
+  async function cargarAsistentes(db: any, dbMod: any) {
+    if (!dashMensaje) return;
+
+    dashMensaje.hidden = false;
+    dashMensaje.dataset.tipo = 'info';
+    dashMensaje.textContent = 'Cargando ventas desde Stripe…';
+
+    try {
+      asistentesCache = await obtenerAsistentes(dbMod, db);
+
+      if (!asistentesCache.length) {
+        dashMensaje.dataset.tipo = 'info';
+        dashMensaje.textContent = 'Aún no hay ventas.';
+        controles && (controles.hidden = true);
+        tablaWrap && (tablaWrap.hidden = true);
+        return;
+      }
+
+      dashMensaje.hidden = true;
+      controles && (controles.hidden = false);
+      tablaWrap && (tablaWrap.hidden = false);
+      pintarMetricas(asistentesCache);
+      pintar(asistentesCache);
+    } catch (error) {
+      console.error('[admin] Error al leer Stripe:', error);
+      dashMensaje.hidden = false;
+      dashMensaje.dataset.tipo = 'error';
+      dashMensaje.textContent =
+        error instanceof Error
+          ? `No se pudo cargar la lista de asistentes: ${error.message}`
+          : 'No se pudo cargar la lista de asistentes.';
+    }
+  }
+
+  const MENSAJES_ERROR: Record<string, string> = {
+    'auth/invalid-email': 'El correo no tiene un formato válido.',
+    'auth/user-disabled': 'Esta cuenta está deshabilitada.',
+    'auth/too-many-requests': 'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
+  };
+
+  (async () => {
+    const { auth, db, authMod, dbMod } = await firebaseListo();
+
+    formLogin?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      if (!inputCorreo || !inputClave || !loginError || !botonLogin) return;
+
+      loginError.hidden = true;
+      botonLogin.disabled = true;
+
+      try {
+        await authMod.signInWithEmailAndPassword(auth, inputCorreo.value.trim(), inputClave.value);
+        inputClave.value = '';
+      } catch (error: any) {
+        const mensaje =
+          MENSAJES_ERROR[error?.code] ?? 'Correo o contraseña incorrectos, o esta cuenta no tiene acceso.';
+        loginError.textContent = mensaje;
+        loginError.hidden = false;
+      } finally {
+        botonLogin.disabled = false;
+      }
+    });
+
+    botonLogout?.addEventListener('click', () => {
+      authMod.signOut(auth);
+    });
+
+    authMod.onAuthStateChanged(auth, (usuario: unknown) => {
+      if (!main) return;
+
+      if (usuario) {
+        main.dataset.auth = 'in';
+        cargarAsistentes(db, dbMod);
+      } else {
+        main.dataset.auth = 'out';
+        asistentesCache = [];
+        cajaMetricas && (cajaMetricas.hidden = true);
+        controles && (controles.hidden = true);
+        tablaWrap && (tablaWrap.hidden = true);
+        dashMensaje && (dashMensaje.hidden = true);
+      }
+    });
+  })().catch((error) => {
+    console.error('[admin] No se pudo inicializar Firebase:', error);
+    if (main) main.dataset.auth = 'error-init';
+    const textoCargando = document.querySelector<HTMLParagraphElement>('#cargando-texto');
+    if (textoCargando) textoCargando.textContent = 'No se pudo iniciar el panel. Recarga la página.';
+  });
 </script>
 
 <style>
   .admin {
     display: grid;
     min-height: 100svh;
-    place-items: center;
     padding: var(--space-xl) var(--gutter);
   }
 
-  .panel {
-    width: 100%;
+  .admin__noscript {
     max-width: 30rem;
-    padding: var(--space-xl);
+    margin: var(--space-xl) auto;
+    padding: var(--space-lg);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background-color: var(--surface);
+    text-align: center;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Máquina de estados: solo una vista visible a la vez, dirigida por   */
+  /* data-auth en <main>. Sin flash: "cargando" es la única visible por  */
+  /* defecto en el marcado (ver el orden de las reglas más abajo).       */
+  /* ------------------------------------------------------------------ */
+  .vista {
+    display: none;
+  }
+
+  .vista--cargando {
+    display: none;
+    place-self: center;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  [data-auth='cargando'] .vista--cargando {
+    display: grid;
+    place-items: center;
+    gap: var(--space-sm);
+  }
+
+  [data-auth='out'] .vista--login {
+    display: grid;
+    place-items: center;
+  }
+
+  [data-auth='in'] .vista--dashboard {
+    display: block;
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+  }
+
+  [data-auth='error-init'] .vista--cargando {
+    display: grid;
+    place-items: center;
+  }
+
+  [data-auth='error-init'] .spinner {
+    display: none;
+  }
+
+  .spinner {
+    color: var(--accent);
+    animation: girar 0.9s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation: none;
+    }
+  }
+
+  @keyframes girar {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Vidrio compartido: mismo patrón que Nav.astro — fondo sólido de     */
+  /* respaldo primero, @supports con backdrop-filter + color-mix juntos  */
+  /* porque un navegador sin color-mix invalida la declaración entera    */
+  /* en cómputo (no en parseo) al llevar var() dentro.                   */
+  /* ------------------------------------------------------------------ */
+  .panel,
+  .metrica,
+  .tabla-wrap,
+  .tarjetas :global(.tarjeta-asistente),
+  .ajustes {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+  }
+
+  @supports (backdrop-filter: blur(1px)) and (background-color: color-mix(in srgb, red 50%, transparent)) {
+    .panel,
+    .metrica,
+    .tabla-wrap,
+    .tarjetas :global(.tarjeta-asistente),
+    .ajustes {
+      background-color: color-mix(in srgb, var(--surface) 70%, transparent);
+      backdrop-filter: blur(var(--nav-blur));
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Login                                                               */
+  /* ------------------------------------------------------------------ */
+  .panel {
+    width: 100%;
+    max-width: 26rem;
+    padding: var(--space-xl);
     box-shadow: var(--shadow-lg);
   }
 
@@ -121,13 +635,334 @@ const opciones = [
 
   .panel__title {
     margin-block-start: var(--space-xs);
+    margin-block-end: var(--space-lg);
     font-size: var(--step-2);
   }
 
-  .field {
-    margin-block-start: var(--space-xl);
-    padding-block-start: var(--space-lg);
-    border-block-start: 1px solid var(--border);
+  .campo {
+    display: grid;
+    gap: var(--space-xs);
+    margin-block-end: var(--space-md);
+  }
+
+  .campo label {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .campo input {
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--step-0);
+  }
+
+  .campo input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .login__error {
+    margin-block-end: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid color-mix(in srgb, #ef4444 45%, var(--border));
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, #ef4444 12%, transparent);
+    color: var(--text);
+    font-size: var(--step--1);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Botones                                                             */
+  /* ------------------------------------------------------------------ */
+  .boton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-size: var(--step--1);
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      opacity var(--t-base) var(--ease-out);
+  }
+
+  .boton--primario {
+    width: 100%;
+    background-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .boton--primario:hover {
+    opacity: 0.9;
+  }
+
+  .boton--primario:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  .boton--fantasma {
+    border-color: var(--border);
+    background-color: transparent;
+    color: var(--text);
+  }
+
+  .boton--fantasma:hover {
+    border-color: var(--primary-bright);
+  }
+
+  .boton--linea {
+    border-color: var(--border);
+    background-color: var(--surface-2);
+    color: var(--text);
+  }
+
+  .boton--linea:hover {
+    border-color: var(--primary-bright);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Dashboard                                                           */
+  /* ------------------------------------------------------------------ */
+  .dash__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-block-end: var(--space-xl);
+  }
+
+  .dash__title {
+    margin-block-start: var(--space-xs);
+    font-size: var(--step-3);
+  }
+
+  .dash__mensaje {
+    margin-block-end: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+  }
+
+  .dash__mensaje[data-tipo='error'] {
+    border-color: color-mix(in srgb, #ef4444 45%, var(--border));
+    color: var(--text);
+  }
+
+  .metricas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--space-md);
+    margin-block-end: var(--space-xl);
+  }
+
+  .metrica {
+    padding: var(--space-lg);
+  }
+
+  .metrica--alerta {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
+
+  .metrica__etiqueta {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .metrica__valor {
+    margin-block-start: var(--space-xs);
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 600;
+  }
+
+  .controles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+    justify-content: space-between;
+    margin-block-end: var(--space-lg);
+  }
+
+  .buscador {
+    position: relative;
+    flex: 1 1 16rem;
+    color: var(--text-muted);
+  }
+
+  .buscador svg {
+    position: absolute;
+    inset-inline-start: var(--space-md);
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .buscador input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md) var(--space-sm) calc(var(--space-md) * 2 + 16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--step--1);
+  }
+
+  .buscador input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .tabla-wrap {
+    overflow-x: auto;
+    margin-block-end: var(--space-xl);
+  }
+
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  /*
+    OJO — filas y celdas de <tbody> las crea JS con innerHTML, no Astro: no
+    llevan el atributo data-astro-cid-* con el que Astro acota los estilos
+    del componente, así que ninguna regla SIN :global() les aplicaría (misma
+    trampa que documenta Sede.astro con su iframe). .tabla th SÍ es marcado
+    estático (va en el .astro) y no lo necesita; td, tr y el resto de aquí
+    abajo sí, porque todos salen de asistentes.js/admin.astro en runtime.
+  */
+  .tabla th,
+  .tabla :global(td) {
+    padding: var(--space-sm) var(--space-md);
+    border-block-end: 1px solid var(--border);
+    text-align: start;
+    font-size: var(--step--1);
+    white-space: nowrap;
+  }
+
+  .tabla th {
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+  }
+
+  .tabla :global(tbody tr:last-child td) {
+    border-block-end: none;
+  }
+
+  :global(.estado) {
+    display: inline-block;
+    padding: 0.2rem var(--space-sm);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  :global(.estado[data-estado='pagado']) {
+    border-color: color-mix(in srgb, #22c55e 45%, var(--border));
+    color: #4ade80;
+  }
+
+  :global(.estado[data-estado='pendiente']),
+  :global(.estado[data-estado='pendiente_oxxo']) {
+    border-color: color-mix(in srgb, #f59e0b 45%, var(--border));
+    color: #fbbf24;
+  }
+
+  :global(.estado[data-estado='fallido']) {
+    border-color: color-mix(in srgb, #ef4444 45%, var(--border));
+    color: #f87171;
+  }
+
+  .tarjetas {
+    display: none;
+    list-style: none;
+  }
+
+  .tarjetas :global(.tarjeta-asistente) {
+    padding: var(--space-lg);
+  }
+
+  .tarjetas :global(.tarjeta-asistente + .tarjeta-asistente) {
+    margin-block-start: var(--space-md);
+  }
+
+  .tarjetas :global(.tarjeta-asistente__nombre) {
+    margin-block-end: var(--space-sm);
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    font-weight: 600;
+  }
+
+  .tarjetas :global(.tarjeta-asistente dl > div) {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-block: 0.3rem;
+    border-block-end: 1px solid var(--border);
+    font-size: var(--step--1);
+  }
+
+  .tarjetas :global(.tarjeta-asistente dl > div:last-child) {
+    border-block-end: none;
+  }
+
+  .tarjetas :global(.tarjeta-asistente dt) {
+    color: var(--text-muted);
+  }
+
+  .tarjetas :global(.tarjeta-asistente dd) {
+    text-align: end;
+  }
+
+  @media (max-width: 46rem) {
+    .tabla {
+      display: none;
+    }
+
+    .tarjetas {
+      display: block;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Ajustes (tema) — reutiliza el segmento de la Fase 1.                 */
+  /* ------------------------------------------------------------------ */
+  .ajustes {
+    padding: var(--space-lg);
+  }
+
+  .ajustes summary {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .ajustes[open] summary {
+    margin-block-end: var(--space-lg);
   }
 
   .field__label {
@@ -138,12 +973,12 @@ const opciones = [
     letter-spacing: 0.12em;
   }
 
-  /* Segmento -------------------------------------------------------------- */
   .segment {
     position: relative;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 4px;
+    max-width: 20rem;
     padding: 4px;
     border: 1px solid var(--border);
     border-radius: var(--radius-pill);
@@ -156,19 +991,12 @@ const opciones = [
     inset-inline-start: 4px;
     width: calc(50% - 6px);
     border-radius: var(--radius-pill);
-    /*
-      Contraste: el relleno se queda en --primary (oscuro) porque la etiqueta
-      activa va encima en --text y así conserva 5.75:1 / 5.72:1 (AA). Pero
-      --primary sobre --surface-2 solo da 2.85:1 / 2.76:1, por debajo del 3:1
-      que pide WCAG 1.4.11 para indicar estado. El anillo de 1px en
-      --primary-bright (6.10:1 / 4.17:1 sobre el track) es lo que hace
-      identificable el borde del indicador.
-    */
     background-color: var(--primary);
     box-shadow:
       inset 0 0 0 1px var(--primary-bright),
       var(--shadow-sm);
-    transition: transform var(--t-base) var(--ease-out),
+    transition:
+      transform var(--t-base) var(--ease-out),
       background-color var(--t-base) var(--ease-out);
   }
 
@@ -194,7 +1022,6 @@ const opciones = [
     color: var(--text);
   }
 
-  /* Estado activo dirigido por el tema: sin destello ni dependencia de JS. */
   :global([data-theme='green']) .segment__option[data-theme-option='green'],
   :global([data-theme='blue']) .segment__option[data-theme-option='blue'] {
     color: var(--text);

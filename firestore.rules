@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Reglas del proyecto Firebase gymteck-1708f para /admin de expo-avicola-2026.
+//
+// Este repo no despliega estas reglas solo (no hay `firebase deploy` en el
+// workflow: el sitio es estático y no lleva Firebase CLI). Hay que pegarlas a
+// mano en Firebase Console → Firestore Database → Reglas, o correr
+// `firebase deploy --only firestore:rules` desde una máquina con el CLI
+// autenticado contra gymteck-1708f.
+//
+// Diseño: NO hay registro público en este proyecto — cada cuenta de
+// Firebase Auth la crea a mano quien administra la consola (Authentication →
+// Users → Add user). Por eso "estar autenticado" y "estar autorizado" son lo
+// mismo aquí: no hace falta una lista de UIDs aparte para decidir quién lee
+// la clave de Stripe, basta con exigir sesión válida.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // config/stripe.restrictedKey: la Restricted Key de Stripe (solo lectura
+    // de Checkout Sessions). Legible solo con sesión de Firebase; nunca
+    // escribible desde el cliente — se captura a mano en la consola.
+    match /config/stripe {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Todo lo demás, cerrado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
