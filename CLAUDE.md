@@ -3719,6 +3719,21 @@ Hogar visible y distinguible en las dos superficies claras (verde y azul),
 0 px de desbordamiento horizontal en los cinco anchos. Cerrado mirando la
 captura (convención 14), no solo los números de `docWidth`.
 
+**Reemplazo posterior del archivo, mismo tratamiento.** El logo se
+reentregó como `promo-hogar.png` (1024×1024 en la entrega original de esta
+nota; la versión recibida después ya venía a 260×260) con canal alfa
+(`hasAlpha: true`), pero **el alfa solo recorta el margen exterior a la
+silueta irregular del blob pintado — el interior sigue siendo pinceladas y
+dados**, no un logotipo limpio. Se verificó por contenido (cabecera
+`89 50 4E 47`, no por extensión) y por muestreo de píxeles (25.4%
+transparente, las cuatro esquinas en alfa 0, el centro opaco con el mismo
+fondo artístico). Sigue siendo el caso `fondoPropio: true`: no cambia el
+campo, solo la conversión, que esta vez SÍ preserva el alfa (antes era JPEG
+sin transparencia). WebP q82, **17.99 KB** — el borde irregular ahora se
+funde contra la tarjeta blanca en vez de mostrar el canto rectangular de
+antes. Verificado con zoom sobre la tarjeta en los dos temas: sin canto
+duro, sin halo. El PNG original salió a la misma carpeta hermana.
+
 ---
 
 ### Logos de patrocinadores — pendiente 7 resuelto · COMPLETADA
