@@ -9,10 +9,9 @@
       "retrato": "img/ponentes/retrato-01.webp",
       "destacado": true,
       "ponencias": [
-        "Diagnóstico temprano en aves: señales que todo productor debe saber interpretar",
-        "Vacunación y prevención: decisiones sanitarias que protegen la producción"
+        "Diagnóstico temprano en aves: señales que todo productor debe saber interpretar"
       ],
-      "bioCorta": "Especialista en capacitación y asesoría en incubación, manejo preventivo y operación de procesos productivos. Acompaña a productores, emprendedores y equipos operativos en prevención, vacunación y bioseguridad con enfoque productivo.",
+      "bioCorta": "Especialista en capacitación y asesoría en incubación, manejo preventivo y operación de procesos productivos. Enseña a productores, emprendedores y equipos operativos a leer las señales tempranas de un problema en la parvada, antes de que se conviertan en pérdida.",
       "formacion": "Químico Farmacobiólogo por la Universidad de Guadalajara (CUCEI). Fundador y director de Incubadora Guadalajara / EOR Consultores desde 2018.",
       "trayectoria": "Su experiencia integra industria farmacéutica, alimentaria y avícola, con enfoque en control de calidad, formulación, mejora de procesos y consultoría técnica. Antes trabajó en gestión de calidad en Grupo Collins y como líder de asistencia técnica en PISA Farmacéutica.",
       "especialidades": [
@@ -23,7 +22,7 @@
         "Prevención, vacunación y bioseguridad con enfoque productivo",
         "Capacitación a productores, emprendedores y personal operativo"
       ],
-      "enfoque": "Presenta la vacunación y la prevención como herramientas estratégicas para proteger la producción, no como un gasto obligatorio. Es el perfil más orientado a enseñar de todo el panel: se dedica profesionalmente a traducir el tema para quien apenas empieza.",
+      "enfoque": "Presenta el diagnóstico temprano como la habilidad que evita que un problema pequeño se vuelva una crisis en la parvada. Es el perfil más orientado a enseñar de todo el panel: se dedica profesionalmente a traducir señales técnicas —comportamiento, consumo, mortalidad puntual— en decisiones que cualquier productor puede tomar sin ser veterinario.",
       "queSeLleva": "Claridad sobre lo que sí depende del productor. Muchos creen que la sanidad es asunto exclusivo del veterinario; esta ponencia les devuelve las decisiones que están en sus manos y los errores que cometen sin saberlo."
     },
     {
@@ -130,7 +129,7 @@
       "retrato": "img/ponentes/retrato-06.webp",
       "destacado": false,
       "ponencias": [
-        "Detrás de la vacuna: qué determina que un biológico proteja tu parvada"
+        "Vacunación y prevención: decisiones sanitarias que protegen la producción"
       ],
       "bioCorta": "Doce años en el laboratorio de control de calidad de biológicos veterinarios: titulación de vacunas contra Newcastle, Gumboro, Marek e Influenza aviar, serología y aislamiento viral. Capacitado en titulación de Marek en Merial Select (Georgia, EUA) y cultivo celular avanzado en el IBt-UNAM.",
       "formacion": "Ingeniero Bioquímico por el Instituto Tecnológico de Tehuacán (TecNM), con especialidad en Ingeniería en Alimentos. Profesional Autorizado por SENASICA en Laboratorio de Constatación para el Control de Calidad Interno en Biológicos.",
@@ -143,8 +142,8 @@
         "Mantenimiento y criopreservación de líneas celulares",
         "Evaluación de toxicidad de antibióticos en sinergia con vacunas"
       ],
-      "enfoque": "Es el único perfil del panel que viene desde el laboratorio y no desde la caseta. El productor compra vacunas y confía en que funcionan, pero rara vez sabe qué determina que un biológico proteja o no. Esteban vive del otro lado de esa pregunta: mide el título viral, verifica la potencia y detecta cuando algo salió mal.",
-      "queSeLleva": "Criterios para que la vacuna que ya paga cumpla su función: qué determina la potencia de un biológico, por qué la cadena de frío pesa más que la marca, cómo manipularlo sin inactivarlo y qué señales delatan un lote comprometido. Una vacuna mal conservada no protege menos: puede no proteger nada."
+      "enfoque": "Es el único perfil del panel que llega desde el laboratorio y no desde la caseta. Vacunar bien no es solo inyectar en la fecha correcta: es una cadena de decisiones —qué biológico, cómo conservarlo, cómo aplicarlo— que Esteban conoce desde el lado que la mayoría del sector nunca ve: el control de calidad que decide si un lote sale o no al campo. Trae esa mirada de laboratorio a la prevención aplicada en granja.",
+      "queSeLleva": "Un criterio claro para que la vacunación proteja de verdad: qué manejo de cadena de frío es negociable y cuál no, cómo detectar un lote comprometido antes de aplicarlo, y qué decisiones de bioseguridad reducen la presión de reto para que la vacuna tenga oportunidad de funcionar. Prevención entendida como una cadena completa, no como una sola inyección."
     }
   ]
 }

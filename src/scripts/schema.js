@@ -112,8 +112,7 @@ function esPendiente(nombre) {
  * Ponentes reales del programa, sin repetir.
  *
  * Se excluye "Por confirmar": declarar una Person con ese nombre sería afirmar
- * que existe alguien que se llama así. Edgar Oliva da dos sesiones y aquí
- * aparece una sola vez.
+ * que existe alguien que se llama así.
  *
  * @returns {{ '@type': 'Person', name: string }[]}
  */
@@ -134,13 +133,13 @@ function ponentes() {
 
     Hacen falta LAS DOS fuentes, y ninguna basta sola: un ponente puede estar
     confirmado y anunciado, con título de ponencia y todo, sin tener todavía
-    HUECO en la agenda —hoy es el caso de IBQ. Esteban Fructuoso Alducin, cuya
-    sesión está escrita pero sin horario asignado—, y a la inversa, la agenda
-    podría llevar a alguien que no salga en el hero.
+    HUECO en la agenda —ya se dio el caso una vez, con IBQ. Esteban Fructuoso
+    Alducin antes de tener sesión asignada—, y a la inversa, la agenda podría
+    llevar a alguien que no salga en el hero.
 
     Un `performer` es quien participa en el evento, no quien tiene hueco en el
     horario, así que quedarse solo con la agenda dejaría fuera a una persona
-    real. Se unen y se deduplica: Edgar da dos sesiones y aparece una vez.
+    real. Se unen y se deduplica.
   */
   for (const figura of heroPonentes) {
     const nombre = figura?.nombre;
@@ -162,7 +161,7 @@ function ponentes() {
  * **Cada sesión repite `location`.** Un `subEvent` es un `Event` completo y
  * Google lo valida como tal —name, startDate y location son sus campos
  * obligatorios—, así que heredar la sede del padre no basta: sin `location`
- * cada sesión saldría con un aviso. El coste es repetir el Place siete veces;
+ * cada sesión saldría con un aviso. El coste es repetir el Place seis veces;
  * lo he preferido a un marcado que valida con advertencias.
  *
  * El `performer` va como ARRAY de una persona aunque hoy nunca haya dos: es el

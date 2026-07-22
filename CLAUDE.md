@@ -491,7 +491,7 @@ llegue — la página nunca enseña un dato falso ni un espacio roto.
 | 10 | **Video del congreso** | `public/video/congreso.{mp4,webm}` + `poster-congreso.jpg` | Placeholder 16:9 con botón de play |
 | ~~11~~ | ~~**Ponente de la sesión de IA**~~ | ~~`programa.json`, bloque 13:10~~ | **RESUELTO** — Ing. Ricardo Olmos Rivera |
 | ~~15~~ | ~~**Hueco en la agenda para la 7ª ponencia**~~ | ~~`programa.json`~~ | **RESUELTO** — 13:15, con el reparto 4+3 a 30 min |
-| 16 | **Actualizar la descripción del producto en STRIPE** | panel de Stripe, fuera del repo | `boletos.json` ya dice «7 conferencias»; **Stripe sigue diciendo 6**. Lo tiene que editar una persona. El build ya avisa si `boletos.json` se desfasa, pero **no puede ver Stripe** |
+| ~~16~~ | ~~**Actualizar la descripción del producto en STRIPE**~~ | ~~panel de Stripe, fuera del repo~~ | **RESUELTO por reversión** — la agenda volvió a 6 ponencias (ver «Vuelta a 6 ponencias» en la bitácora) y `boletos.json` volvió a decir «6 conferencias», que es lo que Stripe ya decía. Coincidencia de que las dos cosas se resolvieran solas, no una edición a propósito |
 | ~~12~~ | ~~**Stripe**: producto, precio y checkout~~ | ~~`boletos.json`~~ | **RESUELTO** — Payment Link conectado en `checkoutUrl` |
 | 13 | **Aviso de privacidad** | página `/privacidad` + enlace en `Footer.astro` | Texto plano «Aviso de privacidad · Próximamente» |
 | 14 | **Imagen Open Graph** 1200×630 | `public/img/og/og-expo-avicola.jpg` | Las etiquetas `og:image`/`twitter:image` ya apuntan ahí; al compartir el enlace la tarjeta sale sin imagen |
@@ -537,7 +537,13 @@ caja sin deformarse. Deja de depender de que corra JavaScript.
 > ya cargando bien). El arreglo completo, con la causa exacta, está en la
 > entrada «Logos de patrocinadores — pendiente 7 resuelto» de la bitácora.
 
-### La séptima ponencia · CERRADO · las 7 sesiones están en la agenda
+### La séptima ponencia · REVERTIDO — ver «Vuelta a 6 ponencias» en la bitácora
+
+> El organizador confirmó después que Esteban toma la sesión de Vacunación
+> (que era de Edgar) en vez de tener tema propio, y la agenda volvió a 6
+> ponencias de 35 min. Esta entrada describe una decisión que ya no está en
+> pie; se conserva completa porque documenta el razonamiento de la aritmética
+> 7×30=6×35, que sí volvió a aplicarse (a la inversa) para deshacer el cambio.
 
 `programa.json` tiene ya **7 ponencias repartidas entre 6 ponentes**: Edgar
 Oliva Ramírez da DOS (09:30 «Diagnóstico temprano» y 12:45 «Vacunación y
@@ -4184,3 +4190,86 @@ creada, usada, borrada — nunca con la cuenta real del usuario):
 **Estado:** completado y verificado, incluyendo la vista previa del PDF
 generado (convención 14 — se abrió y se leyó el documento, no solo se
 comprobó que el archivo existiera).
+
+---
+
+### Vuelta a 6 ponencias — Esteban toma Vacunación, Edgar se queda con Diagnóstico
+
+El organizador de la agenda confirmó un cambio de temas: **Esteban ya no
+tiene tema propio** («Detrás de la vacuna» se retira) y en su lugar toma
+«Vacunación y prevención», que antes era la segunda sesión de Edgar. Edgar
+se queda con una sola ponencia. La agenda vuelve a **6 ponencias de 35
+minutos**, deshaciendo el recorte a 30 min que documenta la entrada «La
+séptima ponencia y el reparto 4+3».
+
+**El itinerario original se sacó de git, no de memoria.** `git show
+02bf1dc~1:src/data/programa.json` —el commit padre de «Mete la séptima
+ponencia sin mover el final del día»— tiene el `programa.json` de 6×35
+exacto, con `notaDuracion` original («30 minutos de exposición y 5 de
+preguntas»). Se restauró ese archivo completo y se cambió una sola línea: el
+`ponente` de «Vacunación y prevención» pasa de Edgar a Esteban. El resto de
+horas y orden (3 ponencias + coffee + show + 3 ponencias, sin el reparto
+4+3 que solo existió para acomodar la séptima) es idéntico al de antes de
+que existiera Esteban con tema propio.
+
+**Qué se tocó, y qué no:**
+
+- `programa.json`: restaurado desde git + el swap de ponente. `notaDuracion`
+  vuelve al texto original, no a una aproximación.
+- `hero-ponentes.json`: el `tema` de Esteban cambia a «Vacunación y
+  prevención». El de Edgar no tocó nada porque ya solo decía «Diagnóstico
+  temprano en aves» — nunca llegó a mencionar la segunda ponencia.
+- `ponentes.json`, ficha de Esteban: `ponencias`, `enfoque` y `queSeLleva`
+  reescritos para el tema nuevo, **texto revisado y aprobado por el cliente
+  antes de escribirse** (se mostró el borrador, no se asumió). Mantiene su
+  diferencial —viene del laboratorio de control de calidad, no de la
+  caseta— porque es lo que lo distingue de los demás ponentes y sigue
+  siendo cierto sin importar el tema.
+- `ponentes.json`, ficha de Edgar: `ponencias` baja a una. `bioCorta` y
+  `enfoque` mencionaban vacunación explícitamente (era, literalmente, el
+  tema de su segunda charla) y se reescribieron para hablar solo de
+  diagnóstico temprano. `queSeLleva` se dejó igual: no nombra vacunación ni
+  las dos ponencias, y su contenido —«las decisiones que están en manos del
+  productor»— aplica igual de bien al diagnóstico temprano.
+- `boletos.json`: `descripcion` (texto plano, espejo de Stripe) vuelve a
+  decir «6 conferencias». **Sin querer, esto resuelve también el pendiente
+  16** («Stripe sigue diciendo 6 y boletos.json decía 7»): con la agenda de
+  vuelta a 6, las dos fuentes vuelven a coincidir solas.
+- `schema.js`: **cero cambios de lógica.** `ponentes()` y `sesiones()` ya
+  derivaban todo de `programa.json` + `hero-ponentes.json`; el JSON-LD
+  compilado pasó solo de tener 7 a 6 `performer`/`subEvent` porque los datos
+  cambiaron, no el código. Se actualizaron tres comentarios que hablaban de
+  «Edgar da dos sesiones» y «Esteban sin horario asignado», que dejaron de
+  ser ciertos.
+- `Programa.astro`, `VideoSection.astro`, `faq.json`: **nada que tocar.**
+  Usan `{conferencias}`/`{conferenciasPalabra}` vía `programa.js`
+  (`totalConferencias()`), así que pasaron de decir «siete»/7 a «seis»/6
+  solos, en el siguiente build.
+
+**Búsqueda de menciones sueltas** (`grep -i` de «7 conferencias», «Detrás de
+la vacuna» y «siete ponencias» en `src/`): el único texto vivo que apareció,
+fuera de lo ya listado arriba, fue la propia `descripcion` de `boletos.json`.
+El resto de coincidencias estaban en esta misma bitácora, documentando la
+decisión anterior — se dejaron intactas porque son historia real, no
+contenido que se esté mostrando hoy.
+
+**Verificado:**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run build` / `npm run check` | 0 errores, 0 avisos, 0 hints |
+| Parrilla 08:00–16:30 | sin huecos ni encimes, verificado con script, idéntica a la de antes de la séptima ponencia |
+| JSON-LD compilado (`dist/index.html`) | **6** `performer`, **6** `subEvent`, la sesión de Vacunación con `performer: IBQ. Esteban Fructuoso Alducin` |
+| Tarjeta de Edgar (Ponentes) | una sola ponencia, «Diagnóstico temprano en aves» |
+| Tarjeta de Esteban (Ponentes) | «Vacunación y prevención: decisiones sanitarias que protegen la producción» |
+| Modal de Edgar | ficha completa reescrita, sin mención a vacunación |
+| Modal de Esteban | ficha completa reescrita, mismo perfil de laboratorio |
+| Lead de Programa.astro | «seis conferencias de 30 minutos» — autoderivado |
+| `boletos.incluye[0]` | «Acceso a las 6 conferencias especializadas» — autoderivado |
+| Capturas 1440/390, verde y azul | sin desborde horizontal, revisadas con `prefers-reduced-motion` para ver la parrilla completa sin esperar el reveal por scroll |
+
+**Estado:** cerrado. La cifra «6» no quedó escrita a mano en ningún sitio
+nuevo — donde ya existía la derivación de la Fase de la séptima ponencia
+(`programa.js`), se benefició de ella; donde no existía (`boletos.json`,
+`ponentes.json`), se editó a mano porque son, por diseño, texto plano o
+contenido editorial que no se deriva de nada.
