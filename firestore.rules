@@ -1,12 +1,12 @@
 rules_version = '2';
 
-// Reglas del proyecto Firebase gymteck-1708f para /admin de expo-avicola-2026.
+// Reglas del proyecto Firebase expo-avicola-2026 para /admin de expo-avicola-2026.
 //
 // Este repo no despliega estas reglas solo (no hay `firebase deploy` en el
 // workflow: el sitio es estático y no lleva Firebase CLI). Hay que pegarlas a
 // mano en Firebase Console → Firestore Database → Reglas, o correr
 // `firebase deploy --only firestore:rules` desde una máquina con el CLI
-// autenticado contra gymteck-1708f.
+// autenticado contra expo-avicola-2026.
 //
 // Diseño: NO hay registro público en este proyecto — cada cuenta de
 // Firebase Auth la crea a mano quien administra la consola (Authentication →

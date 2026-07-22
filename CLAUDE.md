@@ -328,7 +328,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 5    | Boletos: precio, qué incluye, CTA de registro                             | **COMPLETADA** |
 | 6    | Sede, patrocinadores, FAQ, CTA final y footer                             | **COMPLETADA** |
 | 7    | SEO técnico, datos estructurados, indexación y rendimiento                | **COMPLETADA** |
-| 8    | `/admin` real: Firebase Auth + lista de asistentes desde Stripe          | **Código COMPLETADO — pendiente de configuración externa** (ver bitácora) |
+| 8    | `/admin` real: Firebase Auth + lista de asistentes desde Stripe          | **COMPLETADA** |
 | —    | Superficies claras: cuatro secciones invertidas (las bandas se retiraron) | **COMPLETADA** |
 
 > **La numeración cambió al empezar la Fase 4.** El plan original metía
@@ -3984,44 +3984,6 @@ headless):**
 | Botón «Exportar CSV» (interacción real) | dispara una descarga con nombre `asistentes-expo-avicola-2026-AAAA-MM-DD.csv` |
 | Ajustes → tema | segmento de la Fase 1 intacto, sin regresión |
 
-**Lo que NO se pudo verificar, y por qué:** el flujo real de login (correo
-autorizado → sesión → datos reales de Stripe) necesita un proyecto Firebase
-configurado y una Restricted Key real; ninguno de los dos existe en este
-entorno. Se simuló forzando `data-auth` a mano para verificar el CSS/JS de cada
-estado, pero **eso no reemplaza probar la cadena completa** una vez estén
-las credenciales. Queda como primer paso de verificación en cuanto lleguen.
-
-> **LO QUE FALTA, fuera del repo — son pasos en consolas externas, no código:**
->
-> 1. **Firebase**: en el proyecto `gymteck-1708f`, registrar una app WEB si no
->    existe una todavía (Configuración del proyecto → Tus apps → `</>`), y
->    copiar `apiKey`/`authDomain`/`projectId`/`appId` a un `.env` local (ver
->    `.env.example`) y a los secrets del repo en GitHub (`Settings → Secrets
->    and variables → Actions`) con esos mismos cuatro nombres.
-> 2. **Firebase Authentication**: activar el proveedor Email/Contraseña
->    (Authentication → Sign-in method) y crear a mano cada cuenta autorizada
->    (Authentication → Users → Add user). No hay registro público: quien no
->    tenga una cuenta creada aquí, no entra.
-> 3. **Firestore**: crear la base de datos si no existe (modo nativo),
->    pegar las reglas de `firestore.rules` en Firestore Database → Reglas (o
->    `firebase deploy --only firestore:rules` desde una máquina con el CLI
->    autenticado), y crear a mano el documento `config/stripe` con el campo
->    `restrictedKey` (string, empieza con `rk_`).
-> 4. **Stripe**: crear una Restricted Key de solo lectura sobre Checkout
->    Sessions y Customers (Developers → API keys → Create restricted key) y
->    pegar su valor en el documento de Firestore del punto 3 — nunca en el
->    repo.
-> 5. **Payment Link de Stripe** (el mismo que usa `checkoutUrl` en
->    `boletos.json`): revisar que tenga activada la recolección de teléfono
->    (Collect customer's phone number) y un campo personalizado de texto
->    para «Empresa / granja» (Custom fields). **Si no están activados, la
->    tabla los mostrará como «—» para todos** — no es un bug del panel, es
->    que Stripe nunca capturó ese dato.
->
-> Con los cinco pasos hechos, el primer login real con una cuenta autorizada
-> es la prueba que falta — y conviene repetirla con una compra de prueba en
-> modo test de Stripe antes de fiarse de los datos de producción.
-
 **Nota aparte, no tocada en esta fase:** el repo `teccapitalweb/expo-avicola-
 backend` (Railway) ya tiene acceso de servidor a Stripe vía su webhook —
 podría exponer en el futuro un endpoint propio para esto, evitando que la
@@ -4029,3 +3991,69 @@ Restricted Key viaje al navegador aunque sea de un admin ya autenticado. No
 se propuso como alternativa aquí porque el encargo pedía explícitamente
 «llamada desde el navegador con clave restringida», pero queda anotado por si
 una fase futura quiere cerrar esa última superficie.
+
+---
+
+#### Fase 8 — cierre: conexión con el proyecto Firebase real `expo-avicola-2026`
+
+**El proyecto Firebase real se llama `expo-avicola-2026`, no `gymteck-1708f`.**
+Esa referencia (en `.env.example`, `firestore.rules` y el comentario del
+workflow) era de una sesión anterior y se corrigió en los tres archivos.
+
+**Qué se hizo**
+
+- `.env` local con las cuatro variables `PUBLIC_FIREBASE_*` del proyecto real
+  (no se commitea, está en `.gitignore`).
+- Los mismos cuatro valores se subieron como GitHub Secrets del repo
+  (`Settings → Secrets and variables → Actions`), con autorización explícita
+  del usuario antes de tocarlos.
+- `firestore.rules` se publicó a mano en Firebase Console (el usuario lo
+  confirmó con timestamp de publicación reciente).
+
+**Verificación de la cadena completa — con una cuenta DESCARTABLE, no con
+la del usuario.** El usuario no quiso pegar sus credenciales reales en el
+chat (correcto: nunca deben viajar por aquí). En su lugar se acordó este
+protocolo, que conviene repetir en futuras fases con Firebase:
+
+1. Se creó una cuenta de prueba (`test-fase8-…@expo-avicola-2026.local`) vía
+   la API pública `accounts:signUp` de Identity Toolkit — no hace falta el
+   CLI de Firebase ni credenciales de servicio, la propia `apiKey` pública
+   basta para registrar una cuenta cuando Email/Contraseña está habilitado.
+2. Se verificó la cadena entera contra el dev server real con Playwright
+   (Chromium headless, controlado por el agente, nunca por el usuario):
+   login, lectura de `config/stripe`, llamada a Stripe, tabla, buscador y
+   CSV — con la cuenta de prueba.
+3. Al terminar, la cuenta de prueba se borró con `accounts:delete` (Identity
+   Toolkit) y se confirmó que ya no puede iniciar sesión.
+4. La verificación final con la cuenta REAL del usuario queda pendiente de
+   que él la haga por su cuenta — nunca se pidió ni se recibió esa contraseña.
+
+**Un bloqueo intermedio, y cómo se diagnosticó.** La primera lectura de
+`config/stripe` con la cuenta de prueba autenticada devolvía 403
+`PERMISSION_DENIED` — igual que sin autenticar. Antes de asumir que las reglas
+estaban mal, se aisló la causa: un token basura daba un 401 distinto
+(`ACCESS_TOKEN_TYPE_UNSUPPORTED`), lo que probaba que el token válido SÍ
+llegaba a la capa de evaluación de reglas. Es decir, el fallo no estaba en el
+transporte del token sino en las reglas mismas: no se habían publicado
+todavía (se habían pegado pero no pulsado «Publicar»). Al republicarlas, la
+misma prueba pasó al primer intento.
+
+**Datos reales confirmados, no simulados:**
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| Sin login | formulario de login, sin flash de datos |
+| Login con correo no autorizado | «Correo o contraseña incorrectos, o esta cuenta no tiene acceso.» — no distingue casos, evita enumeración |
+| Login con cuenta de prueba autorizada | dashboard con **253 filas reales** de Stripe (paginado completo, `has_more` seguido hasta el final) |
+| Métricas | 8 boletos vendidos, $3,583.00 de ingreso (solo cuenta lo `pagado`, como debía) |
+| Compras de Juan (2 transacciones) | `qty: 2 × $699 = $1,398.00` cada una, con empresa («Comercializadora avícola de Izúcar») y teléfono — confirma que el Payment Link SÍ está capturando esos campos |
+| Compra de $750 | **existe, pero en estado Fallido** (checkout abandonado) — no hay ninguna de $750 pagada |
+| Buscador | filtra a las 2 filas de Juan sin tocar el resto |
+| Exportar CSV | descarga con los datos reales completos, nombre `asistentes-expo-avicola-2026-AAAA-MM-DD.csv` |
+| 360px | `scrollWidth` 360px exactos, tarjetas apiladas sin desbordamiento |
+| Firestore sin sesión | 403 confirmado — la Restricted Key no es alcanzable sin login |
+
+**Estado:** Fase 8 completada de punta a punta. `npm run build` y
+`npm run check` en 0/0/0. La única verificación que queda —a propósito— es
+que el usuario entre con su cuenta real, porque esa contraseña nunca debe
+pasar por este chat.

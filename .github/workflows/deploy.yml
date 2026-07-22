@@ -24,7 +24,7 @@ jobs:
       - name: Install, build, and upload your site output
         uses: withastro/action@v6
         env:
-          # Config pública del proyecto Firebase (gymteck-1708f) para /admin.
+          # Config pública del proyecto Firebase (expo-avicola-2026) para /admin.
           # NO son secretas — Firebase documenta que estos IDs viajan en el
           # cliente; la seguridad la ponen las reglas de Auth/Firestore, no
           # ocultar esto. Se leen igual como secrets del repo por comodidad de
