@@ -43,6 +43,11 @@ const formatoFechaGeneracion = new Intl.DateTimeFormat('es-MX', {
  * @param {any[]} lista Misma lista que pinta la tabla en pantalla (sin filtrar por el buscador).
  */
 export async function descargarPdf(lista) {
+  // El PDF es para el registro en puerta: solo entra quien ya pagó. Un OXXO
+  // "pendiente" sigue visible en la tabla del panel (para dar seguimiento),
+  // pero no debe imprimirse como si fuera un asistente confirmado.
+  const pagados = lista.filter((a) => a.estado === 'pagado');
+
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
@@ -61,7 +66,7 @@ export async function descargarPdf(lista) {
   doc.text('Lista de asistentes', 40, 62);
   doc.text(`Generado el ${formatoFechaGeneracion.format(new Date())}`, 40, 78);
 
-  const filas = lista.map((a) => [
+  const filas = pagados.map((a) => [
     a.nombre,
     a.telefono ?? '—',
     a.empresa ?? '—',
@@ -98,7 +103,7 @@ export async function descargarPdf(lista) {
     margin: { left: 40, right: 40 },
   });
 
-  const totalBoletos = lista.reduce((total, a) => total + a.cantidad, 0);
+  const totalBoletos = pagados.reduce((total, a) => total + a.cantidad, 0);
   const finalY = doc.lastAutoTable?.finalY ?? 96;
 
   doc.setFont('helvetica', 'bold');
