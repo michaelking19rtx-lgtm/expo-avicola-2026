@@ -4057,3 +4057,51 @@ misma prueba pasó al primer intento.
 `npm run check` en 0/0/0. La única verificación que queda —a propósito— es
 que el usuario entre con su cuenta real, porque esa contraseña nunca debe
 pasar por este chat.
+
+---
+
+#### Fase 8 — corrección: filtro por `price_id`, y un dato de esta misma bitácora que era falso
+
+**La cuenta de Stripe es compartida con otros productos** (cursos, apps), y
+`/admin` traía TODAS sus Checkout Sessions, sin filtrar por el boleto de la
+expo. Se añadió el filtro en `asistentes.js`: antes de mostrar o contar una
+fila, sus `line_items` deben incluir al menos uno cuyo `price.id` esté en
+`PRICE_IDS_EXPO`. Las que no coinciden se descartan por completo — no se
+ocultan con CSS ni se excluyen solo de las métricas, no llegan ni a
+`asistentesCache`. `pintarMetricas` no cambió: ya calculaba sobre la lista que
+recibe, así que al filtrar en el origen las métricas quedan correctas solas.
+
+**`PRICE_IDS_EXPO` es un `Set` de DOS ids, no uno.** El boleto subió de $699 a
+$750 y Stripe le asignó un `price_id` nuevo al producto
+(`price_1TvLAJDCxZfVu3387HvuFJZZ`, el mismo que `PRICE_ID_WHITELIST` en
+`expo-avicola-backend`). Filtrar solo por ese nuevo id borraba de la tabla las
+ventas YA HECHAS a $699, que llevan el id viejo
+(`price_1TueSWDCxZfVu338dH8YFKOK`). Ambos son y han sido siempre el boleto de
+la expo; la lista cubre el precio de antes y el de ahora.
+
+**Un dato de la entrada anterior de esta misma bitácora (arriba, «Compra de
+$750… Compras de Juan…») estaba MAL, y este filtro lo destapó.** Al filtrar,
+la sesión de $550 que se había reportado como «TEC CAPITAL, 1 boleto» **no es
+del boleto de la expo**: es el pago de «Curso Cultivo y Manejo de Gerberas»
+(otro producto, otro `price_id`, `price_1Trjn9DCxZfVu338dxN4ozjA`). TEC
+CAPITAL tiene otra compra pagada además, de $79 («AviGo Pro»), tampoco de la
+expo. **TEC CAPITAL no ha comprado ningún boleto de la expo.** El error de la
+sesión anterior fue mirar el monto y el estado (pagado) sin comprobar a qué
+producto pertenecía — exactamente el fallo que este filtro existe para
+cerrar. Las únicas compras pagadas reales del boleto son las 2 de Juan.
+
+**Verificado con datos reales, mismo protocolo de cuenta descartable de la
+entrada anterior** (creada por `accounts:signUp`, verificada por Playwright
+contra el dev server, borrada con `accounts:delete` al terminar — nunca con
+la cuenta real del usuario):
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| Boletos vendidos | **4** (las 2 sesiones de Juan, qty 2 cada una) |
+| Ingreso total | **$2,796.00** (2 × $1,398.00) |
+| Filas de otros productos ($79 AviGo Pro, $300, $1,199, $550 Gerberas) en la tabla | **0** |
+| Filas con `price_id` de la expo (viejo o nuevo), cualquier estado | 28 — incluye pagadas, pendientes y fallidas del boleto, correctamente |
+| TEC CAPITAL en la tabla | **ausente** — no compró boleto, es lo correcto |
+
+**Estado:** filtro cerrado y verificado. `npm run build` / `npm run check` en
+0/0/0.

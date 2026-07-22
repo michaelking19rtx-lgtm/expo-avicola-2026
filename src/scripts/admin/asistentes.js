@@ -19,6 +19,20 @@
 const LIMITE_PAGINA = 100;
 const TOPE_SESIONES = 1000; // 10 páginas: de sobra para un solo evento.
 
+// Los price_id del boleto de la expo. La cuenta de Stripe es compartida con
+// otros proyectos: sin este filtro, la tabla mezcla compras de boletos con
+// compras de cualquier otro producto que use la misma cuenta.
+//
+// Son DOS, no uno: el precio del boleto subió de $699 a $750 y Stripe le dio
+// un price_id nuevo (price_1TvLAJDCxZfVu3387HvuFJZZ, el que usa
+// PRICE_ID_WHITELIST en expo-avicola-backend hoy). El viejo
+// (price_1TueSWDCxZfVu338dH8YFKOK) sigue siendo el de las ventas reales ya
+// hechas a $699 — filtrar solo por el nuevo las habría borrado de la tabla.
+const PRICE_IDS_EXPO = new Set([
+  'price_1TueSWDCxZfVu338dH8YFKOK',
+  'price_1TvLAJDCxZfVu3387HvuFJZZ',
+]);
+
 /**
  * @param {import('firebase/firestore')} dbMod
  * @param {import('firebase/firestore').Firestore} db
@@ -80,6 +94,14 @@ async function listarCheckoutSessions(claveStripe) {
 
 /**
  * @param {any} sesion Checkout Session cruda de Stripe.
+ * @returns {any[]} Los line_items de la sesión que son del boleto de la expo.
+ */
+function lineItemsExpo(sesion) {
+  return sesion.line_items?.data?.filter((item) => PRICE_IDS_EXPO.has(item.price?.id)) ?? [];
+}
+
+/**
+ * @param {any} sesion Checkout Session cruda de Stripe.
  */
 function normaliza(sesion) {
   const metodo = sesion.payment_intent?.payment_method?.type ?? null;
@@ -93,8 +115,7 @@ function normaliza(sesion) {
     }
   }
 
-  const cantidad =
-    sesion.line_items?.data?.reduce((total, item) => total + (item.quantity ?? 0), 0) ?? 0;
+  const cantidad = lineItemsExpo(sesion).reduce((total, item) => total + (item.quantity ?? 0), 0);
 
   const empresa = Array.isArray(sesion.custom_fields)
     ? (sesion.custom_fields.find((c) => c.text?.value)?.text?.value ?? null)
@@ -125,6 +146,7 @@ export async function obtenerAsistentes(dbMod, db) {
 
   return crudas
     .filter((s) => s.status === 'complete' || s.status === 'expired')
+    .filter((s) => lineItemsExpo(s).length > 0)
     .map(normaliza)
     .sort((a, b) => (b.fecha?.getTime() ?? 0) - (a.fecha?.getTime() ?? 0));
 }
