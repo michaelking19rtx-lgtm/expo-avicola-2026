@@ -127,6 +127,28 @@ const opcionesTema = [
           </svg>
           Exportar CSV
         </button>
+
+        <button class="boton boton--linea" type="button" id="btn-pdf">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <path
+              d="M5 2.5h6l3.5 3.5V17a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+            <path d="M11 2.5V6a.5.5 0 0 0 .5.5H14.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+            <path
+              d="M6.75 13.5v-3h1a1 1 0 1 1 0 2h-1m3.25 1v-3h1.25m-1.25 1.5h1M13.5 13.5v-3h1.25"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Descargar PDF
+        </button>
       </div>
 
       <div class="tabla-wrap" id="tabla-wrap" hidden>
@@ -134,11 +156,9 @@ const opcionesTema = [
           <thead>
             <tr>
               <th scope="col">Nombre</th>
-              <th scope="col">Correo</th>
               <th scope="col">Teléfono</th>
               <th scope="col">Empresa / granja</th>
               <th scope="col">Boletos</th>
-              <th scope="col">Importe</th>
               <th scope="col">Método</th>
               <th scope="col">Estado</th>
               <th scope="col">Fecha</th>
@@ -186,6 +206,7 @@ const opcionesTema = [
   import { setTheme, getTheme, isTheme } from '../scripts/theme.js';
   import { firebaseListo } from '../scripts/admin/firebase.js';
   import { obtenerAsistentes } from '../scripts/admin/asistentes.js';
+  import { descargarPdf } from '../scripts/admin/pdf.js';
 
   const main = document.querySelector<HTMLElement>('.admin');
 
@@ -249,6 +270,7 @@ const opcionesTema = [
   const tarjetas = document.querySelector<HTMLUListElement>('#tarjetas');
   const buscador = document.querySelector<HTMLInputElement>('#buscador');
   const botonCsv = document.querySelector<HTMLButtonElement>('#btn-csv');
+  const botonPdf = document.querySelector<HTMLButtonElement>('#btn-pdf');
 
   const ETIQUETAS_ESTADO: Record<string, string> = {
     pagado: 'Pagado',
@@ -259,6 +281,9 @@ const opcionesTema = [
 
   const ETIQUETAS_METODO: Record<string, string> = {
     card: 'Tarjeta',
+    // Stripe Link es un autocompletado de tarjeta guardada, no un método
+    // distinto — para el registro en puerta sigue siendo "pagó con tarjeta".
+    link: 'Tarjeta',
     oxxo: 'OXXO',
   };
 
@@ -286,18 +311,15 @@ const opcionesTema = [
 
     for (const a of lista) {
       const fecha = a.fecha ? formatoFecha.format(a.fecha) : '—';
-      const importe = formatoImporte(a.importe, a.moneda);
       const metodo = a.metodo ? (ETIQUETAS_METODO[a.metodo] ?? a.metodo) : '—';
       const estadoTexto = ETIQUETAS_ESTADO[a.estado] ?? a.estado;
 
       const fila = document.createElement('tr');
       fila.innerHTML = `
         <td>${escapaHtml(a.nombre)}</td>
-        <td>${a.correo ? escapaHtml(a.correo) : '—'}</td>
         <td>${a.telefono ? escapaHtml(a.telefono) : '—'}</td>
         <td>${a.empresa ? escapaHtml(a.empresa) : '—'}</td>
         <td>${a.cantidad}</td>
-        <td>${importe}</td>
         <td>${metodo}</td>
         <td><span class="estado" data-estado="${a.estado}">${estadoTexto}</span></td>
         <td>${fecha}</td>
@@ -309,11 +331,9 @@ const opcionesTema = [
       tarjeta.innerHTML = `
         <p class="tarjeta-asistente__nombre">${escapaHtml(a.nombre)}</p>
         <dl>
-          <div><dt>Correo</dt><dd>${a.correo ? escapaHtml(a.correo) : '—'}</dd></div>
           <div><dt>Teléfono</dt><dd>${a.telefono ? escapaHtml(a.telefono) : '—'}</dd></div>
           <div><dt>Empresa / granja</dt><dd>${a.empresa ? escapaHtml(a.empresa) : '—'}</dd></div>
           <div><dt>Boletos</dt><dd>${a.cantidad}</dd></div>
-          <div><dt>Importe</dt><dd>${importe}</dd></div>
           <div><dt>Método</dt><dd>${metodo}</dd></div>
           <div><dt>Estado</dt><dd><span class="estado" data-estado="${a.estado}">${estadoTexto}</span></dd></div>
           <div><dt>Fecha</dt><dd>${fecha}</dd></div>
@@ -416,6 +436,20 @@ const opcionesTema = [
     enlace.download = `asistentes-${site_nombre_slug()}-${fecha}.csv`;
     enlace.click();
     URL.revokeObjectURL(url);
+  });
+
+  botonPdf?.addEventListener('click', async () => {
+    // Mismo criterio que el CSV: exporta SIEMPRE la lista completa, no el
+    // resultado del buscador.
+    if (!botonPdf) return;
+    botonPdf.disabled = true;
+    try {
+      await descargarPdf(asistentesCache);
+    } catch (error) {
+      console.error('[admin] Error al generar el PDF:', error);
+    } finally {
+      botonPdf.disabled = false;
+    }
   });
 
   function site_nombre_slug() {
@@ -706,7 +740,7 @@ const opcionesTema = [
     opacity: 0.9;
   }
 
-  .boton--primario:disabled {
+  .boton:disabled {
     opacity: 0.6;
     cursor: progress;
   }

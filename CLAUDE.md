@@ -65,6 +65,7 @@ expo-avicola-2026/
 │   ├── layouts/Base.astro
 │   ├── pages/{index,admin,404}.astro
 │   ├── scripts/{theme,animations,paths,fechas,schema,programa}.js
+│   ├── scripts/admin/{firebase,asistentes,pdf}.js
 │   └── styles/{tokens,global}.css
 ├── astro.config.mjs
 ├── CLAUDE.md
@@ -4105,3 +4106,81 @@ la cuenta real del usuario):
 
 **Estado:** filtro cerrado y verificado. `npm run build` / `npm run check` en
 0/0/0.
+
+---
+
+#### Fase 8 — tabla mínima para el registro en puerta + exportación a PDF
+
+**Columnas quitadas de la tabla y de las tarjetas (bajo 46rem): Correo e
+Importe.** El encargo pedía que la tabla mostrara solo lo necesario para
+registrar a alguien en la puerta: nombre, teléfono, empresa/granja, boletos,
+método, estado y fecha. Ni el correo ni el importe entran en esa lista — el
+correo no se usa para identificar a nadie en persona, y el importe no aporta
+nada al registro (ya se sabe que compró, y por cuánto no importa en la
+puerta). **Las dos siguen en el CSV**, sin cambios: ese export sirve para
+conciliación y contacto post-evento, un caso de uso distinto del registro en
+puerta, y no se pidió tocarlo.
+
+**Un hallazgo de paso, directamente relacionado con la columna Método:**
+Stripe reportaba el método de pago de Juan como `link`, no `card`, y
+`ETIQUETAS_METODO` no lo traducía — se veía «link» crudo en la tabla. `link`
+es el autocompletado de tarjeta guardada de Stripe (Stripe Link): sigue
+siendo un pago con tarjeta, no un tercer método. Se agregó `link: 'Tarjeta'`
+al diccionario, en `admin.astro` y en `pdf.js` (llevan el mismo, duplicado a
+mano — son solo 4 líneas y no vale la pena una importación cruzada por esto).
+
+**Exportar PDF, con jsPDF + jspdf-autotable (dependencia nueva, convención
+7).** Se evaluó `window.print()` con una hoja `@media print` y CERO
+dependencias nuevas, pero el encargo pide una columna en blanco para marcar
+«Asistió» a mano y un total al final — eso es maquetación de tabla con
+paginación (saltos de página, repetir encabezado en cada hoja, anchos de
+columna), que jspdf-autotable ya resuelve. Reimplementarlo a mano sobre CSS
+de impresión habría sido reconstruir con más código lo que la librería ya
+hace bien. Ambas se importan de forma DINÁMICA desde `pdf.js` (misma
+convención que `firebase.js` y `animations.js`): no pesan nada hasta que se
+pulsa «Descargar PDF».
+
+**jsPDF trae `html2canvas` y `dompurify` como dependencias propias** (para su
+método `.doc.html()`, que este proyecto no usa) y Vite los separa en chunks
+propios: `html2canvas.js` (196 KB) y `purify.es.js` (28 KB). Antes de aceptar
+el peso, se verificó con Playwright, con la red instrumentada, que esos dos
+chunks **nunca se piden** — ni en `astro dev` ni contra el build de
+producción real (`astro preview`) — porque el código de este proyecto solo
+llama a `autoTable()` y `doc.save()`, nunca a `.html()`. Lo que sí se
+descarga al pulsar el botón: `jspdf.es.min.js` (392 KB) +
+`jspdf.plugin.autotable.js` (32 KB), solo en `/admin` y solo al usarse.
+
+**Diseño del PDF — deliberadamente NO es el glassmorphism oscuro del panel.**
+Fondo blanco, texto casi negro, tabla con tema `grid` de autoTable
+(encabezado negro con texto blanco, filas alternadas gris claro/blanco) y
+tipografía Helvetica (la que trae jsPDF por defecto): es lo que se lee bien
+en papel impreso, que es el uso real de este documento — el panel se ve en
+pantalla con luz de sala, el PDF se imprime y se usa con las manos en la
+mesa de registro.
+
+**Contenido:** encabezado «Expo Avícola Productiva 2026 / Lista de
+asistentes», fecha y hora de generación, la tabla con las mismas columnas de
+la pantalla + una columna «Asistió» siempre vacía (para marcar a mano el día
+del evento), y un total al cierre (`Total de asistentes: N`, la suma de
+`cantidad` de TODAS las filas de la tabla — no solo las pagadas, porque es el
+mismo criterio que ya usa la tabla en pantalla y el CSV: exportar siempre la
+lista completa, nunca el resultado del buscador).
+
+**Verificado con datos reales** (mismo protocolo de cuenta descartable —
+creada, usada, borrada — nunca con la cuenta real del usuario):
+
+| Comprobación | Resultado |
+| :--- | :--- |
+| `npm run build` / `npm run check` | 0 errores, 0 avisos, 0 hints |
+| Encabezados de la tabla en pantalla | `Nombre, Teléfono, Empresa/granja, Boletos, Método, Estado, Fecha` — Correo e Importe, fuera |
+| Método de Juan | `Tarjeta` (antes `link` sin traducir) |
+| `html2canvas.js` / `purify.es.js` solicitados, dev y preview | **0**, en ambos |
+| PDF descargado | `asistentes-expo-avicola-2026-AAAA-MM-DD.pdf`, 48.5 KB |
+| Contenido del PDF vs. tabla en pantalla | coincide fila por fila, incluidas las 2 de Juan (`Tarjeta`, `Pagado`) |
+| Total del PDF | `Total de asistentes: 34` = suma de `Boletos` de las 22 filas listadas |
+| Paginación del PDF | 2 páginas (Letter horizontal), encabezado de tabla repetido en la segunda |
+| 360px, tema oscuro (panel) | sin desborde, tres controles (buscador/CSV/PDF) apilados correctamente |
+
+**Estado:** completado y verificado, incluyendo la vista previa del PDF
+generado (convención 14 — se abrió y se leyó el documento, no solo se
+comprobó que el archivo existiera).
