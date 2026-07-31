@@ -41,11 +41,15 @@ import { asset } from '../scripts/paths.js';
                   que el archivo llegue. Sin ellos, el logo aparece de golpe y
                   empuja la descripción hacia abajo.
 
-                  200×200: los dos WebP son cuadrados de verdad (Avipork
-                  200×200, Prosermat 190×190) — ya no es el 320×120 inventado
-                  de cuando no había archivo. Da igual que .patro__logo fuerce
-                  width/height al 100% de la caja (ver el <style>): esto solo
-                  documenta la proporción real, no decide el tamaño final.
+                  200×200 es un valor NOMINAL, no la proporción real de cada
+                  archivo: los WebP ya no son todos cuadrados (Avipork es
+                  apaisado, 446×176; Prosermat 190×190, TEC Capital 190×190,
+                  Promo Hogar 260×260). No pasa nada, y por dos motivos: el
+                  <style> fuerza width al 100% y height a --patro-alto, así
+                  que estos atributos no deciden el tamaño final; y la caja
+                  tiene alto FIJO, así que tampoco hay salto de layout que
+                  reservar. El `object-fit: contain` respeta la proporción
+                  intrínseca del archivo, sea cual sea.
                 */}
                 <img
                   class="patro__logo"

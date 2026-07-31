@@ -3743,6 +3743,73 @@ duro, sin halo. El PNG original salió a la misma carpeta hermana.
 
 ---
 
+### Logo nuevo de Avipork — fondo NEGRO, y por qué NO se desmezcla · COMPLETADA
+
+Avipork entregó una identidad nueva: logotipo apaisado (marca «Avipork» en
+rojo, red de iconos de especies a la izquierda, razón social y sitio web
+debajo) sobre **fondo NEGRO**, JPEG 1280×506. Sustituye al cuadrado de
+200×200 que había desde el pendiente 7.
+
+**El un-blend de los otros tres logos NO sirve aquí, y aplicarlo habría
+arruinado el logo.** Aquellos venían sobre blanco y se desmezclaban con
+`alpha = 255 − min(R,G,B)` recuperando el color de la tinta. La versión
+espejo para fondo negro sería `alpha = max(R,G,B)` con `color = px/alpha`
+— y eso convierte el **gris #565656** de los iconos y de «AP Equipos
+Integrados S.A. de C.V.» en **blanco al 34 % de alfa**, es decir, invisible
+sobre la superficie CLARA de esta sección. Un un-blend correcto de
+aritmética y equivocado de resultado.
+
+Lo que se hizo en su lugar es una **clave de negro que solo calcula alfa y
+CONSERVA el color**: `smoothstep(10, 44, max(R,G,B))`. El gris sigue siendo
+gris, el rojo sigue siendo rojo, y la rampa evita el borde dentado. La
+sombra oscura desplazada del wordmark cae por debajo del umbral y se va con
+el fondo, que es justo lo que hay que hacer: sobre negro no se veía, y sobre
+claro habría quedado como un fantasma gris.
+
+**No hizo falta `fondoPropio`** (el mecanismo del logo de Promo Hogar): con
+el negro fuera, el gris da 6.4:1 y el rojo #CE1B21 4.6:1 contra
+`--claro-surface`. Una tarjeta con fondo negro entre tres claras habría sido
+peor que el problema que resuelve.
+
+**446×176, WebP q74 / alphaQuality 70, effort 6 → 19.57 KB.** El render real
+es 223×88 CSS px (lo limita el alto, `--patro-alto` = 88 px, con
+`object-fit: contain`), así que 446 es DPR2 exacto. Se barrieron 320–480 px
+y cuatro pares calidad/alfa: a q74/a70 el subtítulo —el texto más fino del
+logo— es indistinguible de la referencia q80/a80 comparado a 4× sobre el
+fondo claro real, y ahorra 9 KB. El logo pesa ahora 19.57 KB contra los
+10.14 del cuadrado anterior; el conjunto de los cuatro sube a ~59 KB, todos
+`loading="lazy"` bajo el pliegue.
+
+**Es el primer logo apaisado del conjunto** (2.53:1 contra los cuadrados de
+los otros tres). No se tocó ni la rejilla ni el CSS: `object-fit: contain`
+sobre una caja de alto fijo lo resuelve solo. Sí se corrigió el comentario
+del `<img>` en `Patrocinadores.astro`, que documentaba «los dos WebP son
+cuadrados de verdad»: los atributos `width`/`height` pasan a declararse como
+NOMINALES, porque el `<style>` fuerza las dos dimensiones y la caja tiene
+alto fijo, así que ni deciden el tamaño ni hay salto de layout que reservar.
+
+**Verificado** (`npm run build` / `npm run check` en 0/0/0, guardián de
+assets silencioso) en Chrome headless por CDP, con `prefers-reduced-motion`,
+en 1440×900 y 390×844 × temas verde y azul: `data-state="loaded"` en los
+cuatro, natural 446×176, 0 px de desbordamiento horizontal y las cuatro
+tarjetas en su sitio. Cerrado MIRANDO la captura de la sección y un recorte
+a 2× de la tarjeta (convención 14): sin caja negra, sin halo, iconos y
+subtítulo legibles sobre las dos superficies claras.
+
+> **La captura de la tarjeta salió primero en el sitio equivocado** —enseñaba
+> el hero— por la trampa de siempre: `getBoundingClientRect()` da coordenadas
+> de VIEWPORT y `Page.captureScreenshot` con `captureBeyondViewport` las
+> quiere de DOCUMENTO. Hay que sumar `window.scrollY`. Es la tercera vez que
+> este proyecto tropieza con recortar en el sistema de coordenadas
+> equivocado.
+
+El JPEG original salió del repo a
+`../expo-avicola-2026-assets-originales/patrocinadores/avipork.jpeg`, y el
+anterior se conservó como `avipork-anterior.jpeg` en vez de sobrescribirlo
+(mismo criterio que la foto vieja de Ricardo).
+
+---
+
 ### Logos de patrocinadores — pendiente 7 resuelto · COMPLETADA
 
 Avipork y Prosermat llegaron como JPEG 1024×1024 (138 KB y 300 KB, sin canal
