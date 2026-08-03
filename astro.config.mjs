@@ -177,11 +177,15 @@ export default defineConfig({
         - `/404`: es una página de error, no contenido. La integración no la
           excluye sola; para Astro es una ruta estática más.
         - `/admin`: es el panel interno. Aparecer en el sitemap es literalmente
-          invitar a Google a rastrearlo. Ambas llevan además `noindex`, porque
-          quedar fuera del sitemap no impide que un buscador las encuentre por
-          otro camino.
+          invitar a Google a rastrearlo.
+        - `/agenda`: es la página del QR que se reparte el día del evento. No
+          está enlazada desde ningún sitio a propósito, así que meterla en el
+          sitemap sería deshacer justo eso.
+
+        Las tres llevan además `noindex`, porque quedar fuera del sitemap no
+        impide que un buscador las encuentre por otro camino.
       */
-      filter: (page) => !/\/(404|admin)\/?$/.test(page),
+      filter: (page) => !/\/(404|admin|agenda)\/?$/.test(page),
       changefreq: 'monthly',
     }),
   ],

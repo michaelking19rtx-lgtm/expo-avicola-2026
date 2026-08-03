@@ -331,6 +331,7 @@ defecto. **Estos hex viven solo en `src/styles/tokens.css`.**
 | 7    | SEO técnico, datos estructurados, indexación y rendimiento                | **COMPLETADA** |
 | 8    | `/admin` real: Firebase Auth + lista de asistentes desde Stripe          | **COMPLETADA** |
 | —    | Superficies claras: cuatro secciones invertidas (las bandas se retiraron) | **COMPLETADA** |
+| —    | `/agenda`: programa del día para el QR del evento, con estado en vivo     | **COMPLETADA** |
 
 > **La numeración cambió al empezar la Fase 4.** El plan original metía
 > «programa/agenda» y «ponentes» juntos en la Fase 3. Al posponerse ponentes por
@@ -4340,3 +4341,103 @@ nuevo — donde ya existía la derivación de la Fase de la séptima ponencia
 (`programa.js`), se benefició de ella; donde no existía (`boletos.json`,
 `ponentes.json`), se editó a mano porque son, por diseño, texto plano o
 contenido editorial que no se deriva de nada.
+
+---
+
+### `/agenda` — programa del día para el QR · COMPLETADA
+
+Página autónoma pensada para el papel que se reparte el día del evento: un QR
+que lleva al programa hora por hora. **No está enlazada desde ningún sitio.** No
+aparece en la nav, ni en el footer, ni en el sitemap, y va con `noindex`. El
+enlace va en un solo sentido: de `/agenda` SÍ se llega al sitio, del sitio no se
+llega a `/agenda`.
+
+**Qué se hizo**
+
+- `src/pages/agenda.astro`: cabecera con fecha, horario y sede; la agenda
+  completa derivada de `programa.json`; nota de duración; y un pie con CTA al
+  sitio, «Cómo llegar» al mapa y WhatsApp con mensaje precargado.
+- Filtro del sitemap en `astro.config.mjs` ampliado de `(404|admin)` a
+  `(404|admin|agenda)`, con el porqué escrito al lado.
+- **Estado en vivo**: marca qué bloque está pasando ahora, atenúa los ya
+  pasados y pinta una pastilla en la cabecera («Comienza a las 08:00» / «En
+  curso · …» / «El congreso terminó»).
+
+**Decisiones**
+
+- **SIN GSAP ni Lenis**, mismo criterio que el 404. Quien abre esto está de pie
+  en el salón con el teléfono: bajar 132 KB de capa de movimiento para una
+  consulta de diez segundos, en la wifi de un evento con doscientas personas
+  colgadas del mismo punto de acceso, es justo el peso que este proyecto lleva
+  siete fases quitando. Las dos animaciones son CSS y las corta el bloque global
+  de `prefers-reduced-motion`.
+- **Las horas NO se releen del texto visible.** Cada `<li>` lleva `data-inicio`
+  y `data-fin` en ISO **con el offset del evento**, calculados en build a partir
+  de `site.inicio` (no escrito a mano: es el mismo dato de la cuenta regresiva).
+  Comparar `Date` contra `Date` sale bien en cualquier huso; parsear «09:00» del
+  DOM habría atado el resultado a la zona horaria del teléfono que escanee.
+- **El estado en vivo nace `hidden` y solo lo revela el script** (convención
+  15). Sin JavaScript no aparece nunca, que es lo correcto: un cartel que dijera
+  «Ahora» sin poder saber la hora sería peor que no tener cartel.
+- **`.estado[hidden] { display: none }` explícito.** El `display: none` que
+  respeta el atributo `hidden` lo pone la hoja del navegador con especificidad
+  mínima, así que el `display: inline-flex` del componente lo habría ganado y el
+  cartel se habría visto antes de tiempo.
+- **Lo ya pasado se atenúa a 0.5, no a 0.25**, y vuelve a opacidad completa con
+  `:focus-within`: sigue siendo información consultable (a qué hora fue tal
+  ponencia), no ruido que estorbe.
+- **Repintado cada 30 s, no cada segundo**, más un repintado al volver de
+  `visibilitychange`. Los bloques duran entre 30 y 60 minutos: el desfase máximo
+  es de medio minuto y esto puede quedarse abierto ocho horas en muchos
+  teléfonos a la vez.
+- **`pintar` es función de expresión, no declaración.** TypeScript descarta el
+  estrechamiento de `estado`/`estadoTexto` dentro de una `function` izada, y
+  `npm run check` daba tres `ts(18047)`. En una flecha creada tras la
+  comprobación el estrechamiento se conserva.
+- **En el frontmatter de un `.astro` los tipos van en TypeScript, no en JSDoc.**
+  Los `@param {string}` de `src/scripts/*.js` allí son correctos porque son
+  archivos JS; copiados al frontmatter dan `ts(7006)` más un warning
+  `ts(80004)`.
+
+**Dos cosas que la captura vio y los números no** (convenciones 14 y 17)
+
+1. **La primera captura mostraba el texto cortado por la derecha, y no había
+   ningún desbordamiento.** Era el arnés: `chrome --headless --window-size=390`
+   maqueta a otro ancho y recorta la imagen a 390. Medido después con
+   `Emulation.setDeviceMetricsOverride`, el `scrollWidth` es exactamente igual
+   al `clientWidth` a 360, 390 y 430 px, y la lista de elementos que se salen
+   del borde sale vacía en los tres. Es la convención 17 al pie de la letra: la
+   causa sospechada —el CSS de la página— no explicaba el síntoma, porque el
+   síntoma estaba en el instrumento. **Para capturar esta página, viewport real
+   por CDP; `--window-size` miente.**
+2. **En escritorio, apilar «08:00» sobre «09:00» no se lee como un rango.** La
+   primera versión escondía el guion al pasar la hora a su columna, dando por
+   hecho que la posición bastaba. En la captura son dos cifras una encima de
+   otra sin nada que diga que la de abajo es el final: el primer bloque parecía
+   anunciar dos horas de inicio. Se resolvió dejando el guion.
+
+Además, el punto separador de la cabecera colgaba al final de la primera línea
+cuando la fecha envolvía, separado de lo que separa. Ahora viaja dentro del
+mismo tramo que el horario.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints.
+
+Verificado por CDP con viewport real, no leyendo el código:
+
+| Comprobación | Resultado |
+| :----------- | :-------- |
+| Desbordamiento horizontal a 360 / 390 / 430 px | 0 px en los tres, sin elementos fuera del borde |
+| Sitemap | solo la home; `/agenda` fuera |
+| `noindex` | presente en el HTML compilado |
+| Sin JavaScript | 13 bloques y 13 títulos visibles, pastilla oculta, 0 badges, 0 bloques atenuados, CTA al sitio funcional |
+| Reloj simulado a las 12:15 del 7 de agosto | marca «Bioseguridad inteligente», 6 bloques atenuados |
+| Reloj simulado a las 18:00 | «El congreso terminó», 13 bloques atenuados |
+| Capturas 390 y 1280, con y sin JS | revisadas a ojo, no solo por asertos |
+
+**Pendiente cuando se genere el QR:** apuntarlo a
+`https://expo.visionpecuariamx.com/agenda/` **con la barra final**. El sitio
+compila con `build.format: 'directory'`, así que la ruta canónica es la de la
+carpeta.
+

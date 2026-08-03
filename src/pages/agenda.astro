@@ -1,0 +1,801 @@
+---
+import Base from '../layouts/Base.astro';
+import IconoWhatsApp from '../components/IconoWhatsApp.astro';
+import site from '../data/site.json';
+import programa from '../data/programa.json';
+import { asset } from '../scripts/paths.js';
+import { fechaConDia } from '../scripts/fechas.js';
+import { totalConferencias, enPalabra } from '../scripts/programa.js';
+
+/*
+  PROGRAMA DEL DÍA — página de acceso por QR.
+
+  NO ESTÁ ENLAZADA DESDE NINGÚN SITIO. No aparece en la nav, ni en el footer, ni
+  en el sitemap (filtrada en astro.config.mjs) y va con `noindex`. Se llega a
+  ella escaneando el QR que se reparte el día del evento. El enlace va en un solo
+  sentido: de aquí SÍ se puede ir al sitio del congreso, del sitio no se puede
+  llegar aquí.
+
+  Qué la diferencia de la sección #programa de la home:
+
+  - Es autónoma. Sin nav, sin hero, sin las diez secciones de la landing. Quien
+    la abre está de pie en el recinto con el teléfono en la mano: lo único que
+    necesita es la hora y qué pasa a esa hora.
+  - SIN GSAP NI LENIS. Mismo criterio que el 404: bajar 132 KB de capa de
+    movimiento para una página de consulta rápida, en la red de un salón de
+    eventos con doscientas personas colgadas del mismo punto de acceso, sería
+    exactamente el peso que este proyecto se ha dedicado a quitar. Las dos
+    animaciones que hay son CSS y las corta el bloque global de
+    `prefers-reduced-motion` de global.css.
+  - Tiene estado en vivo: marca qué bloque está pasando AHORA. Es mejora
+    progresiva pura — ver el <script> del final.
+
+  TODO sale de programa.json y site.json. Aquí no hay ni un horario ni un nombre
+  escrito a mano: si cambia la agenda, cambia esta página sola.
+*/
+
+/*
+  El offset del evento sale de `site.inicio` ("2026-08-07T08:00:00-06:00"), no
+  escrito a mano. Es el mismo dato que usa la cuenta regresiva del hero, y así no
+  hay dos sitios que puedan desincronizarse si algún día cambia.
+*/
+const OFFSET = site.inicio.slice(-6);
+
+/* El separador de `programa.json` es un GUION LARGO (–), no un guion normal. */
+const GUION = '–';
+
+/**
+ * Parte "09:00 – 09:35" en sus dos extremos. El último bloque del día
+ * ("16:30", la clausura) no tiene fin, y devuelve `fin: null`.
+ */
+function franja(hora: string) {
+  const [inicio, fin] = String(hora)
+    .split(GUION)
+    .map((parte) => parte.trim());
+  return { inicio, fin: fin || null };
+}
+
+/**
+ * "09:00" → "2026-08-07T09:00:00-06:00".
+ *
+ * Con el offset explícito, la comparación en el navegador es correcta sea cual
+ * sea la zona horaria del teléfono que escanee el QR: un asistente con el móvil
+ * en otro huso ve el mismo bloque marcado que el de al lado.
+ */
+function aIso(hhmm: string | null) {
+  return hhmm ? `${site.fecha}T${hhmm}:00${OFFSET}` : null;
+}
+
+const bloques = programa.bloques.map((bloque) => {
+  const { inicio, fin } = franja(bloque.hora);
+  return {
+    ...bloque,
+    /*
+      Misma traducción que en Programa.astro: el `tipo` del JSON es dato
+      editorial de seis valores, pero al CSS solo le importa si la fila es una
+      conferencia o una pausa. Añadir un `tipo` nuevo no obliga a tocar estilos.
+    */
+    variante: bloque.tipo === 'ponencia' ? 'ponencia' : 'secundaria',
+    inicio,
+    fin,
+    inicioIso: aIso(inicio),
+    finIso: aIso(fin),
+  };
+});
+
+const conferencias = totalConferencias();
+
+const mapaUrl = `https://www.google.com/maps/search/?api=1&query=${site.coordenadas.lat},${site.coordenadas.lng}`;
+
+const whatsappUrl = `https://wa.me/${site.contacto.whatsapp}?text=${encodeURIComponent(
+  `Hola, estoy en la ${site.nombre} y tengo una pregunta.`
+)}`;
+---
+
+<Base
+  title={`Programa del día — ${site.nombre}`}
+  description={`Programa hora por hora de la ${site.nombre}. ${fechaConDia(site.fecha)} · ${site.recinto}, ${site.ciudad}.`}
+  noindex
+>
+  <main class="dia" id="contenido">
+    <div class="dia__inner">
+      <header class="cabecera">
+        <p class="cabecera__eyebrow">Programa del día</p>
+
+        <h1 class="cabecera__titulo">{site.nombre}</h1>
+
+        {/*
+          El punto separador viaja DENTRO del mismo tramo que el horario, no
+          suelto entre los dos. Como items hermanos de un flex que envuelve, al
+          partirse la línea el punto se quedaba colgando al final de la primera,
+          separado de lo que separa.
+        */}
+        <p class="cabecera__cuando">
+          <time datetime={site.fecha}>{fechaConDia(site.fecha)}</time>
+          <span class="cabecera__horario">
+            <span class="cabecera__punto" aria-hidden="true"></span>
+            <span>{site.horario}</span>
+          </span>
+        </p>
+
+        {/*
+          Estado en vivo. Nace OCULTO y solo lo revela el script del final.
+
+          Sin JavaScript no aparece nunca, y es lo correcto: un cartel que
+          dijera «Ahora» sin poder saber qué hora es sería peor que no tener
+          cartel. La página completa se lee igual sin él (convención 15).
+        */}
+        <p class="estado" data-estado hidden>
+          <span class="estado__punto" aria-hidden="true"></span>
+          <span class="estado__texto" data-estado-texto></span>
+        </p>
+
+        <p class="cabecera__sede">
+          <svg
+            class="cabecera__icono"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"></path>
+            <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"
+            ></circle>
+          </svg>
+          <span>
+            <span class="cabecera__recinto">{site.recinto}</span>
+            <span class="cabecera__direccion">{site.direccion}</span>
+          </span>
+        </p>
+      </header>
+
+      <ol class="agenda" role="list">
+        {bloques.map((bloque) => (
+          <li
+            class="bloque"
+            data-variante={bloque.variante}
+            data-inicio={bloque.inicioIso}
+            data-fin={bloque.finIso}
+          >
+            <div class="bloque__horario">
+              <time class="bloque__inicio" datetime={bloque.inicioIso}>
+                {bloque.inicio}
+              </time>
+              {bloque.fin && (
+                <span class="bloque__rango">
+                  <span class="bloque__guion" aria-hidden="true">{GUION}</span>
+                  <time class="bloque__fin" datetime={bloque.finIso}>
+                    {bloque.fin}
+                  </time>
+                </span>
+              )}
+            </div>
+
+            <div class="bloque__cuerpo">
+              <h2 class="bloque__titulo">{bloque.titulo}</h2>
+              {bloque.ponente && (
+                <p class="bloque__ponente">{bloque.ponente}</p>
+              )}
+
+              {/*
+                Igual que el estado de arriba: oculto hasta que el script lo
+                revele.
+
+                Va DENTRO del cuerpo, no como tercer hijo del bloque. Como hijo
+                directo caía en una fila nueva del grid de escritorio y el gap de
+                columna se aplicaba también entre filas, abriendo un hueco muerto
+                bajo el ponente. Aquí fluye detrás del nombre en las dos
+                maquetaciones y no necesita colocarse a mano.
+              */}
+              <p class="bloque__ahora" data-ahora hidden>
+                <span class="bloque__ahora-punto" aria-hidden="true"></span>
+                En curso
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <p class="nota">
+        {enPalabra(conferencias).charAt(0).toUpperCase() +
+          enPalabra(conferencias).slice(1)} conferencias, un panel de expertos y
+        un show de medio tiempo. {programa.notaDuracion}
+      </p>
+
+      <footer class="pie">
+        <a class="pie__cta" href={asset('')}>
+          <span>Ver el sitio del congreso</span>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M5 12h14m0 0-5.5-5.5M19 12l-5.5 5.5"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+        </a>
+
+        <div class="pie__vias">
+          <a class="pie__via" href={mapaUrl} target="_blank" rel="noopener noreferrer">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linejoin="round"></path>
+              <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"
+              ></circle>
+            </svg>
+            <span>Cómo llegar</span>
+          </a>
+
+          <a class="pie__via" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <IconoWhatsApp tamano={18} />
+            <span>Escríbenos</span>
+          </a>
+        </div>
+
+        <p class="pie__marca">{site.ciudad}</p>
+      </footer>
+    </div>
+  </main>
+</Base>
+
+<script>
+  /*
+    ESTADO EN VIVO — mejora progresiva, nunca requisito.
+
+    La página ya es completa y legible sin este script: todos los bloques están
+    en el HTML con su hora. Lo único que añade esto es señalar CUÁL está pasando
+    ahora, que es justo lo que quiere quien acaba de escanear el QR de pie en el
+    salón.
+
+    Las horas NO se releen del texto visible: cada <li> trae `data-inicio` y
+    `data-fin` en ISO con el offset del evento, calculados en build. Comparar
+    `Date` contra `Date` es correcto en cualquier huso horario; parsear "09:00"
+    del DOM habría atado el resultado a la zona del teléfono.
+  */
+  const lista = document.querySelectorAll<HTMLElement>('.bloque[data-inicio]');
+  const estado = document.querySelector<HTMLElement>('[data-estado]');
+  const estadoTexto = document.querySelector<HTMLElement>('[data-estado-texto]');
+
+  if (lista.length && estado && estadoTexto) {
+    /** Bloques con sus límites ya resueltos a milisegundos. */
+    const bloques = Array.from(lista).map((el) => {
+      const inicio = Date.parse(el.dataset.inicio ?? '');
+      const finBruto = Date.parse(el.dataset.fin ?? '');
+
+      return {
+        el,
+        inicio,
+        /*
+          La clausura no tiene hora de fin en los datos. Se le da una duración
+          nominal para que «en curso» no se quede encendido toda la noche.
+        */
+        fin: Number.isNaN(finBruto) ? inicio + 30 * 60 * 1000 : finBruto,
+        titulo: el.querySelector('.bloque__titulo')?.textContent?.trim() ?? '',
+      };
+    });
+
+    const primero = bloques[0];
+    const ultimo = bloques[bloques.length - 1];
+
+    const horaCorta = new Intl.DateTimeFormat('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Mexico_City',
+    });
+
+    const diaCorto = new Intl.DateTimeFormat('es-MX', {
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'America/Mexico_City',
+    });
+
+    /*
+      Función de expresión, NO declaración. TypeScript descarta el estrechamiento
+      de `estado` y `estadoTexto` —que aquí ya se sabe que no son null— dentro de
+      una `function` declarada, porque al estar izada podría llamarse desde
+      cualquier sitio. En una flecha creada después de la comprobación, el
+      estrechamiento se conserva.
+    */
+    const pintar = () => {
+      const ahora = Date.now();
+
+      let enCurso = null;
+      let siguiente = null;
+
+      for (const bloque of bloques) {
+        const activo = ahora >= bloque.inicio && ahora < bloque.fin;
+
+        bloque.el.classList.toggle('bloque--ahora', activo);
+        bloque.el.classList.toggle('bloque--pasado', ahora >= bloque.fin);
+
+        const marca = bloque.el.querySelector<HTMLElement>('[data-ahora]');
+        if (marca) marca.hidden = !activo;
+
+        if (activo) enCurso = bloque;
+        if (!siguiente && bloque.inicio > ahora) siguiente = bloque;
+      }
+
+      let texto = '';
+      let modo = 'espera';
+
+      if (enCurso) {
+        texto = `En curso · ${enCurso.titulo}`;
+        modo = 'vivo';
+      } else if (ahora < primero.inicio) {
+        /*
+          Antes de que arranque. Si aún no es el día del evento se dice la
+          fecha; si ya lo es, la hora de apertura, que es el dato útil.
+        */
+        const faltanDias = Math.ceil((primero.inicio - ahora) / 86400000);
+        texto =
+          faltanDias > 1
+            ? `Comienza el ${diaCorto.format(primero.inicio)} a las ${horaCorta.format(primero.inicio)}`
+            : `Comienza a las ${horaCorta.format(primero.inicio)}`;
+      } else if (ahora >= ultimo.fin) {
+        texto = 'El congreso terminó. Gracias por acompañarnos.';
+        modo = 'fin';
+      } else if (siguiente) {
+        /* Hueco entre bloques: se anuncia el que viene. */
+        texto = `A continuación · ${siguiente.titulo}`;
+        modo = 'vivo';
+      }
+
+      if (!texto) return;
+
+      estadoTexto.textContent = texto;
+      estado.dataset.modo = modo;
+      estado.hidden = false;
+    };
+
+    pintar();
+
+    /*
+      Medio minuto. Los bloques duran entre 30 y 60 minutos, así que el desfase
+      máximo entre que cambia la agenda y cambia la pantalla es de 30 s — y no
+      cuesta nada. Nada de segundo a segundo: esto puede quedarse abierto en
+      doscientos teléfonos a la vez durante ocho horas.
+    */
+    setInterval(pintar, 30_000);
+
+    /*
+      Al volver de bloquear el teléfono, `setInterval` puede haber quedado
+      congelado: se repinta en cuanto la pestaña se vuelve visible.
+    */
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pintar();
+    });
+  }
+</script>
+
+<style>
+  /* Lienzo ----------------------------------------------------------------- */
+  .dia {
+    padding-block: var(--space-2xl) var(--space-3xl);
+    padding-inline: var(--gutter);
+  }
+
+  .dia__inner {
+    max-width: 46rem;
+    margin-inline: auto;
+  }
+
+  /* Cabecera --------------------------------------------------------------- */
+  .cabecera__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .cabecera__titulo {
+    margin-block-start: var(--space-sm);
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .cabecera__cuando {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step-0);
+  }
+
+  .cabecera__cuando time::first-letter {
+    text-transform: uppercase;
+  }
+
+  .cabecera__horario {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .cabecera__punto {
+    flex: none;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+  }
+
+  .cabecera__sede {
+    display: flex;
+    align-items: start;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-lg);
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .cabecera__icono {
+    flex: none;
+    margin-block-start: 0.1em;
+    color: var(--accent);
+  }
+
+  .cabecera__recinto {
+    display: block;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .cabecera__direccion {
+    display: block;
+    margin-block-start: 0.15em;
+  }
+
+  /* Estado en vivo --------------------------------------------------------- */
+  /*
+    `hidden` es un atributo, y el estilo por defecto que lo respeta
+    (`display: none`) lo pone la hoja del navegador con especificidad mínima.
+    Como aquí se declara `display: inline-flex`, ganaría la regla del componente
+    y el cartel se vería antes de tiempo. De ahí esta línea explícita.
+  */
+  .estado[hidden] {
+    display: none;
+  }
+
+  .estado {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-lg);
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background-color: var(--surface);
+    font-size: var(--step--1);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .estado__punto {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+  }
+
+  .estado[data-modo='vivo'] {
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+    color: var(--text);
+  }
+
+  .estado[data-modo='vivo'] .estado__punto {
+    background-color: var(--accent);
+    animation: latido 2.4s var(--ease-in-out) infinite;
+  }
+
+  .estado[data-modo='fin'] {
+    color: var(--text-muted);
+  }
+
+  /*
+    El latido es el único movimiento permanente de la página, y está aquí porque
+    comunica algo concreto: que el dato es de ahora mismo y se está actualizando
+    solo. El bloque global de `prefers-reduced-motion` de global.css lo corta.
+  */
+  @keyframes latido {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.82);
+    }
+  }
+
+  /* Agenda ----------------------------------------------------------------- */
+  .agenda {
+    margin-block-start: var(--space-xl);
+    list-style: none;
+  }
+
+  .bloque {
+    position: relative;
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-card);
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      background-color var(--t-base) var(--ease-out),
+      opacity var(--t-base) var(--ease-out);
+  }
+
+  .bloque + .bloque {
+    margin-block-start: var(--space-xs);
+  }
+
+  .bloque__horario {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    /* La franja no debe partirse en dos líneas por el guion. */
+    white-space: nowrap;
+  }
+
+  .bloque__inicio {
+    font-size: var(--step-1);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .bloque__rango {
+    display: inline-flex;
+    gap: 0.35em;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    font-weight: 500;
+  }
+
+  .bloque__cuerpo {
+    margin-block-start: var(--space-2xs);
+  }
+
+  .bloque__titulo {
+    font-size: var(--step-0);
+    font-weight: 500;
+    line-height: 1.35;
+    text-wrap: pretty;
+  }
+
+  .bloque__ponente {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step--1);
+  }
+
+  /* Conferencias: la fila protagonista ------------------------------------- */
+  .bloque[data-variante='ponencia'] {
+    border-color: var(--border);
+    background-color: var(--surface);
+  }
+
+  .bloque[data-variante='ponencia'] .bloque__inicio {
+    color: var(--accent);
+  }
+
+  .bloque[data-variante='ponencia'] .bloque__titulo {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .bloque[data-variante='ponencia'] .bloque__ponente {
+    color: var(--text-muted);
+  }
+
+  /* Pausas del programa: filas secundarias --------------------------------- */
+  .bloque[data-variante='secundaria'] .bloque__inicio {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .bloque[data-variante='secundaria'] .bloque__titulo {
+    color: var(--text-muted);
+  }
+
+  /* En curso / ya pasó ------------------------------------------------------ */
+  /*
+    Las dos las pone el script. Sin JavaScript ningún bloque las lleva y la
+    agenda se ve entera y pareja, que es su estado por defecto correcto.
+  */
+  .bloque--ahora {
+    border-color: var(--accent);
+    background-color: color-mix(in oklab, var(--accent) 9%, var(--surface));
+  }
+
+  .bloque--ahora .bloque__inicio,
+  .bloque--ahora .bloque__titulo {
+    color: var(--text);
+  }
+
+  .bloque--ahora .bloque__inicio {
+    color: var(--accent);
+  }
+
+  /*
+    Lo ya pasado se atenúa, pero NO por debajo de lo legible: sigue siendo
+    información que alguien puede querer consultar (a qué hora fue tal
+    ponencia). Por eso 0.5 y no 0.25, y por eso vuelve a opacidad completa al
+    enfocarlo con el teclado.
+  */
+  .bloque--pasado {
+    opacity: 0.5;
+  }
+
+  .bloque--pasado:focus-within {
+    opacity: 1;
+  }
+
+  .bloque__ahora[hidden] {
+    display: none;
+  }
+
+  .bloque__ahora {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-sm);
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .bloque__ahora-punto {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    animation: latido 2.4s var(--ease-in-out) infinite;
+  }
+
+  /* Nota -------------------------------------------------------------------- */
+  .nota {
+    margin-block-start: var(--space-xl);
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-wrap: pretty;
+  }
+
+  /* Pie --------------------------------------------------------------------- */
+  .pie {
+    margin-block-start: var(--space-2xl);
+    text-align: center;
+  }
+
+  .pie__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step-0);
+    font-weight: 600;
+    transition:
+      filter var(--t-base) var(--ease-out),
+      transform var(--t-fast) var(--ease-out);
+  }
+
+  .pie__cta:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+
+  .pie__vias {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-lg);
+  }
+
+  .pie__via {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    font-weight: 500;
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      color var(--t-base) var(--ease-out);
+  }
+
+  .pie__via:hover {
+    border-color: var(--primary-bright);
+    color: var(--text);
+  }
+
+  .pie__marca {
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  /*
+    Escritorio: la hora pasa a su propia columna. En móvil se queda encima,
+    apilada — meter una columna de horas de ancho fijo en un teléfono dejaría el
+    título en una tira ilegible. Mismo criterio que la agenda de la home.
+  */
+  @media (min-width: 34rem) {
+    .bloque {
+      display: grid;
+      grid-template-columns: 7.5rem 1fr;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .bloque__horario {
+      display: block;
+      /* Alinea la hora con la primera línea del título, no con la caja. */
+      padding-block-start: 0.1em;
+    }
+
+    /*
+      El guion SE QUEDA al pasar la hora a su propia columna.
+
+      La primera versión lo escondía aquí, dando por hecho que apilar «08:00»
+      sobre «09:00» ya se leía como un rango. En la captura no se leía: son dos
+      cifras una encima de otra, sin nada que diga que la de abajo es el final,
+      y el primer bloque parecía anunciar dos horas de inicio distintas. Un
+      carácter lo resuelve.
+    */
+    .bloque__rango {
+      display: block;
+      margin-block-start: 0.1em;
+    }
+
+    .bloque__cuerpo {
+      margin-block-start: 0;
+    }
+  }
+</style>
