@@ -39,10 +39,32 @@ export const correo = contacto.correo ?? null;
  * @returns {string | null} URL, o null si no hay número configurado.
  */
 export function whatsappUrl(mensaje) {
-  if (!whatsapp) return null;
-  const numero = String(whatsapp).replace(/\D/g, '');
+  return waUrl(whatsapp, mensaje);
+}
+
+/**
+ * El mismo enlace, para un número QUE NO ES EL DEL EVENTO.
+ *
+ * Lo usan las fichas de patrocinador: cada empresa tiene su propio WhatsApp y
+ * ninguno vive en `site.json`. Se saca aquí en vez de escribir `wa.me/52…` en
+ * el componente por la razón de siempre —que el armado del enlace exista una
+ * sola vez—, y `whatsappUrl` pasa a ser este mismo con el número del evento.
+ *
+ * `52` se antepone si el número viene a 10 dígitos, que es el formato en que
+ * este proyecto guarda los teléfonos mexicanos. Si ya trae lada de país se
+ * respeta tal cual.
+ *
+ * @param {unknown} numero Teléfono, con o sin espacios y con o sin lada país.
+ * @param {string} [mensaje] Texto con el que se abre la conversación.
+ * @returns {string | null} URL, o null si no hay número.
+ */
+export function waUrl(numero, mensaje) {
+  if (!numero) return null;
+  const digitos = String(numero).replace(/\D/g, '');
+  if (!digitos) return null;
+  const conLada = digitos.length === 10 ? `52${digitos}` : digitos;
   const texto = mensaje ? `?text=${encodeURIComponent(mensaje)}` : '';
-  return `https://wa.me/${numero}${texto}`;
+  return `https://wa.me/${conLada}${texto}`;
 }
 
 /**

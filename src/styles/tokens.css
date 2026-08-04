@@ -26,6 +26,17 @@
      --bg ahí ya está remapeado al claro, así que sin este token la banda de
      frontera no tendría de dónde partir. Ver la sección 4 de global.css. */
   --oscuro-bg: #0a0f0d;
+  /* Su pareja: el texto que se lee SOBRE --oscuro-bg desde dentro de una
+     sección clara, donde --text ya está remapeado al tinte oscuro. Lo usa el
+     chip oscuro de la tarjeta de El Triunfo, cuyo logotipo va en tinta blanca.
+     Es la convención 16 vista desde el otro lado: no basta con poner el fondo
+     oscuro, hay que declarar también con qué color se escribe encima. */
+  --oscuro-text: #f4f1ea;
+  /* Y su acento. --claro-accent (#0c6047) sobre --oscuro-bg da 2.57:1, por
+     debajo de AA: el lima es el acento que ESTE fondo pide, y es justo el que
+     la sección clara había remapeado. Medido, no supuesto. */
+  --oscuro-accent: #b6e33b;
+  --oscuro-border: rgba(255, 255, 255, 0.12);
 
   /* Superficie clara — ver «Superficies claras» en global.css. */
   --claro-bg: #efe9dc;
@@ -61,6 +72,9 @@
   --border: rgba(255, 255, 255, 0.08);
 
   --oscuro-bg: #0a1428;
+  --oscuro-text: #eaf2ff;
+  --oscuro-accent: #22d3ee;
+  --oscuro-border: rgba(255, 255, 255, 0.12);
 
   --claro-bg: #e7edf5;
   --claro-surface: #f4f8fc;

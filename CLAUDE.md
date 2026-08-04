@@ -4441,3 +4441,237 @@ Verificado por CDP con viewport real, no leyendo el código:
 compila con `build.format: 'directory'`, así que la ruta canónica es la de la
 carpeta.
 
+
+---
+
+### Patrocinadores: seis, con ficha completa en modal · COMPLETADA
+
+La sección pasa de tarjetas estáticas a tarjetas que abren una ficha completa
+en `<dialog>`, igual que Ponentes, y entran **dos patrocinadores nuevos**:
+Materiales y Acabados El Triunfo y Comercializadora Avícola Victoria Linares.
+
+**Qué se hizo**
+
+- `patrocinadores.json` reescrito: de 4 campos por objeto a 16. Razón social,
+  descripción corta y larga, ubicación, contacto responsable, teléfonos,
+  correo, web y redes. Los ausentes van en `null` y **no se renderizan**.
+- `Patrocinadores.astro`: rejilla + seis `<dialog>` con el mecanismo completo
+  de Ponentes (foco atrapado, Escape, retorno de foco, `#patrocinador-{slug}`,
+  in situ sin mover el scroll, y modo sin JS con las fichas en el flujo).
+- Dos WebP nuevos, dos recomprimidos, y `--oscuro-text` / `--oscuro-accent` /
+  `--oscuro-border` en `tokens.css`.
+- `animations.js`: el gestor de anclas deja de conocer una sola familia de
+  ficha (ver abajo).
+
+#### EL TRIUNFO NO TRAÍA FONDO QUE QUITAR — TRAÍA TINTA BLANCA
+
+El encargo daba por hecho el tratamiento de siempre («quita el fondo blanco si
+se puede hacer limpio»). **El archivo ya venía recortado**, con alfa real: 64.0%
+transparente y solo 0.6% de píxeles parciales, un antialias limpio. No había
+un-blend que hacer.
+
+El problema era el contrario y no se ve hasta componerlo: **el 54.3% de la tinta
+opaca es blanco `#F0F0F0`** —«EL TRIUNFO» está compuesto en blanco— y esta
+sección es SUPERFICIE CLARA. Sobre `--claro-surface` el wordmark desaparece y
+solo quedan la mascota y el amarillo.
+
+`fondoPropio: true`, el mecanismo de Promo Hogar, **lo habría empeorado**: pinta
+`--blanco-marca`, blanco puro, debajo de un logotipo blanco. Lo que hacía falta
+era lo opuesto, y por eso existe `fondoOscuro`: devolverle el fondo oscuro para
+el que la marca lo diseñó, y servir el logo **sin retocar un píxel de la
+identidad de nadie**. Se consultó con el cliente antes de implementarlo, porque
+es una decisión de marca y no de código.
+
+> **`fondoPropio` y `fondoOscuro` son dos campos y no un enum a propósito.**
+> `fondoPropio` ya estaba en el repo, documentado y en producción; convertirlo
+> en `fondo: 'blanco' | 'oscuro' | null` obligaba a tocar el objeto de Promo
+> Hogar sin ninguna ganancia. Si algún día entra un tercer tratamiento, ESE es
+> el momento de unificarlos.
+
+#### VICTORIA LINARES: EL RECORTE CIRCULAR GANA, PERO HAY QUE CORTAR MÁS ADENTRO
+
+Llegó como captura de WhatsApp, 640×640, sello circular sobre gris plano
+`rgb(96,96,96)`. El recorte circular gana sin discusión frente al cuadrado: el
+disco es blanco y el gris no aporta nada.
+
+**Lo que no se veía sin medir es que el archivo lleva DOS anillos.** El perfil
+radial desde el centro (323.5, 306) lo separa:
+
+| radio | qué hay |
+| :---- | :------ |
+| ≤ 185 | el arte: gallina, sol y huevos |
+| 186–193 | anillo verde macizo (98.2% verde) |
+| 198–229 | «COMERCIALIZADORA AVÍCOLA» / «VICTORIA LINARES» en arco |
+| 232 | anillo verde fino que cierra el sello |
+| 240–255 | blanco limpio |
+| **256–275** | **micro-tipografía exterior — DEL REVÉS arriba, y cortada por el borde inferior del lienzo** |
+| ≥ 296 | fondo gris |
+
+Se corta en **r = 246**, en el blanco limpio: el sello entero, sin el anillo
+exterior. A 88 px de render ese anillo es ruido ilegible y encima invertido;
+comparados los dos recortes a tamaño real, con él no se lee nada y sin él se
+leen las dos líneas en arco. El teléfono que llevaba impreso —2381332647— no se
+pierde: está en `telefonos`, y **es el único WhatsApp confirmado del conjunto**
+porque el propio logotipo lleva el icono de WhatsApp junto a él.
+
+#### EL PRESUPUESTO DE 70 KB NO DABA, Y SE ARREGLÓ SIN TOCAR CUATRO LOGOS
+
+Los cuatro existentes sumaban ya **58.42 KB**, así que quedaban 11.58 KB para
+los dos nuevos — imposible para un logotipo apaisado con un personaje 3D.
+
+**Se recomprimieron solo dos, y ninguno de los dos por capricho:** los dos
+tenían más píxeles de los que se ven. El render es de 88 CSS px de alto, así que
+DPR2 son 176; Promo Hogar estaba a 260×260 y Prosermat a 190×190.
+
+| | antes | ahora | cómo |
+| :-- | --: | --: | :-- |
+| Promo Hogar | 17.57 KB | **9.00 KB** | RE-DERIVADO del PNG original limpio (ya trae alfa, no necesita un-blend): sin pérdida generacional |
+| Prosermat | 17.05 KB | **11.10 KB** | reescalado 190→176 del WebP servido |
+| Avipork | 19.57 KB | 19.57 KB | sin tocar |
+| TEC Capital | 4.23 KB | 4.23 KB | sin tocar |
+| El Triunfo | — | **11.74 KB** | 581×176, q72/a70 |
+| Victoria Linares | — | **8.11 KB** | 176×176, q74/a70 |
+| **TOTAL** | | **63.75 KB** | presupuesto 70 KB, **sobran 6.25** |
+
+**Avipork, Prosermat y TEC Capital NO tienen original del que re-derivarse a un
+tamaño mayor sin rehacer su un-blend**, que vive en esta bitácora y no en un
+script. Es la razón por la que los logos se quedan en 176 px de alto y no suben
+a 240: ver la nota del CSS de `.pficha__marco`.
+
+> Reescalar un WebP ya con pérdida es aceptable cuando se REDUCE —el remuestreo
+> promedia los artefactos en vez de acumularlos—, no cuando se re-codifica al
+> mismo tamaño. Aun así se comprobó en captura a 2×: Prosermat es indistinguible
+> a q86, q80 y q74; se tomó q80 por dejar margen.
+
+#### DOS FAMILIAS DE FICHA, Y UN MARCADOR COMÚN PARA EL GESTOR DE ANCLAS
+
+`Ponentes.astro` usa `[data-ficha]` y este componente `[data-ficha-patro]`.
+**Tienen que ser distintos**: el script del cliente NO lo acota Astro, y con un
+marcador compartido el `desdeHash` de Ponentes cerraría las fichas de aquí en
+cuanto el hash no empezara por `ponente-`, y este las de allá.
+
+Lo que sí es común es la excepción del gestor de anclas, y ahí sí se generalizó.
+`fichaDeHash()` de `animations.js` casaba `dialog[data-ficha]` y hacía que el
+deep-link fuera SIEMPRE a `#ponentes`, con la sección escrita a mano en el
+módulo. Ahora casa **`dialog[data-ficha-modal]`** y la sección la declara cada
+`<dialog>` en **`data-ficha-seccion`**. Así `animations.js` deja de saber cuántas
+familias de ficha hay, y la siguiente entra sin tocarlo.
+
+#### TRES FALLOS QUE LOS ASERTOS DIERON POR BUENOS
+
+**(1) El chip oscuro no llegaba al modal.** Los selectores `[data-fondo-propio]`
+y `[data-fondo-oscuro]` iban sueltos, con especificidad (0,1,0) — la misma que
+`.patro__marco` y `.pficha__marco`. Decidía el ORDEN, y `.pficha__marco` se
+declara más abajo con la propiedad ABREVIADA `background`, que **reinicia
+`background-color`**. En la tarjeta el chip salía bien; en el modal el logotipo
+blanco de El Triunfo quedaba invisible sobre la superficie clara. Los 8 asertos
+del modal pasaban. **Lo enseñó la captura con la ficha abierta.** Se cierra
+acotando los selectores a su clase, y de paso `.pficha__marco` pasa a
+`background-color`.
+
+**(2) El logo del modal salía MÁS PEQUEÑO que el de la tarjeta.** La primera
+versión puso el logo en una columna al lado del nombre
+(`grid-template-columns: auto 1fr`). Con eso, un logotipo APAISADO como el de El
+Triunfo (3.3:1) quedaba limitado por el ANCHO y se dibujaba a **44 px de alto,
+contra los 82 de la tarjeta** — exactamente lo contrario de lo que la ficha
+tiene que hacer. Y de paso el nombre se partía en cuatro líneas: «Materiales / y
+/ Acabados / El Triunfo». Apilando el logo ARRIBA, en su propia línea, dispone
+del ancho entero y lo limita el ALTO: los seis salen a 112 px, sin importar su
+proporción, y el nombre cabe en una línea.
+
+**(3) `opacity` cuenta para el contraste, y tumbó un par por debajo de AA.**
+`.patro__mas` («Ver ficha») va en `--accent` con `opacity: 0.72` para ser
+discreto. A plena opacidad ese color da 6.95:1; **compuesto al 0.72 sobre la
+tarjeta clara se desploma a 3.71:1 en verde y 3.72:1 en azul**, por debajo del
+4.5 de AA. Subido a **0.85** da 4.96 y 4.98, y el salto a 1 en hover se sigue
+notando. La tarjeta del chip oscuro pasaba igualmente (7.04:1): el lima sobre
+casi negro aguanta la atenuación; el verde profundo sobre crema, no.
+
+> **ES EL PAR DE LA CONVENCIÓN 16.** La 16 dice que remapear un token no alcanza
+> a quien hereda el color ya computado. Esta es la otra mitad: **el color
+> declarado tampoco es el color que se ve** si hay una `opacity` por encima. En
+> los dos casos `getComputedStyle` devuelve el valor «correcto» y la pantalla
+> enseña otro. Al medir contraste hay que componer la opacidad —la del elemento
+> y la de sus ancestros— antes de calcular.
+
+#### EL ARNÉS FALLÓ TRES VECES, Y NINGUNA ERA DEL PRODUCTO
+
+1. **`build | head` mató el build por SIGPIPE** y dejó `dist/` SIN
+   `index.html`. El servidor devolvía 404 y Playwright reportaba «no existe
+   `#patrocinadores`» durante tres corridas. **Ya estaba documentado en esta
+   bitácora —«no pasar la salida del build por `head`»— y se repitió igual.**
+   Los logs del build van a un archivo y se leen del archivo.
+2. **Ratio 1.00 en cinco pares de contraste.** `page.screenshot({clip})` pide
+   coordenadas de VIEWPORT; los elementos bajo el pliegue recortaban zona vacía
+   o el velo del backdrop, dando un color plano contra sí mismo. **1.00 no es
+   un fallo de contraste, es un fallo de medición** — la trampa que ya estaba
+   escrita aquí. Se pasó a `locator.screenshot()`, que desplaza el elemento
+   solo, y finalmente a medir el COLOR RESUELTO componiendo la opacidad: el
+   histograma no ve un texto de nueve caracteres en una caja de 270×39, porque
+   ningún color puro llega al umbral de cobertura.
+3. **«La llegada con hash no desplaza».** El arnés navegaba a `URL + '#hash'`
+   con la página YA cargada: eso es una navegación de FRAGMENTO, no recarga el
+   documento y no vuelve a ejecutar el módulo, así que solo disparaba
+   `hashchange` —que abre la ficha y NO debe desplazar—. Cargando la URL
+   completa de cero, los 6 casos pasan en los dos modos de movimiento.
+
+#### DOS CAMPOS FUERA DEL ENCARGO, Y POR QUÉ
+
+- **`whatsapp`** — el encargo pedía «botón de WhatsApp si aplica», y NO hay
+  forma de saber por el número cuál lo es. El único con evidencia es el de
+  Victoria Linares, porque su logotipo lleva el icono de WhatsApp junto a
+  «Pedidos: 2381332647». Ponerlo en los demás sería prometer un canal que quizá
+  no existe. Es un campo aparte y no una marca dentro de `telefonos` para no
+  romper la forma que pidió el encargo.
+- **`fondoOscuro`** — ver arriba.
+
+#### LAS REDES QUE NO SON URL SE PINTAN COMO TEXTO
+
+Avipork trae `facebook: "AVIPORK"` e `instagram: "AVIPORK"`, y Victoria Linares
+`facebook: "Avicola Victoria Linares"`. **Son nombres de página, no URLs**, y el
+segundo ni siquiera es un identificador válido. Componer
+`facebook.com/{nombre}` a ojo es fabricar un enlace que puede dar 404 — el mismo
+error que este proyecto lleva evitando desde `/privacidad` y las anclas muertas.
+Se pintan como texto atenuado y sin hover, visiblemente distintos de un enlace.
+**Solo El Triunfo trae URLs completas y solo él tiene Facebook e Instagram
+enlazados.**
+
+> **PENDIENTE DE CONTENIDO:** si el cliente confirma las URLs reales de
+> Facebook e Instagram de Avipork y de Victoria Linares, basta sustituir el
+> nombre por la URL en `patrocinadores.json` — el componente ya distingue los
+> dos casos y no hay código que tocar.
+
+**Estado**
+
+`npm run build` y `npm run check`: 0 errores, 0 warnings, 0 hints. Guardián de
+`public/img/` silencioso (los tres originales salieron a la carpeta hermana; el
+banner `NUESTRA OBRA ES SERVIRLE` no se usa y está allí como
+`nuestra-obra-es-servirle.png`).
+
+Verificado en Chromium por Playwright, con `prefers-reduced-motion`:
+
+| Comprobación | Resultado |
+| :----------- | :-------- |
+| Desborde en 320 / 360 / 768 / 1024 / 1440 × verde y azul | **0 px en los 10** |
+| Rejilla | **3×2** a 1440 · 2×3 a 768 y 1024 · apilada a 320 y 360 |
+| Los seis logos | `loaded`, sin deformar, alto pintado 82–88 px en una caja de 88 |
+| Peso de los seis | **63.75 KB** de 70 |
+| Modal, los 6 | abre como `:modal`, `position: fixed`, **scroll Δ0**, hash correcto, foco dentro, una sola ficha abierta, cero `null` visibles |
+| Escape | cierra, limpia el hash, **devuelve el foco a su tarjeta**, scroll intacto |
+| Foco atrapado | **16/16** tabulaciones dentro de la ficha |
+| Llegada directa con `#patrocinador-{slug}` | ficha abierta y sección a **y=73 = alto de la nav**, en los 2 modos de movimiento |
+| Enlaces externos | 5 con `target="_blank"` y `rel="noopener noreferrer"` |
+| `tel:` | 7, todos `tel:+52` + 10 dígitos |
+| `mailto:` | 2, bien formados |
+| **Sin JavaScript** | 6/6 fichas en el flujo, `position: static`, **6 coordenadas distintas**, contenedor de 3 526 px, botón de cerrar oculto, 7 `tel:` accesibles, **0 px de desborde** en los 4 anchos |
+| Contraste | **44 pares** medidos sobre el color resuelto con la opacidad compuesta, los 2 temas, tarjetas y 2 modales. Peor par **4.93:1** |
+
+Cerrado MIRANDO las capturas (convención 14): sección en los 4 anchos × 2 temas,
+**dos modales abiertos en cada uno** —El Triunfo por el chip oscuro y Avipork
+por ser la ficha más llena— y el modo sin JavaScript (convención 15). Los fallos
+(1) y (2) de arriba salieron de ahí y de ningún aserto.
+
+**Los teléfonos de Avipork ya venían normalizados** y se verificaron uno a uno:
+los cuatro dan 10 dígitos. El `238 129 1241` es el que llegó como
+`+52 1 238 129 1241` —formato viejo, con el 1 de móvil después del 52—; quitando
+lada de país y ese 1 queda el mismo número de 10 dígitos que ya estaba escrito.

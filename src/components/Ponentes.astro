@@ -139,6 +139,18 @@ const IMG_H = 960;
     del módulo, dejando el modal entero muerto. El CSS sí está a salvo porque
     Astro lo acota; el JS no.
 
+    Y `data-ficha` SIGUE SIENDO EXCLUSIVO DE ESTE COMPONENTE, que es lo que
+    permite que Patrocinadores tenga sus propias fichas sin interferir: su
+    script busca `[data-ficha-patro]` y este busca `[data-ficha]`, así que
+    ninguno de los dos ve los <dialog> del otro. Si compartieran marcador, el
+    `desdeHash` de aquí cerraría las fichas de allá en cuanto el hash no
+    empezara por `ponente-`, y viceversa.
+
+    `data-ficha-modal` y `data-ficha-seccion` son la parte que SÍ es común:
+    los lee `bindAnchors()` de animations.js para no desplazar el scroll hacia
+    un elemento de la capa superior, y para saber a qué sección llevar a quien
+    llegue con el enlace compartido. Ver `fichaDeHash` allí.
+
     OJO con los comentarios aquí dentro: un {…} suelto dentro del cuerpo con
     paréntesis de un .map() son DOS expresiones y el compilador de Astro lo
     rechaza. Los comentarios de las fichas van en este bloque, fuera del map.
@@ -149,6 +161,8 @@ const IMG_H = 960;
         <dialog
           class="ficha"
           data-ficha
+          data-ficha-modal
+          data-ficha-seccion="#ponentes"
           id={`ponente-${p.slug}`}
           open
           aria-labelledby={`ficha-titulo-${p.slug}`}

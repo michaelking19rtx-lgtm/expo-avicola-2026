@@ -1,25 +1,110 @@
 ---
 import patrocinadores from '../data/patrocinadores.json';
 import { asset } from '../scripts/paths.js';
+import { waUrl } from '../scripts/contacto.js';
 
 /*
-  Patrocinadores.
+  Patrocinadores — tarjetas con ficha completa en modal.
 
-  Los logos ya llegaron (WebP con transparencia, fondo blanco quitado a mano
-  porque venían horneados en JPEG). Se CONSERVA el reparto entre CSS y JS que
-  ya traía el hero y los retratos de Ponentes, a propósito y no por inercia:
-  un logo puede volver a dar 404 el día que se sustituya por uno nuevo, y ese
-  día es exactamente cuando este mecanismo vuelve a ganarse el puesto.
+  TODO sale de src/data/patrocinadores.json. Aquí no hay ni un teléfono, ni un
+  correo, ni una dirección escritos a mano.
 
-    - Sin JS ([data-js] ausente): manda el <img>. Si falta, el navegador pinta
-      su icono de imagen rota, pero es el único escenario donde no podemos
-      hacer nada mejor.
-    - Con JS: manda el marco punteado con el nombre de la empresa, y la imagen
-      solo aparece cuando se confirma que cargó.
+  ── LA FICHA NO VIVE SOLO EN EL MODAL ────────────────────────────────────────
 
-  Así el sitio nunca enseña un icono de imagen rota mientras un logo esté
-  roto, y el nombre de la empresa siempre se lee.
+  Mismo reparto que Ponentes, y por la misma razón: cada ficha se emite como un
+  <dialog> CON el atributo `open`. Un <dialog open> no es modal, se pinta como
+  un bloque en el flujo, así que SIN JavaScript la página enseña la rejilla y
+  debajo las seis fichas completas, y `#patrocinador-{slug}` es un ancla a un
+  elemento que existe de verdad. Con JavaScript el script los cierra al arrancar
+  y a partir de ahí usa `showModal()`, que da gratis el foco atrapado, Escape,
+  `aria-modal`, el fondo inerte y el retorno de foco al elemento que abrió.
+
+  ── LOS CAMPOS NULL NO SE RENDERIZAN ─────────────────────────────────────────
+
+  Ninguno se pinta como «no disponible». Todo lo que puede faltar se resuelve
+  AQUÍ, en el frontmatter, y la plantilla solo lee valores ya listos — mismo
+  patrón que `entradas` en Boletos.astro y `items` en Faq.astro. Así el JSX no
+  se llena de ternarios y no hay forma de que un null se escape al HTML.
+
+  ── DOS CAMPOS QUE NO ESTABAN EN EL ENCARGO Y POR QUÉ ────────────────────────
+
+  `whatsapp`  — no todos los teléfonos son WhatsApp y NO hay manera de saber
+                cuál lo es mirando el número. El único con evidencia es el de
+                Victoria Linares: su propio logotipo lleva el icono de WhatsApp
+                junto a «Pedidos: 2381332647». Poner el botón en los demás sería
+                prometer un canal que quizá no existe, que es justo lo que este
+                proyecto lleva evitando desde el aviso de Boletos.
+  `fondoOscuro` — ver el bloque del chip oscuro en el CSS.
 */
+
+/*
+  Los tipos van en TypeScript y NO en JSDoc: esto es el frontmatter de un
+  .astro, no un .js de src/scripts/. Con `@param {string}` el check da ts(7006)
+  por parámetro más un ts(80004). Ya documentado al construir /agenda.
+*/
+
+/** Dígitos limpios para `tel:`. El JSON los guarda agrupados para leerlos. */
+const soloDigitos = (t: unknown) => String(t ?? '').replace(/\D/g, '');
+
+/**
+ * Un valor de red social puede venir como URL COMPLETA o como nombre de página.
+ *
+ * Avipork trae «AVIPORK» y Victoria Linares «Avicola Victoria Linares»: son
+ * nombres, no URLs, y el segundo ni siquiera es un identificador válido. Salvo
+ * que ya sea una URL, se pinta como TEXTO y no como enlace: componer
+ * `facebook.com/{nombre}` a ojo es fabricar un enlace que puede dar 404, el
+ * mismo error que se evitó con /privacidad y con las anclas muertas.
+ */
+function red(valor: string | null) {
+  if (!valor) return null;
+  const v = String(valor).trim();
+  if (!/^https?:\/\//i.test(v)) return { href: null, texto: v };
+  try {
+    const url = new URL(v);
+    const tramos = url.pathname.split('/').filter(Boolean);
+    return {
+      href: v,
+      texto: tramos.length ? tramos[tramos.length - 1] : url.hostname.replace(/^www\./, ''),
+    };
+  } catch {
+    return { href: null, texto: v };
+  }
+}
+
+/** La web se etiqueta con su dominio, que es lo que la gente reconoce. */
+function web(valor: string | null) {
+  if (!valor) return null;
+  try {
+    return { href: valor, texto: new URL(valor).hostname.replace(/^www\./, '') };
+  } catch {
+    return { href: valor, texto: valor };
+  }
+}
+
+const fichas = patrocinadores.map((p) => {
+  const digitosWa = soloDigitos(p.whatsapp);
+
+  return {
+    ...p,
+    logoSrc: asset(p.logo),
+    telefonos: (p.telefonos ?? []).map((t) => ({
+      legible: t,
+      tel: `+52${soloDigitos(t)}`,
+      /*
+        El botón de WhatsApp solo aparece en el teléfono que ADEMÁS está
+        declarado como tal. Se compara por dígitos y no por cadena para que
+        un agrupado distinto en los dos campos no lo desactive en silencio.
+      */
+      wa:
+        digitosWa && soloDigitos(t) === digitosWa
+          ? waUrl(t, `Hola, los vi en la Expo Avícola Productiva 2026`)
+          : null,
+    })),
+    web: web(p.web),
+    facebook: red(p.facebook),
+    instagram: red(p.instagram),
+  };
+});
 ---
 
 <section class="patros" id="patrocinadores" {...Astro.props}>
@@ -30,57 +115,385 @@ import { asset } from '../scripts/paths.js';
     </header>
 
     <ul class="patros__lista" role="list">
-      {patrocinadores.map((patro) => {
-        return (
+      {
+        fichas.map((p) => (
           <li class="patro" data-anim>
-            <div class="patro__marco" data-fondo-propio={patro.fondoPropio ? '' : undefined}>
+            <article
+              class="patro__marco"
+              data-fondo-propio={p.fondoPropio ? '' : undefined}
+              data-fondo-oscuro={p.fondoOscuro ? '' : undefined}
+            >
               <div class="patro__caja" data-logo-frame>
-                {/*
-                  width/height declarados aunque el CSS mande: le dan al
-                  navegador una proporción con la que reservar la caja antes de
-                  que el archivo llegue. Sin ellos, el logo aparece de golpe y
-                  empuja la descripción hacia abajo.
-
-                  200×200 es un valor NOMINAL, no la proporción real de cada
-                  archivo: los WebP ya no son todos cuadrados (Avipork es
-                  apaisado, 446×176; Prosermat 190×190, TEC Capital 190×190,
-                  Promo Hogar 260×260). No pasa nada, y por dos motivos: el
-                  <style> fuerza width al 100% y height a --patro-alto, así
-                  que estos atributos no deciden el tamaño final; y la caja
-                  tiene alto FIJO, así que tampoco hay salto de layout que
-                  reservar. El `object-fit: contain` respeta la proporción
-                  intrínseca del archivo, sea cual sea.
-                */}
                 <img
                   class="patro__logo"
-                  src={asset(patro.logo)}
-                  alt={`Logotipo de ${patro.nombre}`}
+                  src={p.logoSrc}
+                  alt={`Logotipo de ${p.nombre}`}
                   width="200"
                   height="200"
                   loading="lazy"
                   decoding="async"
                   data-logo-img
                 />
-                {/*
-                  aria-hidden: el nombre ya lo anuncia el alt del <img>.
-                  Sin esto se leería dos veces.
-                */}
                 <span class="patro__respaldo" aria-hidden="true">
-                  {patro.nombre}
+                  {p.nombre}
                 </span>
               </div>
 
-              <p class="patro__desc">{patro.descripcion}</p>
-            </div>
+              <p class="patro__desc">
+                <a class="patro__enlace" href={`#patrocinador-${p.slug}`}>
+                  <span class="sr-only">{p.nombre}: </span>
+                  {p.descripcionCorta}
+                </a>
+              </p>
+
+              <p class="patro__mas" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.25"
+                  />
+                  <path
+                    d="M12 8.5v7M8.5 12h7"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.25"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <span>Ver ficha</span>
+              </p>
+            </article>
           </li>
-        );
-      })}
+        ))
+      }
     </ul>
 
     <p class="patros__invita" data-anim>
       ¿Tu empresa trabaja en nutrición, sanidad, genética, equipos o tecnología
       avícola? Hay espacios de expositor disponibles en el área comercial.
     </p>
+  </div>
+
+  {/*
+    LAS FICHAS. `open` es deliberado — ver el frontmatter.
+
+    Van fuera de .patros__inner porque al pasar a modal se despegan del flujo y
+    no deben heredar el ancho del contenedor.
+
+    `data-ficha-patro` y NO `data-ficha`: ese lo usa Ponentes.astro para su
+    propio script, y el script del cliente no está acotado por Astro. Si los dos
+    compartieran marcador, el `desdeHash` de Ponentes cerraría estas fichas en
+    cuanto el hash no empezara por `ponente-`, y este cerraría las suyas.
+
+    `data-ficha-modal` y `data-ficha-seccion` SÍ son comunes a las dos familias:
+    los lee `bindAnchors()` de animations.js para no desplazar el scroll hacia un
+    elemento de la capa superior —cuyo offsetTop resuelve a ~0— y para saber a
+    qué sección llevar a quien llegue con el enlace compartido.
+
+    OJO con los comentarios: un {…} suelto dentro del cuerpo con paréntesis de un
+    .map() son DOS expresiones y el compilador de Astro lo rechaza con un error
+    que no menciona los comentarios. Van todos en este bloque, fuera del map.
+  */}
+  <div class="pfichas">
+    {
+      fichas.map((p) => (
+        <dialog
+          class="pficha"
+          data-ficha-patro
+          data-ficha-modal
+          data-ficha-seccion="#patrocinadores"
+          id={`patrocinador-${p.slug}`}
+          open
+          aria-labelledby={`pficha-titulo-${p.slug}`}
+        >
+          <article class="pficha__caja">
+            <form method="dialog" class="pficha__cerrar-form">
+              <button class="pficha__cerrar" type="submit" aria-label="Cerrar ficha">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path
+                    d="m6 6 12 12M18 6 6 18"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    fill="none"
+                  />
+                </svg>
+              </button>
+            </form>
+
+            <header class="pficha__cabecera">
+              <div
+                class="pficha__marco"
+                data-fondo-propio={p.fondoPropio ? '' : undefined}
+                data-fondo-oscuro={p.fondoOscuro ? '' : undefined}
+              >
+                <img
+                  class="pficha__logo"
+                  src={p.logoSrc}
+                  alt={`Logotipo de ${p.nombre}`}
+                  width="200"
+                  height="200"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+
+              <div class="pficha__identidad">
+                <h3 class="pficha__nombre" id={`pficha-titulo-${p.slug}`}>
+                  {p.nombre}
+                </h3>
+                {p.razonSocial && <p class="pficha__razon">{p.razonSocial}</p>}
+              </div>
+            </header>
+
+            <p class="pficha__desc">{p.descripcionLarga}</p>
+
+            {(p.ubicacion || p.contacto) && (
+              <dl class="datos">
+                {p.ubicacion && (
+                  <div class="datos__fila">
+                    <dt class="datos__clave">Ubicación</dt>
+                    <dd class="datos__valor">{p.ubicacion}</dd>
+                  </div>
+                )}
+                {p.contacto && (
+                  <div class="datos__fila">
+                    <dt class="datos__clave">Contacto</dt>
+                    <dd class="datos__valor">{p.contacto}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+
+            {p.telefonos.length > 0 && (
+              <section class="pbloque">
+                <h4 class="pbloque__titulo">
+                  {p.telefonos.length > 1 ? 'Teléfonos' : 'Teléfono'}
+                </h4>
+                <ul class="tels" role="list">
+                  {p.telefonos.map((t) => (
+                    <li class="tels__fila">
+                      <a class="tels__num" href={`tel:${t.tel}`}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path
+                            d="M6.5 3.5h3l1.5 4-2 1.5a12 12 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4.5 5.7 2 2 0 0 1 6.5 3.5Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        {t.legible}
+                      </a>
+                      {t.wa && (
+                        <a
+                          class="tels__wa"
+                          href={t.wa}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                            <path
+                              d="M20.5 11.6a8.5 8.5 0 0 1-12.7 7.4L3.5 20.5l1.6-4.2A8.5 8.5 0 1 1 20.5 11.6Z"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="1.5"
+                              stroke-linejoin="round"
+                            />
+                            <path
+                              d="M9 8.6c.3-.1.7 0 .9.4l.6 1.2c.1.3 0 .6-.2.8l-.4.4a5.2 5.2 0 0 0 2.7 2.7l.4-.4c.2-.2.5-.3.8-.2l1.2.6c.4.2.5.6.4.9-.2.7-.9 1.2-1.7 1.1a7.5 7.5 0 0 1-5.8-5.8c-.1-.8.4-1.5 1.1-1.7Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                          WhatsApp
+                          <span class="sr-only">
+                            {' '}
+                            de {p.nombre}, abre en una pestaña nueva
+                          </span>
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {p.correo && (
+              <section class="pbloque">
+                <h4 class="pbloque__titulo">Correo</h4>
+                <a class="pficha__correo" href={`mailto:${p.correo}`}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <rect
+                      x="3"
+                      y="5"
+                      width="18"
+                      height="14"
+                      rx="2"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                    />
+                    <path
+                      d="m3.6 6.5 8.4 6 8.4-6"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  {p.correo}
+                </a>
+              </section>
+            )}
+
+            {(p.web || p.facebook || p.instagram) && (
+              <section class="pbloque">
+                <h4 class="pbloque__titulo">En línea</h4>
+                <ul class="redes" role="list">
+                  {p.web && (
+                    <li>
+                      <a
+                        class="red red--enlace"
+                        href={p.web.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="8.5"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                          />
+                          <path
+                            d="M3.5 12h17M12 3.5c4.5 4.7 4.5 12.3 0 17-4.5-4.7-4.5-12.3 0-17Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                          />
+                        </svg>
+                        {p.web.texto}
+                        <span class="sr-only"> (abre en una pestaña nueva)</span>
+                      </a>
+                    </li>
+                  )}
+
+                  {p.facebook && p.facebook.href && (
+                    <li>
+                      <a
+                        class="red red--enlace"
+                        href={p.facebook.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path
+                            d="M14.5 8.5h2.2V5.6h-2.4c-2.2 0-3.6 1.4-3.6 3.7v1.6H8.4v3h2.3v7h3v-7h2.3l.4-3h-2.7V9.6c0-.7.3-1.1.8-1.1Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        Facebook
+                        <span class="sr-only"> (abre en una pestaña nueva)</span>
+                      </a>
+                    </li>
+                  )}
+
+                  {p.facebook && !p.facebook.href && (
+                    <li>
+                      <span class="red">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path
+                            d="M14.5 8.5h2.2V5.6h-2.4c-2.2 0-3.6 1.4-3.6 3.7v1.6H8.4v3h2.3v7h3v-7h2.3l.4-3h-2.7V9.6c0-.7.3-1.1.8-1.1Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        Facebook: {p.facebook.texto}
+                      </span>
+                    </li>
+                  )}
+
+                  {p.instagram && p.instagram.href && (
+                    <li>
+                      <a
+                        class="red red--enlace"
+                        href={p.instagram.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <rect
+                            x="3.5"
+                            y="3.5"
+                            width="17"
+                            height="17"
+                            rx="5"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="4"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                          />
+                          <circle cx="17" cy="7" r="1.1" fill="currentColor" />
+                        </svg>
+                        Instagram
+                        <span class="sr-only"> (abre en una pestaña nueva)</span>
+                      </a>
+                    </li>
+                  )}
+
+                  {p.instagram && !p.instagram.href && (
+                    <li>
+                      <span class="red">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <rect
+                            x="3.5"
+                            y="3.5"
+                            width="17"
+                            height="17"
+                            rx="5"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="4"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                          />
+                          <circle cx="17" cy="7" r="1.1" fill="currentColor" />
+                        </svg>
+                        Instagram: {p.instagram.texto}
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </section>
+            )}
+          </article>
+        </dialog>
+      ))
+    }
   </div>
 </section>
 
@@ -91,7 +504,7 @@ import { asset } from '../scripts/paths.js';
   // Logos: nunca debe verse un icono de imagen rota. Sin GSAP de por medio.
   // -----------------------------------------------------------------------
   (() => {
-    const marcos = document.querySelectorAll<HTMLElement>('[data-logo-frame]');
+    const marcos = document.querySelectorAll<HTMLElement>('.patros [data-logo-frame]');
 
     marcos.forEach((marco) => {
       const img = marco.querySelector<HTMLImageElement>('[data-logo-img]');
@@ -110,6 +523,139 @@ import { asset } from '../scripts/paths.js';
       }
     });
   })();
+
+  // -----------------------------------------------------------------------
+  // Fichas en modal. Mismo mecanismo que Ponentes.astro, y por las mismas
+  // razones: ver los comentarios del marcado y del CSS.
+  // -----------------------------------------------------------------------
+  const fichas = Array.from(
+    document.querySelectorAll<HTMLDialogElement>('dialog[data-ficha-patro]')
+  );
+
+  /*
+    Quitarles el `open`. Hasta aquí se pintaban como bloques —que es lo que ve
+    quien no tiene JS—; con JS pasan a ser modales. Se hace en cuanto corre el
+    script, no en 'load', para que no se vea el bloque un instante.
+  */
+  for (const f of fichas) f.close();
+
+  const porId = new Map(fichas.map((f) => [f.id, f]));
+
+  /**
+   * Abre la ficha de un id, si existe y no está ya abierta.
+   *
+   * `showModal()` da foco atrapado, Escape, aria-modal, fondo inerte y retorno
+   * de foco al abridor. No hay que implementar nada de eso a mano.
+   */
+  const abrir = (id: string) => {
+    const f = porId.get(id);
+    if (!f || f.open) return;
+
+    /*
+      CERRAR LA QUE HUBIERA ABIERTA ANTES DE ABRIR LA NUEVA. Los <dialog>
+      modales se APILAN: con una abierta, showModal() pone la segunda encima y
+      al cerrarla reaparece la primera. Pasa al llegar a otro hash por
+      hashchange. Es el mismo fallo que se cazó en Ponentes MIRANDO una captura.
+    */
+    for (const otra of fichas) if (otra !== f && otra.open) otra.close();
+
+    f.showModal();
+  };
+
+  /*
+    Los enlaces. Se escucha en el documento entero: un solo listener cubre las
+    seis tarjetas y cualquier enlace a una ficha que se añada después.
+  */
+  document.addEventListener('click', (ev) => {
+    const el = ev.target as HTMLElement | null;
+    const a = el?.closest<HTMLAnchorElement>('a[href*="#patrocinador-"]');
+    if (!a) return;
+
+    // Solo clic primario y sin modificadores: Ctrl/Cmd+clic debe abrir pestaña.
+    const me = ev as MouseEvent;
+    if (me.button !== 0 || me.metaKey || me.ctrlKey || me.shiftKey || me.altKey) return;
+
+    const id = a.hash.slice(1);
+    if (!porId.has(id)) return;
+
+    ev.preventDefault();
+    /*
+      El hash SÍ se escribe, para que la ficha sea compartible por WhatsApp, que
+      es el canal del evento. `pushState` en vez de asignar location.hash para no
+      provocar un salto de scroll: el modal ya está a la vista.
+    */
+    history.pushState(null, '', a.hash);
+    abrir(id);
+  });
+
+  for (const f of fichas) {
+    /*
+      Al cerrar, limpiar el hash. Si se queda, recargar o volver con «Atrás»
+      reabriría la ficha sin que nadie lo haya pedido.
+    */
+    f.addEventListener('close', () => {
+      if (location.hash === `#${f.id}`) {
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    });
+
+    /*
+      Clic en el fondo cierra. <dialog> no lo hace solo: el evento llega al
+      propio <dialog>, cuya caja ocupa toda la ventana, así que se compara con la
+      caja REAL del contenido.
+    */
+    f.addEventListener('click', (ev) => {
+      if (ev.target !== f) return;
+      const caja = f.querySelector('.pficha__caja');
+      if (!caja) return;
+      const r = caja.getBoundingClientRect();
+      const dentro =
+        ev.clientX >= r.left &&
+        ev.clientX <= r.right &&
+        ev.clientY >= r.top &&
+        ev.clientY <= r.bottom;
+      if (!dentro) f.close();
+    });
+  }
+
+  /**
+   * Lleva la vista a la SECCIÓN de patrocinadores.
+   *
+   * ES EL ÚNICO CAMINO EN QUE EL SCROLL SE MUEVE, y solo en la llegada directa
+   * con hash: quien abre un enlace compartido merece ver el contexto detrás del
+   * modal. Pulsando desde dentro de la página no se mueve nada.
+   *
+   * Va a la sección y NO a la ficha: con `showModal()` la ficha está en la capa
+   * superior, donde se posiciona contra el viewport y su offsetTop resuelve a
+   * ~0, así que «desplazarse hasta ella» es irse al principio de la página.
+   */
+  const llevarALaSeccion = () => {
+    if (!seccion) return;
+    const nav = document.querySelector<HTMLElement>('[data-nav]');
+    const y =
+      seccion.getBoundingClientRect().top + window.scrollY - (nav ? nav.offsetHeight : 0);
+    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
+  };
+
+  const desdeHash = (inicial = false) => {
+    const id = location.hash.slice(1);
+
+    if (id.startsWith('patrocinador-') && porId.has(id)) {
+      abrir(id);
+      if (inicial) requestAnimationFrame(llevarALaSeccion);
+      return;
+    }
+
+    /*
+      El hash ya no apunta a ninguna ficha DE ESTA SECCIÓN. Solo se cierran las
+      propias: `fichas` sale de [data-ficha-patro], así que las de Ponentes no
+      están en esta lista y este bucle no las toca.
+    */
+    for (const f of fichas) if (f.open) f.close();
+  };
+
+  desdeHash(true);
+  window.addEventListener('hashchange', () => desdeHash());
 
   // -----------------------------------------------------------------------
   // Movimiento: mejora progresiva.
@@ -171,13 +717,21 @@ import { asset } from '../scripts/paths.js';
 
   /* Rejilla ---------------------------------------------------------------- */
   /*
-    auto-fit + minmax con un máximo de 22rem por tarjeta: con dos patrocinadores
-    quedan centrados y del mismo ancho; si mañana hay cinco, se reparten sin
-    dejar a nadie huérfano en una fila suelta.
+    MÁXIMO 20rem, no 22. Con seis tarjetas ese valor decide el reparto de
+    escritorio, porque `auto-fit` con un máximo definido calcula el número de
+    columnas contra el MÁXIMO y no contra el mínimo (documentado al entrar el
+    cuarto patrocinador). A 1440 el ancho útil son ~1072px:
+
+      con 22rem → 3×352 + 2×24 = 1104 > 1072 → 2 columnas (3 filas)
+      con 20rem → 3×320 + 2×24 = 1008 ≤ 1072 → 3 columnas (2 filas)
+
+    Con SEIS no hay huérfanos en ningún reparto —6 es divisible por 3, 2 y 1—,
+    así que esto es una decisión de proporción, no de evitar un hueco suelto:
+    a dos columnas las tarjetas salen de 524px para un logo de 88px de alto.
   */
   .patros__lista {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 22rem));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 20rem));
     gap: var(--space-lg);
     justify-content: center;
     margin-block-start: var(--space-2xl);
@@ -185,7 +739,9 @@ import { asset } from '../scripts/paths.js';
   }
 
   .patro__marco {
-    display: block;
+    position: relative;
+    display: flex;
+    flex-direction: column;
     height: 100%;
     padding: var(--space-lg);
     border: 1px solid var(--border);
@@ -210,9 +766,53 @@ import { asset } from '../scripts/paths.js';
     recortar a transparente), la tarjeta necesita blanco fijo, NO la
     --surface clara de la sección, para leerse como marca propia y no como
     un recorte fallido sobre el fondo de la sección.
+
+    LOS SELECTORES VAN ACOTADOS A SU CLASE, no sueltos como `[data-fondo-*]`.
+    Sueltos tienen la misma especificidad que `.patro__marco` y `.pficha__marco`
+    (0,1,0), así que decidía el ORDEN de aparición en la hoja — y
+    `.pficha__marco` se declara más abajo con la propiedad ABREVIADA
+    `background`, que reinicia `background-color`. Resultado: en la tarjeta el
+    chip salía bien y en el modal NO, con el logotipo blanco de El Triunfo
+    invisible sobre la superficie clara. Ningún aserto lo vio; lo enseñó la
+    captura del modal abierto (convención 14).
   */
-  [data-fondo-propio] {
+  .patro__marco[data-fondo-propio],
+  .pficha__marco[data-fondo-propio] {
     background-color: var(--blanco-marca);
+  }
+
+  /*
+    CHIP OSCURO — el caso de El Triunfo, y es el CONTRARIO de `fondoPropio`.
+
+    Su logotipo no trae fondo que quitar: llega ya recortado, con alfa real. El
+    problema es que el 54% de su tinta es BLANCA («EL TRIUNFO» va en blanco) y
+    esta sección es superficie clara, así que compuesto sobre --claro-surface el
+    wordmark desaparece y solo se ven la mascota y el amarillo. Medido sobre el
+    archivo: rgb(240,240,240) es el color dominante de lo opaco.
+
+    `fondoPropio` no sirve aquí, lo empeora: pinta --blanco-marca, blanco puro,
+    debajo de un logotipo blanco. Lo que hace falta es lo opuesto — devolverle
+    el fondo oscuro para el que la marca lo diseñó. Así el logo se sirve tal
+    cual, sin recolorear la identidad de nadie.
+
+    --oscuro-text NO SOBRA, y es la convención 16: dentro de la sección clara
+    --text ya está remapeado al tinte oscuro, así que el respaldo punteado (el
+    nombre que se ve mientras el logo no carga) saldría oscuro sobre oscuro. No
+    basta con poner el fondo: hay que declarar con qué color se escribe encima.
+
+    Y --accent HAY QUE REMAPEARLO TAMBIÉN, por lo mismo un paso más allá. La
+    sección clara lo tiene en --claro-accent (#0c6047, el primario profundo)
+    porque el lima no se lee sobre claro; sobre este chip oscuro ese verde da
+    **2.57:1** contra AA 4.5, y lo usan el «Ver ficha» y su icono. Se devuelve
+    al lima, que es exactamente el acento que este fondo pide.
+  */
+  .patro__marco[data-fondo-oscuro],
+  .pficha__marco[data-fondo-oscuro] {
+    background-color: var(--oscuro-bg);
+    color: var(--oscuro-text);
+    border-color: var(--oscuro-border);
+    --accent: var(--oscuro-accent);
+    --border: var(--oscuro-border);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -244,25 +844,20 @@ import { asset } from '../scripts/paths.js';
   /*
     ALTO EN `var(--patro-alto)`, NO EN `height: 100%`. Se probó con los logos
     reales y `height: 100%` NO FUNCIONABA: el logo salía a 302×302 —cuadrado,
-    el tamaño intrínseco del WebP (200×200 o 190×190)— y se derramaba sobre
-    la descripción de la tarjeta, aunque `.patro__caja` medía los 88px
-    correctos y `place-items: stretch` ya estaba puesto.
+    el tamaño intrínseco del WebP— y se derramaba sobre la descripción de la
+    tarjeta, aunque `.patro__caja` medía los 88px correctos y `place-items:
+    stretch` ya estaba puesto.
 
     La causa es una rareza real de CSS Grid: un porcentaje de alto en un
     elemento reemplazado (`<img>`) dentro de un item de grid NO se resuelve
-    contra el alto "estirado" de la pista, aunque `getComputedStyle` del
-    propio item ya reporte ese alto como definido. Comprobado quitando la
-    variable de la ecuación: fijando `height: 88px` a mano (unidad absoluta,
-    no porcentaje) el logo SÍ respeta la caja; con el mismo `88px` puesto
-    como porcentaje (`height: 100%` de un contenedor de 88px), no. También se
-    descartó que fuera el `aspect-ratio` implícito de los atributos
-    `width`/`height` del `<img>` —persistía igual quitándolos del marcado—,
-    así que la causa es específicamente la resolución del porcentaje, no el
-    aspect-ratio.
-
-    `width: 100%` SÍ resuelve bien (no es un elemento reemplazado con alto
-    intrínseco en juego de la misma forma), así que solo el alto necesitó
-    salir del porcentaje.
+    contra el alto "estirado" de la pista, aunque `getComputedStyle` del propio
+    item ya reporte ese alto como definido. Comprobado quitando la variable de
+    la ecuación: fijando `height: 88px` a mano (unidad absoluta, no porcentaje)
+    el logo SÍ respeta la caja; con el mismo `88px` puesto como porcentaje
+    (`height: 100%` de un contenedor de 88px), no. También se descartó que fuera
+    el `aspect-ratio` implícito de los atributos `width`/`height` del `<img>`
+    —persistía igual quitándolos del marcado—, así que la causa es
+    específicamente la resolución del porcentaje, no el aspect-ratio.
   */
   .patro__logo {
     width: 100%;
@@ -278,7 +873,7 @@ import { asset } from '../scripts/paths.js';
     padding: var(--space-sm);
     border: 1px dashed var(--border);
     border-radius: var(--radius-md);
-    color: var(--text);
+    color: inherit;
     font-family: var(--font-display);
     font-size: var(--step-1);
     font-weight: 600;
@@ -318,6 +913,87 @@ import { asset } from '../scripts/paths.js';
     font-size: var(--step--1);
   }
 
+  /*
+    El chip oscuro remapea el color de la tarjeta entera, así que la descripción
+    necesita su propio tono atenuado: --text-muted es el gris de la superficie
+    clara y sobre oscuro se hunde. Se mezcla con el fondo en vez de inventar un
+    token nuevo, el mismo criterio que los textos atenuados del panel de acento
+    en Boletos.
+  */
+  [data-fondo-oscuro] .patro__desc {
+    color: color-mix(in srgb, var(--oscuro-text) 72%, var(--oscuro-bg));
+  }
+
+  @supports not (color: color-mix(in srgb, red 50%, blue)) {
+    [data-fondo-oscuro] .patro__desc {
+      color: var(--oscuro-text);
+    }
+  }
+
+  .patro__enlace {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /*
+    Enlace estirado: toda la tarjeta es pulsable con UNA sola parada de
+    tabulación, y el nombre accesible del enlace empieza por el de la empresa
+    (WCAG 2.5.3). El ::after no lleva fondo, así que no tapa nada.
+  */
+  .patro__enlace::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .patro__marco:has(.patro__enlace:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-color: var(--accent);
+  }
+
+  /*
+    La señal de «se puede abrir». Discreta: sube al pasar el ratón.
+
+    OPACIDAD 0.85, NO 0.72. La atenuación es parte del diseño —la señal no debe
+    competir con la descripción—, pero la opacidad compone el color contra el
+    fondo y eso CUENTA para el contraste. Medido sobre el color resuelto:
+    --claro-accent a plena opacidad da 6.95:1, y a 0.72 se desploma a **3.71:1
+    en verde y 3.72:1 en azul**, por debajo del 4.5 de AA. A 0.85 sube a 4.96 y
+    4.98, y el salto a 1 en hover se sigue notando.
+
+    No lo vio el muestreo por histograma —«Ver ficha» son nueve caracteres en
+    una caja de 270×39 y ningún color puro llegaba al umbral de cobertura, así
+    que daba el 1.00 de «no hay tinta medible»—. Lo cazó medir el color
+    resuelto componiendo la opacidad a mano. La tarjeta del chip oscuro pasaba
+    igualmente (7.04:1): el lima sobre casi negro aguanta la atenuación, el
+    verde profundo sobre crema no.
+  */
+  .patro__mas {
+    margin-block-start: auto;
+    padding-block-start: var(--space-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    color: var(--accent);
+    font-size: var(--step--1);
+    opacity: 0.85;
+    transition: opacity var(--t-base) var(--ease-out);
+  }
+
+  .patro__marco:hover .patro__mas,
+  .patro__marco:has(.patro__enlace:focus-visible) .patro__mas {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .patro__mas {
+      transition: none;
+    }
+  }
+
   .patros__invita {
     max-width: 56ch;
     margin-block-start: var(--space-2xl);
@@ -325,5 +1001,373 @@ import { asset } from '../scripts/paths.js';
     color: var(--text-muted);
     font-size: var(--step--1);
     text-align: center;
+  }
+
+  /* ── Fichas ─────────────────────────────────────────────────────────── */
+
+  /*
+    SIN JAVASCRIPT los <dialog> llevan `open`, así que se pintan como bloques
+    normales: rejilla arriba, seis fichas completas debajo.
+  */
+  .pfichas {
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .pficha {
+    inline-size: 100%;
+    max-inline-size: none;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text);
+  }
+
+  /*
+    `display: block` SOLO con [open]. El navegador trae
+    `dialog:not([open]) { display: none }`, pero es una regla de ELEMENTO y
+    `.pficha` es de CLASE: la clase gana, y las seis fichas cerradas seguirían
+    ocupando sitio en el flujo por detrás del modal sin que se notara, porque el
+    modal se pinta encima.
+  */
+  .pficha[open] {
+    display: block;
+    /*
+      `position: static` NO SOBRA, y es lo que hace que el modo sin JS exista.
+
+      La hoja del navegador da `position: absolute` a TODO <dialog>. Con
+      showModal() da igual, porque entonces pasa a `fixed` y a la capa superior.
+      Pero con el atributo `open` en el flujo, ese `absolute` se resuelve contra
+      el bloque contenedor inicial —ni .pfichas ni .patros ni body están
+      posicionados— y provoca tres cosas a la vez, las tres medidas en su día en
+      la sección de Ponentes: las seis fichas se apilan en la misma coordenada y
+      solo se ve la última; su contenedor mide 0px y se superponen a lo que
+      venga después; y sangran a ancho completo sin gutter.
+    */
+    position: static;
+    margin: var(--space-xl) auto 0;
+    max-inline-size: var(--container);
+  }
+
+  /*
+    CON JAVASCRIPT el script cierra las seis al cargar, y a partir de ahí solo
+    se ven abiertas por showModal(). `:modal` casa únicamente en ese caso, así
+    que estas reglas no tocan el modo sin JS.
+  */
+  .pficha:modal {
+    /*
+      `position: fixed` NO SOBRA: sin ella el modal se abre donde el usuario NO
+      está y le arrastra la página.
+
+      `.pficha[open]` declara `position: static` para que el modo sin JS
+      funcione, y `showModal()` también pone el atributo `open`, así que esa
+      regla alcanza AL MODAL. Un elemento de la capa superior con `static` se
+      trata como absolutamente posicionado, pero contra el BLOQUE CONTENEDOR
+      INICIAL —el documento—, no contra el viewport: al mover showModal() el
+      foco al diálogo, el navegador lo trae a la vista desplazando la página.
+      Es el fallo que se midió y cerró en Ponentes.
+
+      Se declara aquí, y no acotando la regla de arriba con `:not(:modal)`, para
+      no arriesgar el modo sin JS: un navegador que no entienda `:modal`
+      descarta este bloque entero y `.pficha[open]` sigue dando `static`, que es
+      exactamente lo que ese navegador necesita. Al revés, el selector inválido
+      se llevaría por delante el `static` y con él las tres roturas sin JS.
+    */
+    position: fixed;
+    inset: 0;
+
+    max-inline-size: min(42rem, calc(100vw - 2 * var(--gutter)));
+    max-block-size: min(90dvh, 52rem);
+    margin: auto;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .pficha::backdrop {
+    background: color-mix(in srgb, var(--oscuro-bg) 82%, transparent);
+    backdrop-filter: blur(3px);
+  }
+
+  @supports not (background: color-mix(in srgb, red 50%, blue)) {
+    .pficha::backdrop {
+      background: rgb(0 0 0 / 0.8);
+    }
+  }
+
+  .pficha__caja {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+  }
+
+  .pficha:modal .pficha__caja {
+    border: none;
+    border-radius: 0;
+  }
+
+  /* El botón de cerrar no significa nada si la ficha no es un modal. */
+  .pficha__cerrar-form {
+    display: none;
+  }
+
+  .pficha:modal .pficha__cerrar-form {
+    display: block;
+  }
+
+  .pficha__cerrar {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    z-index: 2;
+    /* WCAG 2.5.5: 44x44 reales aunque el icono mida 22. */
+    inline-size: 44px;
+    block-size: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+    transition:
+      border-color var(--t-fast) var(--ease-out),
+      color var(--t-fast) var(--ease-out);
+  }
+
+  .pficha__cerrar:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /*
+    EL LOGO VA ARRIBA Y EN SU PROPIA LÍNEA, no en una columna al lado del
+    nombre. La primera versión lo puso a la izquierda con
+    `grid-template-columns: auto 1fr` y la captura enseñó dos fallos a la vez:
+
+      1. El nombre largo se partía en cuatro líneas —«Materiales / y /
+         Acabados / El Triunfo»— porque la columna del texto se quedaba en
+         ~300px una vez descontados el logo, el hueco y el sitio del botón de
+         cerrar.
+      2. Y lo que es peor: con el logo encajonado en una columna estrecha, un
+         logotipo APAISADO como el de El Triunfo (3.3:1) quedaba limitado por
+         el ANCHO y se dibujaba a 44px de alto — MÁS PEQUEÑO que en la tarjeta,
+         que es exactamente lo contrario de lo que la ficha tiene que hacer.
+
+    Apilado, el logo dispone del ancho entero de la ficha y se limita por el
+    ALTO, así que los seis salen a 112px —contra los 88 de la tarjeta— sin
+    importar su proporción.
+  */
+  .pficha__cabecera {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding-inline-end: 52px; /* deja sitio al botón de cerrar */
+  }
+
+  /*
+    EL LOGO DE LA FICHA, más grande que en la tarjeta: 7rem (112px) contra
+    5.5rem (88px).
+
+    No sube más porque los WebP se sirven a 176px de alto —el DPR2 exacto del
+    render de la TARJETA, que es donde se ven los seis— y a 112 CSS px un
+    DPR2 pide 224. Se comparó el reescalado contra el nativo a 224 y la
+    diferencia no se aprecia; a 120 ya empezaba a notarse en el texto en arco
+    del sello de Victoria Linares. Subir el origen a 240px de alto sacaría a
+    los seis del presupuesto de 70 KB, y tres de ellos ni siquiera tienen un
+    original del que re-derivarse a ese tamaño sin rehacer su un-blend.
+  */
+  .pficha__marco {
+    --patro-alto: 7rem;
+
+    display: inline-grid;
+    place-items: center;
+    max-inline-size: 100%;
+    /* Que un logo cuadrado pequeño no quede como una pastilla apretada. */
+    min-inline-size: min(100%, 11rem);
+    padding: var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    /*
+      `background-color` y NO la abreviada `background`: la abreviada reinicia
+      background-color y volvería a pisar el chip oscuro / blanco aunque los
+      selectores de arriba ya estén acotados. Cinturón y tirantes, porque este
+      fallo concreto ya se coló una vez.
+    */
+    background-color: var(--surface-2);
+  }
+
+  /*
+    ALTO ABSOLUTO Y ANCHO `auto`. El alto viene del token —una unidad absoluta,
+    no un porcentaje— que es justo lo que exige la rareza de CSS Grid
+    documentada arriba en `.patro__logo`. Con el ancho en `auto` la proporción
+    la pone el propio archivo, así que el mismo bloque sirve para el logotipo
+    apaisado de El Triunfo y para los sellos cuadrados.
+  */
+  .pficha__logo {
+    inline-size: auto;
+    max-inline-size: 100%;
+    block-size: var(--patro-alto);
+    object-fit: contain;
+  }
+
+  .pficha__nombre {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--text);
+  }
+
+  .pficha__razon {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step--1);
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
+  .pficha__desc {
+    margin-block-start: var(--space-lg);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .datos {
+    margin-block-start: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+  }
+
+  .datos__fila {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  @media (min-width: 34rem) {
+    .datos__fila {
+      grid-template-columns: 7rem 1fr;
+      gap: var(--space-sm);
+      align-items: baseline;
+    }
+  }
+
+  .datos__clave {
+    font-size: var(--step--1);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .datos__valor {
+    font-size: var(--step-0);
+    line-height: 1.5;
+    color: var(--text);
+    /* El correo y las direcciones largas no pueden ensanchar la ficha. */
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .pbloque {
+    margin-block-start: var(--space-lg);
+  }
+
+  .pbloque__titulo {
+    font-size: var(--step--1);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-block-end: var(--space-xs);
+  }
+
+  .tels,
+  .redes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .tels__fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  /*
+    44px de alto real en todas las vías de contacto: son enlaces `tel:`,
+    `mailto:` y `wa.me` que se pulsan con el pulgar (WCAG 2.5.5). El grueso del
+    tráfico de este sitio llega por WhatsApp en celular.
+  */
+  .tels__num,
+  .tels__wa,
+  .pficha__correo,
+  .red {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-block-size: 44px;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: var(--step--1);
+    line-height: 1.3;
+    text-decoration: none;
+    /* Un correo largo se parte dentro de su píldora en vez de desbordar. */
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    transition:
+      border-color var(--t-fast) var(--ease-out),
+      color var(--t-fast) var(--ease-out);
+  }
+
+  .tels__num svg,
+  .tels__wa svg,
+  .pficha__correo svg,
+  .red svg {
+    flex: none;
+    color: var(--accent);
+  }
+
+  .tels__num:hover,
+  .tels__wa:hover,
+  .pficha__correo:hover,
+  .red--enlace:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Lo que NO es enlace no debe parecerlo: sin hover y con el texto atenuado. */
+  .red:not(.red--enlace) {
+    color: var(--text-muted);
+    cursor: default;
+  }
+
+  .redes {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tels__num,
+    .tels__wa,
+    .pficha__correo,
+    .red {
+      transition: none;
+    }
   }
 </style>

@@ -228,27 +228,45 @@ function enfocarDestino(destino) {
 }
 
 /**
- * ¿El destino de este hash es una ficha de ponente, es decir, un MODAL?
+ * ¿El destino de este hash es una ficha, es decir, un MODAL?
  *
- * Las fichas son `<dialog data-ficha>` y con JavaScript se abren con
+ * Las fichas son `<dialog data-ficha-modal>` y con JavaScript se abren con
  * `showModal()`, que las manda a la capa superior. Una vez ahí **su posición
  * en el documento deja de significar nada**: se posicionan contra el viewport,
  * así que su `offsetTop` resuelve a ~0. Pedirle a Lenis que se desplace hasta
  * una de ellas equivale a pedirle que se vaya al principio de la página.
+ *
+ * **EL MARCADOR ES `data-ficha-modal` Y NO `data-ficha`**, que es el que usa
+ * `Ponentes.astro` para SU propio script. Hay dos familias de ficha en el sitio
+ * —ponentes y patrocinadores— y cada una la abre su componente, pero las dos
+ * comparten esta excepción del gestor de anclas. Un marcador por familia
+ * obligaría a listarlas aquí una a una y a que este archivo supiera cuántas
+ * hay; con uno común, la siguiente entra sin tocar nada de esto.
  *
  * @param {string} hash
  * @returns {Element | null} la ficha, o null si el destino no es una.
  */
 function fichaDeHash(hash) {
   const destino = destinoDeHash(hash);
-  return destino instanceof Element && destino.matches('dialog[data-ficha]')
+  return destino instanceof Element && destino.matches('dialog[data-ficha-modal]')
     ? destino
     : null;
 }
 
-/** La sección de Ponentes, que es el contexto de cualquier ficha. */
-function seccionPonentes() {
-  return document.querySelector('#ponentes');
+/**
+ * La SECCIÓN que hace de contexto de una ficha.
+ *
+ * Es a donde se desplaza quien llega con un enlace compartido: la ficha se abre
+ * encima, pero detrás tiene que verse de qué sección salió. Cada `<dialog>` la
+ * declara en `data-ficha-seccion` en vez de deducirse aquí, para que este
+ * archivo no tenga que saber qué familias de ficha existen.
+ *
+ * @param {Element} ficha
+ * @returns {Element | null}
+ */
+function seccionDeFicha(ficha) {
+  const sel = ficha.getAttribute('data-ficha-seccion');
+  return sel ? document.querySelector(sel) : null;
 }
 
 /**
@@ -258,8 +276,9 @@ function seccionPonentes() {
  * enlaces a secciones aún no construidas (#ponentes, #programa…) y deben
  * quedarse quietos en vez de saltar al inicio.
  *
- * **LAS FICHAS DE PONENTE SON LA EXCEPCIÓN Y NO SE TOCAN AQUÍ.** Las abre
- * `Ponentes.astro` como modal, sin mover el scroll. Ver `fichaDeHash`.
+ * **LAS FICHAS SON LA EXCEPCIÓN Y NO SE TOCAN AQUÍ.** Las abre su propio
+ * componente —`Ponentes.astro`, `Patrocinadores.astro`— como modal y sin mover
+ * el scroll. Ver `fichaDeHash`.
  */
 export function bindAnchors() {
   const lenis = getLenis();
@@ -280,8 +299,9 @@ export function bindAnchors() {
     ver el contexto detrás del modal; desplazarse a la ficha en sí llevaría al
     principio de la página, por lo que explica `fichaDeHash`.
   */
-  const inicial = fichaDeHash(hashInicial)
-    ? seccionPonentes()
+  const fichaInicial = fichaDeHash(hashInicial);
+  const inicial = fichaInicial
+    ? seccionDeFicha(fichaInicial)
     : destinoDeHash(hashInicial);
 
   if (inicial) {
@@ -302,12 +322,12 @@ export function bindAnchors() {
     const href = link.getAttribute('href') ?? '';
 
     /*
-      FICHA DE PONENTE: NI SCROLL NI preventDefault. Se sale sin tocar nada y
-      manda `Ponentes.astro`, que abre el modal in situ.
+      FICHA: NI SCROLL NI preventDefault. Se sale sin tocar nada y manda el
+      componente dueño de la ficha, que abre el modal in situ.
 
       Se sale SIN preventDefault a propósito, y no es un descuido: si el script
-      de Ponentes no llegara a correr, el <a> tiene que seguir siendo un ancla
-      normal al id de la ficha. Cancelar aquí lo dejaría muerto.
+      de ese componente no llegara a correr, el <a> tiene que seguir siendo un
+      ancla normal al id de la ficha. Cancelar aquí lo dejaría muerto.
 
       Y no depende del orden de registro de los dos listeners: los dos están en
       el documento y en burbuja, y cualquiera de los dos órdenes da el mismo
