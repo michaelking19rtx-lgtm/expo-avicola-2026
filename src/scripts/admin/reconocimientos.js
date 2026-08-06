@@ -57,6 +57,7 @@ function normalizarConfig(config = {}) {
     logoUrl: texto(config.logoUrl),
     emblemaUrl: texto(config.emblemaUrl),
     firmasUrl: texto(config.firmasUrl),
+    selloUrl: texto(config.selloUrl),
   };
 }
 
@@ -83,24 +84,25 @@ function textoAjustado(doc, texto, anchoMaximo, tamanoInicial, tamanoMinimo) {
   }
 }
 
-function dibujarSello(doc, colores) {
+function dibujarSello(doc, colores, sello) {
   const x = 38;
   const y = 174;
-  doc.setFillColor(...colores.doradoClaro);
-  doc.circle(x, y, 18, 'F');
-  doc.setFillColor(...colores.verdeProfundo);
-  doc.circle(x, y, 15.3, 'F');
-  doc.setDrawColor(...colores.dorado);
-  doc.setLineWidth(0.6);
-  doc.circle(x, y, 12.7, 'S');
+  if (sello) {
+    doc.addImage(sello, 'PNG', 20, 156.2, 36, 35.6, undefined, 'FAST');
+  } else {
+    doc.setFillColor(...colores.doradoClaro);
+    doc.circle(x, y, 18, 'F');
+    doc.setFillColor(...colores.verdeProfundo);
+    doc.circle(x, y, 15.3, 'F');
+  }
   doc.setTextColor(...colores.doradoClaro);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.2);
-  doc.text('PARTICIPACIÓN', x, y - 4, { align: 'center', charSpace: 0.35 });
-  doc.setFontSize(13);
-  doc.text('2026', x, y + 2, { align: 'center' });
-  doc.setFontSize(5.7);
-  doc.text('COMPROMISO', x, y + 7, { align: 'center', charSpace: 0.5 });
+  doc.setFontSize(5.1);
+  doc.text('EXCELENCIA', x, y - 5.6, { align: 'center', charSpace: 0.25 });
+  doc.setFontSize(4.6);
+  doc.text('CONOCIMIENTO', x, y - 1.4, { align: 'center', charSpace: 0.12 });
+  doc.setFontSize(4.2);
+  doc.text('Y COMPROMISO', x, y + 2.4, { align: 'center', charSpace: 0.1 });
 }
 
 function dibujarPagina(doc, persona, indice, colores, config, recursos) {
@@ -115,7 +117,7 @@ function dibujarPagina(doc, persona, indice, colores, config, recursos) {
     doc.rect(5, 5, 287, 200, 'S');
   }
 
-  if (recursos.logo) doc.addImage(recursos.logo, 'PNG', centro - 32.5, 2.7, 65, 33, undefined, 'FAST');
+  if (recursos.logo) doc.addImage(recursos.logo, 'PNG', centro - 32.5, 4.7, 65, 33, undefined, 'FAST');
 
   doc.setTextColor(...colores.verdeProfundo);
   doc.setFont('times', 'normal');
@@ -166,7 +168,7 @@ function dibujarPagina(doc, persona, indice, colores, config, recursos) {
     maxWidth: 190,
   });
 
-  dibujarSello(doc, colores);
+  dibujarSello(doc, colores, recursos.sello);
   if (recursos.firmas) doc.addImage(recursos.firmas, 'PNG', 73, 162, 151, 30.5, undefined, 'FAST');
   if (recursos.emblema) doc.addImage(recursos.emblema, 'PNG', 263, 162, 20, 29.2, undefined, 'FAST');
 
@@ -179,13 +181,14 @@ async function crearDocumento(personas, indices = personas.map((_, indice) => in
   const { jsPDF } = await import('jspdf');
   const colores = paleta();
   const config = normalizarConfig(opciones);
-  const [fondo, logo, emblema, firmas] = await Promise.all([
+  const [fondo, logo, emblema, firmas, sello] = await Promise.all([
     cargarImagen(config.fondoUrl),
     cargarImagen(config.logoUrl),
     cargarImagen(config.emblemaUrl),
     cargarImagen(config.firmasUrl),
+    cargarImagen(config.selloUrl),
   ]);
-  const recursos = { fondo, logo, emblema, firmas };
+  const recursos = { fondo, logo, emblema, firmas, sello };
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
   doc.setProperties({
     title: `Reconocimientos — ${site.nombre}`,

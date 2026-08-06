@@ -332,7 +332,9 @@
 .reco-hoja__logo-principal {
   width: 22cqi;
   height: auto;
+  margin-block-end: -0.75cqi;
   object-fit: contain;
+  transform: translateY(0.75cqi);
 }
 
 .reco-hoja h3 {
@@ -407,28 +409,43 @@
 
 .reco-hoja__sello {
   position: absolute;
-  inset: auto auto 5.5cqi 3.1cqi;
+  inset: auto auto 5.2cqi 2.6cqi;
   display: grid;
   place-items: center;
-  width: 10.5cqi;
-  height: 10.5cqi;
-  border: 0.7cqi solid var(--reco-dorado-claro);
-  border-radius: 50%;
-  outline: 0.12cqi solid var(--reco-dorado);
-  outline-offset: -1.3cqi;
-  background-color: var(--reco-verde-profundo);
+  width: 12cqi;
+  aspect-ratio: 480 / 475;
   color: var(--reco-dorado-claro);
+  filter: drop-shadow(0 0.35cqi 0.4cqi rgb(70 40 0 / 24%));
   line-height: 1;
 }
 
-.reco-hoja__sello span {
-  font-size: 0.65cqi;
-  font-weight: 750;
-  letter-spacing: 0.05em;
+.reco-hoja__sello > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.reco-hoja__sello strong {
-  font-size: 1.8cqi;
+.reco-hoja__sello-texto {
+  position: absolute;
+  z-index: 1;
+  inset: 43% auto auto 50%;
+  display: grid;
+  gap: 0.28cqi;
+  width: 70%;
+  color: var(--reco-dorado-claro);
+  font-family: Arial, sans-serif;
+  font-size: 0.52cqi;
+  font-weight: 750;
+  letter-spacing: 0.035em;
+  text-shadow: 0 0.08cqi 0.1cqi rgb(0 0 0 / 45%);
+  transform: translate(-50%, -50%);
+}
+
+.reco-hoja__sello-texto strong {
+  font-size: 0.64cqi;
+  letter-spacing: 0.06em;
 }
 
 .reco-hoja__firmas-oficiales {
@@ -436,6 +453,7 @@
   inset: auto auto 5.7cqi 24.6cqi;
   width: 50.8cqi;
   height: auto;
+  filter: contrast(1.04);
   object-fit: contain;
 }
 

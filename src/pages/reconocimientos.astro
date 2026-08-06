@@ -10,6 +10,7 @@ const fondoReconocimiento = asset('img/reconocimientos/fondo-reconocimiento.jpg'
 const logoReconocimiento = asset('img/reconocimientos/logo-avipro-oficial.png');
 const emblemaReconocimiento = asset('img/reconocimientos/emblema-inferior.png');
 const firmasReconocimiento = asset('img/reconocimientos/firmas-oficiales.png');
+const selloReconocimiento = asset('img/reconocimientos/sello-premium.png');
 ---
 
 <Base title={`Reconocimientos — ${site.nombre}`} noindex>
@@ -146,7 +147,7 @@ const firmasReconocimiento = asset('img/reconocimientos/firmas-oficiales.png');
                 <input id="fecha-reconocimiento" maxlength="160" value="7 de agosto de 2026 · Tehuacán, Puebla, México" />
               </div>
               <div class="reco-config__oficial">
-                <img src={firmasReconocimiento} width="613" height="123" alt="Firmas oficiales de Jesus Alberto Betanzo, Ricardo Olmos Rivera y Comité Organizador" />
+                <img src={firmasReconocimiento} width="1839" height="369" alt="Firmas oficiales de Jesus Alberto Betanzo, Ricardo Olmos Rivera y Comité Organizador" />
                 <p>Se aplicarán las tres firmas oficiales proporcionadas para el evento.</p>
               </div>
             </div>
@@ -169,6 +170,7 @@ const firmasReconocimiento = asset('img/reconocimientos/firmas-oficiales.png');
             data-logo={logoReconocimiento}
             data-emblema={emblemaReconocimiento}
             data-firmas={firmasReconocimiento}
+            data-sello={selloReconocimiento}
           >
             <img class="reco-hoja__fondo" src={fondoReconocimiento} width="1492" height="1054" alt="" aria-hidden="true" />
             <img class="reco-hoja__logo-principal" src={logoReconocimiento} width="309" height="157" alt="1er Expo Avipró 2026" />
@@ -179,8 +181,15 @@ const firmasReconocimiento = asset('img/reconocimientos/firmas-oficiales.png');
             <span class="reco-hoja__linea" aria-hidden="true"></span>
             <p class="reco-hoja__texto" id="preview-texto">Por su valiosa participación como asistente en la Expo Avícola Productiva 2026 y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.</p>
             <p class="reco-hoja__fecha" id="preview-fecha">7 DE AGOSTO DE 2026 · TEHUACÁN, PUEBLA, MÉXICO</p>
-            <div class="reco-hoja__sello" aria-hidden="true"><span>PARTICIPACIÓN</span><strong>2026</strong><span>COMPROMISO</span></div>
-            <img class="reco-hoja__firmas-oficiales" src={firmasReconocimiento} width="613" height="123" alt="Firmas oficiales" />
+            <div class="reco-hoja__sello" role="img" aria-label="Sello de excelencia, conocimiento y compromiso">
+              <img src={selloReconocimiento} width="480" height="475" alt="" aria-hidden="true" />
+              <span class="reco-hoja__sello-texto" aria-hidden="true">
+                <strong>EXCELENCIA</strong>
+                <span>CONOCIMIENTO</span>
+                <span>Y COMPROMISO</span>
+              </span>
+            </div>
+            <img class="reco-hoja__firmas-oficiales" src={firmasReconocimiento} width="1839" height="369" alt="Firmas oficiales" />
             <img class="reco-hoja__emblema" src={emblemaReconocimiento} width="438" height="640" alt="" aria-hidden="true" />
           </article>
 
@@ -264,6 +273,7 @@ const firmasReconocimiento = asset('img/reconocimientos/firmas-oficiales.png');
       logoUrl: hojaPreview?.dataset.logo ?? '',
       emblemaUrl: hojaPreview?.dataset.emblema ?? '',
       firmasUrl: hojaPreview?.dataset.firmas ?? '',
+      selloUrl: hojaPreview?.dataset.sello ?? '',
     };
   }
 

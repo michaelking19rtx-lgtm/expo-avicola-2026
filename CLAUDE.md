@@ -4859,8 +4859,14 @@ por el material oficial entregado por el cliente:
   transparente de 438×640 y 209 587 bytes del gallo con engrane azul que ocupa
   la esquina inferior derecha.
 - `public/img/reconocimientos/firmas-oficiales.png`: franja transparente de
-  613×123 y 43 916 bytes. Conserva los trazos y rótulos de Jesus Alberto
-  Betanzo, Ricardo Olmos Rivera y Comité Organizador / 1er Expo Avipró 2026.
+  1839×369 y 365 143 bytes. Conserva los trazos y rótulos de Jesus Alberto
+  Betanzo, Ricardo Olmos Rivera y Comité Organizador / 1er Expo Avipró 2026. La
+  escala 3× y el refuerzo de contraste eliminan la apariencia borrosa sin
+  regenerar ni alterar las firmas.
+- `public/img/reconocimientos/sello-premium.png`: medallón original de 480×475
+  y 376 178 bytes, con aro dorado, centro verde, cinco estrellas y laureles. La
+  imagen no contiene letras: vista previa y PDF superponen «EXCELENCIA ·
+  CONOCIMIENTO · Y COMPROMISO» como texto real para mantenerlo siempre nítido.
 
 La interfaz agrega un bloque **Datos del reconocimiento** para editar el texto
 de participación, la fecha y el lugar. Las tres firmas oficiales se muestran
@@ -4868,10 +4874,13 @@ en ese bloque como confirmación y se aplican automáticamente tanto a la vista
 previa como a cada página del PDF; ya no existen campos manuales que pudieran
 alterar nombres o cargos.
 
-Vista previa y jsPDF consumen los mismos cuatro archivos. El PDF incrusta el
-fondo una sola vez como JPEG y los tres elementos oficiales como PNG con alfa,
+El logotipo principal se desplazó solo 2 mm hacia abajo en el PDF y 0.75 cqi en
+la vista previa; el resto del flujo vertical no cambia. Vista previa y jsPDF
+consumen los mismos cinco archivos. El PDF incrusta el fondo una sola vez como
+JPEG y los cuatro elementos superpuestos como PNG con alfa,
 por lo que las páginas subsecuentes pueden reutilizarlos sin multiplicar
-innecesariamente el peso. Una prueba directa con el motor produjo 595 262 bytes
-con encabezado `%PDF-1.3` y cierre `%%EOF`; fondo, logotipo, firmas y emblema
-fueron aceptados. `astro check`: 40 archivos, 0 errores, 0 warnings y 0 hints.
-`npm run build`: seis rutas estáticas; ningún binario nuevo supera 400 KB.
+innecesariamente el peso. Una prueba directa con el motor produjo 1 309 279
+bytes con encabezado `%PDF-1.3` y cierre `%%EOF`; fondo, logotipo, firmas,
+emblema y sello fueron aceptados. `astro check`: 40 archivos, 0 errores, 0
+warnings y 0 hints. `npm run build`: seis rutas estáticas; ningún binario nuevo
+supera 400 KB.
