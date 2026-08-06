@@ -1,10 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
 import site from '../data/site.json';
+import { asset } from '../scripts/paths.js';
 import '../styles/asistencia.css';
 import '../styles/reconocimientos.css';
 
 const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
+const fondoReconocimiento = asset('img/reconocimientos/fondo-reconocimiento.jpg');
+const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
 ---
 
 <Base title={`Reconocimientos — ${site.nombre}`} noindex>
@@ -128,6 +131,45 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
               <button class="boton boton--primario" type="submit" id="btn-guardar">Guardar cambio</button>
             </div>
           </form>
+
+          <details class="reco-config" open>
+            <summary>Datos del reconocimiento</summary>
+            <div class="reco-config__contenido">
+              <div class="campo">
+                <label for="texto-reconocimiento">Texto de participación</label>
+                <textarea id="texto-reconocimiento" rows="4" maxlength="420">Por su valiosa participación como asistente en la Expo Avícola Productiva 2026 y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.</textarea>
+              </div>
+              <div class="campo">
+                <label for="fecha-reconocimiento">Fecha y lugar</label>
+                <input id="fecha-reconocimiento" maxlength="160" value="7 de agosto de 2026 · Tehuacán, Puebla, México" />
+              </div>
+              <div class="reco-config__firmantes">
+                <fieldset>
+                  <legend>Firma 1</legend>
+                  <div class="campo">
+                    <label for="firma-1-nombre">Nombre</label>
+                    <input id="firma-1-nombre" maxlength="100" placeholder="Déjalo vacío por ahora" autocomplete="off" />
+                  </div>
+                  <div class="campo">
+                    <label for="firma-1-cargo">Cargo o función</label>
+                    <input id="firma-1-cargo" maxlength="120" placeholder="Déjalo vacío por ahora" autocomplete="off" />
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>Firma 2</legend>
+                  <div class="campo">
+                    <label for="firma-2-nombre">Nombre</label>
+                    <input id="firma-2-nombre" maxlength="100" placeholder="Déjalo vacío por ahora" autocomplete="off" />
+                  </div>
+                  <div class="campo">
+                    <label for="firma-2-cargo">Cargo o función</label>
+                    <input id="firma-2-cargo" maxlength="120" placeholder="Déjalo vacío por ahora" autocomplete="off" />
+                  </div>
+                </fieldset>
+              </div>
+              <p class="reco-config__nota">Las líneas sí aparecen en el PDF; nombres y cargos solo se imprimen cuando los escribas.</p>
+            </div>
+          </details>
         </div>
 
         <div class="reco-salida">
@@ -139,11 +181,15 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
             <span class="reco-folio" id="folio-preview">EAP-2026-001</span>
           </div>
 
-          <article class="reco-hoja" aria-label="Vista previa del reconocimiento">
-            <span class="reco-hoja__esquina reco-hoja__esquina--arriba" aria-hidden="true"></span>
-            <span class="reco-hoja__esquina reco-hoja__esquina--abajo" aria-hidden="true"></span>
+          <article
+            class="reco-hoja"
+            aria-label="Vista previa del reconocimiento"
+            data-fondo={fondoReconocimiento}
+            data-marca={marcaReconocimiento}
+          >
+            <img class="reco-hoja__fondo" src={fondoReconocimiento} width="1492" height="1054" alt="" aria-hidden="true" />
             <div class="reco-hoja__marca">
-              <span class="reco-hoja__ano">2026</span>
+              <img src={marcaReconocimiento} width="640" height="640" alt="" aria-hidden="true" />
               <span><strong>EXPO AVÍCOLA</strong><small>PRODUCTIVA 2026</small></span>
             </div>
             <h3>RECONOCIMIENTO</h3>
@@ -151,14 +197,13 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
             <p class="reco-hoja__otorga">Se otorga a</p>
             <p class="reco-hoja__nombre" id="preview-nombre">Nombre de la persona</p>
             <span class="reco-hoja__linea" aria-hidden="true"></span>
-            <p class="reco-hoja__texto">
-              Por su valiosa participación como asistente en la<br />
-              <strong>{site.nombre}</strong><br />
-              y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.
-            </p>
-            <p class="reco-hoja__fecha">7 DE AGOSTO DE 2026 · TEHUACÁN, PUEBLA, MÉXICO</p>
+            <p class="reco-hoja__texto" id="preview-texto">Por su valiosa participación como asistente en la Expo Avícola Productiva 2026 y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.</p>
+            <p class="reco-hoja__fecha" id="preview-fecha">7 DE AGOSTO DE 2026 · TEHUACÁN, PUEBLA, MÉXICO</p>
             <div class="reco-hoja__sello" aria-hidden="true"><span>PARTICIPACIÓN</span><strong>2026</strong><span>COMPROMISO</span></div>
-            <div class="reco-hoja__firma"><span></span><strong>COMITÉ ORGANIZADOR</strong><small>{site.nombre}</small></div>
+            <div class="reco-hoja__firmas">
+              <div class="reco-hoja__firma"><span></span><strong id="preview-firma-1-nombre"></strong><small id="preview-firma-1-cargo"></small></div>
+              <div class="reco-hoja__firma"><span></span><strong id="preview-firma-2-nombre"></strong><small id="preview-firma-2-cargo"></small></div>
+            </div>
           </article>
 
           <div class="reco-descargas">
@@ -211,6 +256,19 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
   const botonGuardar = document.querySelector<HTMLButtonElement>('#btn-guardar');
   const previewNombre = document.querySelector<HTMLParagraphElement>('#preview-nombre');
   const previewFolio = document.querySelector<HTMLSpanElement>('#folio-preview');
+  const hojaPreview = document.querySelector<HTMLElement>('.reco-hoja');
+  const inputTextoReconocimiento = document.querySelector<HTMLTextAreaElement>('#texto-reconocimiento');
+  const inputFechaReconocimiento = document.querySelector<HTMLInputElement>('#fecha-reconocimiento');
+  const inputFirma1Nombre = document.querySelector<HTMLInputElement>('#firma-1-nombre');
+  const inputFirma1Cargo = document.querySelector<HTMLInputElement>('#firma-1-cargo');
+  const inputFirma2Nombre = document.querySelector<HTMLInputElement>('#firma-2-nombre');
+  const inputFirma2Cargo = document.querySelector<HTMLInputElement>('#firma-2-cargo');
+  const previewTexto = document.querySelector<HTMLParagraphElement>('#preview-texto');
+  const previewFecha = document.querySelector<HTMLParagraphElement>('#preview-fecha');
+  const previewFirma1Nombre = document.querySelector<HTMLElement>('#preview-firma-1-nombre');
+  const previewFirma1Cargo = document.querySelector<HTMLElement>('#preview-firma-1-cargo');
+  const previewFirma2Nombre = document.querySelector<HTMLElement>('#preview-firma-2-nombre');
+  const previewFirma2Cargo = document.querySelector<HTMLElement>('#preview-firma-2-cargo');
   const botonDescargarUno = document.querySelector<HTMLButtonElement>('#btn-descargar-uno');
   const botonDescargarTodos = document.querySelector<HTMLButtonElement>('#btn-descargar-todos');
 
@@ -228,11 +286,35 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
     return personas.find((persona) => persona.id === seleccionId) ?? null;
   }
 
+  function configuracionReconocimiento() {
+    return {
+      texto: inputTextoReconocimiento?.value.trim() ?? '',
+      fecha: inputFechaReconocimiento?.value.trim() ?? '',
+      firma1: {
+        nombre: inputFirma1Nombre?.value.trim() ?? '',
+        cargo: inputFirma1Cargo?.value.trim() ?? '',
+      },
+      firma2: {
+        nombre: inputFirma2Nombre?.value.trim() ?? '',
+        cargo: inputFirma2Cargo?.value.trim() ?? '',
+      },
+      fondoUrl: hojaPreview?.dataset.fondo ?? '',
+      marcaUrl: hojaPreview?.dataset.marca ?? '',
+    };
+  }
+
   function actualizarPreview() {
     const persona = seleccionActual();
     const indice = persona ? personas.findIndex((item) => item.id === persona.id) : -1;
+    const config = configuracionReconocimiento();
     if (previewNombre) previewNombre.textContent = persona?.nombre ?? 'Nombre de la persona';
     if (previewFolio) previewFolio.textContent = `EAP-2026-${String(Math.max(indice + 1, 1)).padStart(3, '0')}`;
+    if (previewTexto) previewTexto.textContent = config.texto;
+    if (previewFecha) previewFecha.textContent = config.fecha.toLocaleUpperCase('es-MX');
+    if (previewFirma1Nombre) previewFirma1Nombre.textContent = config.firma1.nombre;
+    if (previewFirma1Cargo) previewFirma1Cargo.textContent = config.firma1.cargo;
+    if (previewFirma2Nombre) previewFirma2Nombre.textContent = config.firma2.nombre;
+    if (previewFirma2Cargo) previewFirma2Cargo.textContent = config.firma2.cargo;
     if (botonDescargarUno) botonDescargarUno.disabled = !persona;
     if (botonDescargarTodos) botonDescargarTodos.disabled = personas.length === 0;
   }
@@ -371,6 +453,17 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
 
   buscador?.addEventListener('input', pintarLista);
 
+  for (const entrada of [
+    inputTextoReconocimiento,
+    inputFechaReconocimiento,
+    inputFirma1Nombre,
+    inputFirma1Cargo,
+    inputFirma2Nombre,
+    inputFirma2Cargo,
+  ]) {
+    entrada?.addEventListener('input', actualizarPreview);
+  }
+
   botonAgregar?.addEventListener('click', () => {
     editar(null, true);
     pintarLista();
@@ -446,7 +539,7 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
     if (!persona) return;
     conBotonOcupado(botonDescargarUno, async () => {
       const { descargarReconocimiento } = await import('../scripts/admin/reconocimientos.js');
-      await descargarReconocimiento(persona, personas.indexOf(persona));
+      await descargarReconocimiento(persona, personas.indexOf(persona), configuracionReconocimiento());
     });
   });
 
@@ -454,7 +547,7 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
     if (!personas.length) return;
     conBotonOcupado(botonDescargarTodos, async () => {
       const { descargarReconocimientos } = await import('../scripts/admin/reconocimientos.js');
-      await descargarReconocimientos(personas);
+      await descargarReconocimientos(personas, configuracionReconocimiento());
     });
   });
 
@@ -494,6 +587,10 @@ const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
         if (workspace) workspace.hidden = true;
         if (estadoArchivo) estadoArchivo.hidden = true;
         if (inputNombre) inputNombre.value = '';
+        for (const entrada of [inputFirma1Nombre, inputFirma1Cargo, inputFirma2Nombre, inputFirma2Cargo]) {
+          if (entrada) entrada.value = '';
+        }
+        actualizarPreview();
         main.dataset.auth = 'out';
         return;
       }

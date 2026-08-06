@@ -4841,3 +4841,33 @@ El Excel reveló que «JuanPedro Hernándezcruz cupo 2/3/4» todavía son lugare
 reservados, no identidades finales. El generador los conserva y los señala en
 vez de inventar nombres; deben corregirse desde la propia interfaz antes de
 imprimir la versión oficial.
+
+#### Ampliación visual y firmantes configurables
+
+El generador ahora usa dos recursos originales creados expresamente para el
+evento, sin copiar texto, firmas ni identidades del ejemplo recibido:
+
+- `public/img/reconocimientos/fondo-reconocimiento.jpg`: fondo A4 horizontal de
+  1492×1054, 245 816 bytes, con papel marfil, cintas verde esmeralda, bordes
+  dorados y gallo-plumaje en marca de agua. El centro queda deliberadamente
+  limpio para el contenido variable.
+- `public/img/reconocimientos/marca-expo.png`: símbolo original de gallo y hoja
+  de 640×640, 155 252 bytes y transparencia real. El nombre del evento se
+  compone aparte como texto para que conserve nitidez y ortografía en pantalla
+  y PDF.
+
+La interfaz agrega un bloque **Datos del reconocimiento** para editar el texto
+de participación, la fecha y el lugar. También incluye dos bloques de firma,
+cada uno con nombre y cargo o función. Los cuatro campos de firmantes empiezan
+vacíos: el documento muestra únicamente las dos líneas hasta que el equipo
+escriba datos reales. No se generaron firmas manuscritas ni nombres de
+autoridades.
+
+Vista previa y jsPDF consumen los mismos dos archivos. El PDF incrusta el fondo
+una sola vez como JPEG y la marca como PNG con alfa, por lo que las páginas
+subsecuentes pueden reutilizarlos sin multiplicar innecesariamente el peso.
+Una prueba directa con el motor de PDF produjo un archivo de 428 583 bytes con
+encabezado `%PDF-1.3` y cierre `%%EOF`; las dos imágenes y las dos líneas de
+firma fueron aceptadas. `astro check`: 40 archivos, 0 errores, 0 warnings y 0
+hints. `npm run build`: seis rutas estáticas; sin binarios nuevos por encima de
+400 KB.

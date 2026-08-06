@@ -239,6 +239,60 @@
   justify-content: flex-end;
 }
 
+.reco-config {
+  margin-block-start: var(--space-lg);
+  border-block-start: 1px solid var(--border);
+}
+
+.reco-config summary {
+  padding-block: var(--space-lg) var(--space-md);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--step-0);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.reco-config__contenido {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.reco-config textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.reco-config__firmantes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.reco-config fieldset {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.reco-config legend {
+  padding-inline: var(--space-xs);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reco-config__nota {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
 .reco-salida {
   position: sticky;
   inset-block-start: var(--space-lg);
@@ -263,8 +317,8 @@
   aspect-ratio: 297 / 210;
   overflow: hidden;
   margin-block: var(--space-lg);
-  padding: 2.8cqi 7cqi 2.1cqi;
-  border: 1px solid var(--reco-dorado);
+  padding: 2.2cqi 7cqi 2.1cqi;
+  border: 0;
   background-color: var(--reco-papel);
   color: var(--reco-tinta);
   box-shadow: var(--shadow-lg);
@@ -272,39 +326,30 @@
 }
 
 .reco-hoja::before {
+  content: none;
+}
+
+.reco-hoja__fondo {
   position: absolute;
-  z-index: -1;
-  inset: 0.7cqi;
-  border: 0.08cqi solid var(--reco-borde);
-  content: '';
-}
-
-.reco-hoja__esquina {
-  position: absolute;
-  z-index: -1;
-  width: 31cqi;
-  height: 22cqi;
-  background:
-    linear-gradient(142deg, transparent 47%, var(--reco-dorado-claro) 48% 50%, transparent 51%),
-    var(--reco-verde);
-}
-
-.reco-hoja__esquina--arriba {
-  inset: 0 auto auto 0;
-  clip-path: polygon(0 0, 100% 0, 0 100%);
-}
-
-.reco-hoja__esquina--abajo {
-  inset: auto 0 0 auto;
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  z-index: -2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .reco-hoja__marca {
   display: flex;
   align-items: center;
-  gap: 1.1cqi;
+  gap: 0.8cqi;
   color: var(--reco-verde);
   line-height: 1;
+}
+
+.reco-hoja__marca > img {
+  width: 6.2cqi;
+  height: 6.2cqi;
+  object-fit: contain;
 }
 
 .reco-hoja__marca > span:last-child {
@@ -325,21 +370,8 @@
   letter-spacing: 0.18em;
 }
 
-.reco-hoja__ano {
-  display: grid;
-  place-items: center;
-  width: 3.9cqi;
-  height: 3.9cqi;
-  border: 0.14cqi solid var(--reco-dorado-claro);
-  border-radius: 50%;
-  background-color: var(--reco-verde-profundo);
-  color: var(--reco-dorado-claro);
-  font-size: 1.1cqi;
-  font-weight: 750;
-}
-
 .reco-hoja h3 {
-  margin-block-start: 2.5cqi;
+  margin-block-start: 0.7cqi;
   color: var(--reco-verde-profundo);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 4.8cqi;
@@ -355,7 +387,7 @@
 }
 
 .reco-hoja__otorga {
-  margin-block-start: 1.55cqi;
+  margin-block-start: 1.15cqi;
   color: var(--reco-tinta-suave);
   font-size: 1.4cqi;
 }
@@ -379,7 +411,7 @@
   position: relative;
   width: 61%;
   height: 0.1cqi;
-  margin-block: 1.25cqi 1.2cqi;
+  margin-block: 1.05cqi 1cqi;
   background-color: var(--reco-dorado);
 }
 
@@ -394,18 +426,14 @@
 }
 
 .reco-hoja__texto {
-  font-size: 1.45cqi;
-  line-height: 1.65;
-}
-
-.reco-hoja__texto strong {
-  color: var(--reco-verde-profundo);
-  font-size: 2.05cqi;
-  letter-spacing: 0.02em;
+  max-width: 70%;
+  font-size: 1.35cqi;
+  line-height: 1.55;
 }
 
 .reco-hoja__fecha {
-  margin-block-start: 1.1cqi;
+  max-width: 68%;
+  margin-block-start: 0.8cqi;
   color: var(--reco-verde);
   font-size: 1.15cqi;
   font-weight: 750;
@@ -438,12 +466,17 @@
   font-size: 1.8cqi;
 }
 
-.reco-hoja__firma {
+.reco-hoja__firmas {
   position: absolute;
-  inset: auto 9cqi 2.7cqi auto;
+  inset: auto 12cqi 2.5cqi 17cqi;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4.5cqi;
+}
+
+.reco-hoja__firma {
   display: grid;
   gap: 0.3cqi;
-  width: 25cqi;
   color: var(--reco-tinta);
 }
 
@@ -453,11 +486,13 @@
 }
 
 .reco-hoja__firma strong {
+  min-height: 0.85cqi;
   font-size: 0.85cqi;
   letter-spacing: 0.07em;
 }
 
 .reco-hoja__firma small {
+  min-height: 0.75cqi;
   color: var(--reco-tinta-suave);
   font-size: 0.75cqi;
 }
@@ -485,6 +520,10 @@
   .reco-intro {
     grid-template-columns: 1fr;
     padding: var(--space-lg);
+  }
+
+  .reco-config__firmantes {
+    grid-template-columns: 1fr;
   }
 }
 

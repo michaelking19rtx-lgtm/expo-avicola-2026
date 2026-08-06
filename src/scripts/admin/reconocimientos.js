@@ -34,6 +34,38 @@ function paleta() {
   );
 }
 
+async function cargarImagen(url) {
+  if (!url) return null;
+  const respuesta = await fetch(url);
+  if (!respuesta.ok) throw new Error(`No se pudo cargar el recurso visual ${url}.`);
+  const blob = await respuesta.blob();
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.addEventListener('load', () => resolve(lector.result));
+    lector.addEventListener('error', () => reject(new Error(`No se pudo leer el recurso visual ${url}.`)));
+    lector.readAsDataURL(blob);
+  });
+}
+
+function normalizarConfig(config = {}) {
+  const textoPredeterminado = `Por su valiosa participación como asistente en la ${site.nombre} y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.`;
+  const texto = (valor, respaldo = '') => (typeof valor === 'string' ? valor.trim() : respaldo);
+  return {
+    texto: texto(config.texto, textoPredeterminado),
+    fecha: texto(config.fecha, '7 de agosto de 2026 · Tehuacán, Puebla, México'),
+    firma1: {
+      nombre: texto(config.firma1?.nombre),
+      cargo: texto(config.firma1?.cargo),
+    },
+    firma2: {
+      nombre: texto(config.firma2?.nombre),
+      cargo: texto(config.firma2?.cargo),
+    },
+    fondoUrl: texto(config.fondoUrl),
+    marcaUrl: texto(config.marcaUrl),
+  };
+}
+
 function slugArchivo(nombre) {
   return nombre
     .normalize('NFD')
@@ -57,23 +89,6 @@ function textoAjustado(doc, texto, anchoMaximo, tamanoInicial, tamanoMinimo) {
   }
 }
 
-function dibujarEsquina(doc, colores) {
-  doc.setFillColor(...colores.verde);
-  doc.triangle(0, 0, 86, 0, 0, 59, 'F');
-  doc.setFillColor(...colores.verdeProfundo);
-  doc.triangle(0, 0, 63, 0, 0, 42, 'F');
-  doc.setDrawColor(...colores.doradoClaro);
-  doc.setLineWidth(2.1);
-  doc.line(0, 62, 90, 0);
-
-  doc.setFillColor(...colores.verde);
-  doc.triangle(297, 210, 211, 210, 297, 151, 'F');
-  doc.setFillColor(...colores.verdeProfundo);
-  doc.triangle(297, 210, 234, 210, 297, 168, 'F');
-  doc.setDrawColor(...colores.doradoClaro);
-  doc.line(207, 210, 297, 148);
-}
-
 function dibujarSello(doc, colores) {
   const x = 38;
   const y = 166;
@@ -94,108 +109,110 @@ function dibujarSello(doc, colores) {
   doc.text('COMPROMISO', x, y + 7, { align: 'center', charSpace: 0.5 });
 }
 
-function dibujarPagina(doc, persona, indice, colores) {
+function dibujarFirma(doc, firma, centroX, colores) {
+  doc.setDrawColor(...colores.tintaSuave);
+  doc.setLineWidth(0.35);
+  doc.line(centroX - 28, 171, centroX + 28, 171);
+  if (firma.nombre) {
+    doc.setTextColor(...colores.tinta);
+    doc.setFont('helvetica', 'bold');
+    textoAjustado(doc, firma.nombre, 54, 7.6, 5.8);
+    doc.text(firma.nombre, centroX, 177, { align: 'center' });
+  }
+  if (firma.cargo) {
+    doc.setTextColor(...colores.tintaSuave);
+    doc.setFont('helvetica', 'normal');
+    textoAjustado(doc, firma.cargo, 54, 6.6, 5.2);
+    doc.text(firma.cargo, centroX, 182, { align: 'center' });
+  }
+}
+
+function dibujarPagina(doc, persona, indice, colores, config, recursos) {
   const centro = 148.5;
-  doc.setFillColor(...colores.papel);
-  doc.rect(0, 0, 297, 210, 'F');
-  dibujarEsquina(doc, colores);
+  if (recursos.fondo) {
+    doc.addImage(recursos.fondo, 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
+  } else {
+    doc.setFillColor(...colores.papel);
+    doc.rect(0, 0, 297, 210, 'F');
+    doc.setDrawColor(...colores.dorado);
+    doc.setLineWidth(0.45);
+    doc.rect(5, 5, 287, 200, 'S');
+  }
 
-  doc.setDrawColor(...colores.dorado);
-  doc.setLineWidth(0.45);
-  doc.rect(5, 5, 287, 200, 'S');
-  doc.setLineWidth(0.18);
-  doc.rect(7, 7, 283, 196, 'S');
-
-  doc.setFillColor(...colores.verdeProfundo);
-  doc.circle(centro - 28, 17, 6.2, 'F');
-  doc.setDrawColor(...colores.doradoClaro);
-  doc.setLineWidth(0.65);
-  doc.circle(centro - 28, 17, 6.2, 'S');
-  doc.setTextColor(...colores.doradoClaro);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.5);
-  doc.text('2026', centro - 28, 19, { align: 'center' });
+  if (recursos.marca) doc.addImage(recursos.marca, 'PNG', centro - 30, 6.5, 17, 17, undefined, 'FAST');
 
   doc.setTextColor(...colores.verde);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14.5);
-  doc.text('EXPO AVÍCOLA', centro + 3, 16.2, { align: 'center', charSpace: 0.7 });
+  doc.setFontSize(13.5);
+  doc.text('EXPO AVÍCOLA', centro + 4, 15.2, { align: 'center', charSpace: 0.7 });
   doc.setTextColor(...colores.dorado);
-  doc.setFontSize(7.2);
-  doc.text('PRODUCTIVA 2026', centro + 3, 22.2, { align: 'center', charSpace: 1.35 });
+  doc.setFontSize(6.8);
+  doc.text('PRODUCTIVA 2026', centro + 4, 21.2, { align: 'center', charSpace: 1.25 });
 
   doc.setTextColor(...colores.verdeProfundo);
   doc.setFont('times', 'normal');
   doc.setFontSize(28);
-  doc.text('RECONOCIMIENTO', centro, 49, { align: 'center', charSpace: 1.25 });
+  doc.text('RECONOCIMIENTO', centro, 47, { align: 'center', charSpace: 1.25 });
   doc.setTextColor(...colores.dorado);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.2);
-  doc.text('DE PARTICIPACIÓN', centro, 60, { align: 'center', charSpace: 2.1 });
+  doc.text('DE PARTICIPACIÓN', centro, 58, { align: 'center', charSpace: 2.1 });
   doc.setLineWidth(0.45);
-  doc.line(94, 57.2, 119, 57.2);
-  doc.line(178, 57.2, 203, 57.2);
+  doc.line(94, 55.2, 119, 55.2);
+  doc.line(178, 55.2, 203, 55.2);
 
   doc.setTextColor(...colores.tintaSuave);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('Se otorga a', centro, 72, { align: 'center' });
+  doc.text('Se otorga a', centro, 69, { align: 'center' });
 
   doc.setTextColor(...colores.verde);
   doc.setFont('times', 'bolditalic');
   textoAjustado(doc, persona.nombre, 205, 29, 17);
-  doc.text(persona.nombre, centro, 91, { align: 'center' });
+  doc.text(persona.nombre, centro, 88.5, { align: 'center' });
 
   doc.setDrawColor(...colores.dorado);
   doc.setLineWidth(0.45);
-  doc.line(63, 101, 234, 101);
+  doc.line(63, 98.5, 234, 98.5);
   doc.setFillColor(...colores.dorado);
-  doc.rect(146.4, 98.9, 4.2, 4.2, 'F');
+  doc.rect(146.4, 96.4, 4.2, 4.2, 'F');
 
   doc.setTextColor(...colores.tinta);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.2);
-  doc.text('Por su valiosa participación como asistente en la', centro, 114, { align: 'center' });
-  doc.setTextColor(...colores.verdeProfundo);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14.5);
-  doc.text(site.nombre.toLocaleUpperCase('es-MX'), centro, 125.5, { align: 'center' });
-  doc.setTextColor(...colores.tinta);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.7);
-  doc.text('y por su compromiso con la formación, la innovación y el', centro, 136.5, { align: 'center' });
-  doc.text('fortalecimiento del sector avícola.', centro, 142.5, { align: 'center' });
+  let tamanoTexto = 9.1;
+  doc.setFontSize(tamanoTexto);
+  let lineas = doc.splitTextToSize(config.texto, 169);
+  while (lineas.length > 5 && tamanoTexto > 7) {
+    tamanoTexto -= 0.4;
+    doc.setFontSize(tamanoTexto);
+    lineas = doc.splitTextToSize(config.texto, 169);
+  }
+  doc.text(lineas.slice(0, 5), centro, 111, { align: 'center', lineHeightFactor: 1.35 });
 
   doc.setTextColor(...colores.verde);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.7);
-  doc.text('7 DE AGOSTO DE 2026  ·  TEHUACÁN, PUEBLA, MÉXICO', centro, 154, {
+  doc.text(config.fecha.toLocaleUpperCase('es-MX'), centro, 149, {
     align: 'center',
     charSpace: 0.35,
+    maxWidth: 190,
   });
 
   dibujarSello(doc, colores);
-
-  doc.setDrawColor(...colores.tintaSuave);
-  doc.setLineWidth(0.35);
-  doc.line(185, 171, 254, 171);
-  doc.setTextColor(...colores.tinta);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.6);
-  doc.text('COMITÉ ORGANIZADOR', 219.5, 177, { align: 'center', charSpace: 0.55 });
-  doc.setTextColor(...colores.tintaSuave);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.6);
-  doc.text(site.nombre, 219.5, 182, { align: 'center' });
+  dibujarFirma(doc, config.firma1, 118, colores);
+  dibujarFirma(doc, config.firma2, 191, colores);
 
   doc.setTextColor(...colores.tintaSuave);
   doc.setFontSize(6.2);
   doc.text(`Folio interno: ${folio(indice)}`, 283, 198, { align: 'right' });
 }
 
-async function crearDocumento(personas, indices = personas.map((_, indice) => indice)) {
+async function crearDocumento(personas, indices = personas.map((_, indice) => indice), opciones = {}) {
   const { jsPDF } = await import('jspdf');
   const colores = paleta();
+  const config = normalizarConfig(opciones);
+  const [fondo, marca] = await Promise.all([cargarImagen(config.fondoUrl), cargarImagen(config.marcaUrl)]);
+  const recursos = { fondo, marca };
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
   doc.setProperties({
     title: `Reconocimientos — ${site.nombre}`,
@@ -205,17 +222,17 @@ async function crearDocumento(personas, indices = personas.map((_, indice) => in
 
   personas.forEach((persona, indice) => {
     if (indice > 0) doc.addPage('a4', 'landscape');
-    dibujarPagina(doc, persona, indices[indice] ?? indice, colores);
+    dibujarPagina(doc, persona, indices[indice] ?? indice, colores, config, recursos);
   });
   return doc;
 }
 
-export async function descargarReconocimiento(persona, indice = 0) {
-  const doc = await crearDocumento([persona], [indice]);
+export async function descargarReconocimiento(persona, indice = 0, config = {}) {
+  const doc = await crearDocumento([persona], [indice], config);
   doc.save(`reconocimiento-${slugArchivo(persona.nombre) || 'participante'}.pdf`);
 }
 
-export async function descargarReconocimientos(personas) {
-  const doc = await crearDocumento(personas);
+export async function descargarReconocimientos(personas, config = {}) {
+  const doc = await crearDocumento(personas, undefined, config);
   doc.save('reconocimientos-expo-avicola-productiva-2026.pdf');
 }
