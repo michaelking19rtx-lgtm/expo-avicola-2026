@@ -14,7 +14,7 @@ import { waUrl } from '../scripts/contacto.js';
   Mismo reparto que Ponentes, y por la misma razón: cada ficha se emite como un
   <dialog> CON el atributo `open`. Un <dialog open> no es modal, se pinta como
   un bloque en el flujo, así que SIN JavaScript la página enseña la rejilla y
-  debajo las seis fichas completas, y `#patrocinador-{slug}` es un ancla a un
+  debajo todas las fichas completas, y `#patrocinador-{slug}` es un ancla a un
   elemento que existe de verdad. Con JavaScript el script los cierra al arrancar
   y a partir de ahí usa `showModal()`, que da gratis el foco atrapado, Escape,
   `aria-modal`, el fondo inerte y el retorno de foco al elemento que abrió.
@@ -563,8 +563,8 @@ const fichas = patrocinadores.map((p) => {
   };
 
   /*
-    Los enlaces. Se escucha en el documento entero: un solo listener cubre las
-    seis tarjetas y cualquier enlace a una ficha que se añada después.
+    Los enlaces. Se escucha en el documento entero: un solo listener cubre
+    todas las tarjetas y cualquier enlace a una ficha que se añada después.
   */
   document.addEventListener('click', (ev) => {
     const el = ev.target as HTMLElement | null;
@@ -715,27 +715,30 @@ const fichas = patrocinadores.map((p) => {
     letter-spacing: -0.03em;
   }
 
-  /* Rejilla ---------------------------------------------------------------- */
+  /* Rejilla flexible ------------------------------------------------------- */
   /*
-    MÁXIMO 20rem, no 22. Con seis tarjetas ese valor decide el reparto de
-    escritorio, porque `auto-fit` con un máximo definido calcula el número de
-    columnas contra el MÁXIMO y no contra el mínimo (documentado al entrar el
-    cuarto patrocinador). A 1440 el ancho útil son ~1072px:
+    MÁXIMO 20rem, no 22. Ese valor conserva tres tarjetas en escritorio. A
+    1440 el ancho útil son ~1072px:
 
       con 22rem → 3×352 + 2×24 = 1104 > 1072 → 2 columnas (3 filas)
       con 20rem → 3×320 + 2×24 = 1008 ≤ 1072 → 3 columnas (2 filas)
 
-    Con SEIS no hay huérfanos en ningún reparto —6 es divisible por 3, 2 y 1—,
-    así que esto es una decisión de proporción, no de evitar un hueco suelto:
-    a dos columnas las tarjetas salen de 524px para un logo de 88px de alto.
+    Flex, y no Grid, hace que `justify-content: center` centre también los
+    ELEMENTOS de una última fila incompleta. Grid solo centra el bloque de
+    columnas y deja el séptimo elemento en la primera columna.
   */
   .patros__lista {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 20rem));
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-lg);
     justify-content: center;
     margin-block-start: var(--space-2xl);
     list-style: none;
+  }
+
+  .patro {
+    flex: 1 1 min(100%, 16rem);
+    max-inline-size: 20rem;
   }
 
   .patro__marco {
@@ -1007,7 +1010,7 @@ const fichas = patrocinadores.map((p) => {
 
   /*
     SIN JAVASCRIPT los <dialog> llevan `open`, así que se pintan como bloques
-    normales: rejilla arriba, seis fichas completas debajo.
+    normales: rejilla arriba, todas las fichas completas debajo.
   */
   .pfichas {
     max-inline-size: var(--container);
@@ -1027,7 +1030,7 @@ const fichas = patrocinadores.map((p) => {
   /*
     `display: block` SOLO con [open]. El navegador trae
     `dialog:not([open]) { display: none }`, pero es una regla de ELEMENTO y
-    `.pficha` es de CLASE: la clase gana, y las seis fichas cerradas seguirían
+    `.pficha` es de CLASE: la clase gana, y las fichas cerradas seguirían
     ocupando sitio en el flujo por detrás del modal sin que se notara, porque el
     modal se pinta encima.
   */
@@ -1041,7 +1044,7 @@ const fichas = patrocinadores.map((p) => {
       Pero con el atributo `open` en el flujo, ese `absolute` se resuelve contra
       el bloque contenedor inicial —ni .pfichas ni .patros ni body están
       posicionados— y provoca tres cosas a la vez, las tres medidas en su día en
-      la sección de Ponentes: las seis fichas se apilan en la misma coordenada y
+      la sección de Ponentes: las fichas se apilan en la misma coordenada y
       solo se ve la última; su contenedor mide 0px y se superponen a lo que
       venga después; y sangran a ancho completo sin gutter.
     */
@@ -1051,7 +1054,7 @@ const fichas = patrocinadores.map((p) => {
   }
 
   /*
-    CON JAVASCRIPT el script cierra las seis al cargar, y a partir de ahí solo
+    CON JAVASCRIPT el script cierra todas al cargar, y a partir de ahí solo
     se ven abiertas por showModal(). `:modal` casa únicamente en ese caso, así
     que estas reglas no tocan el modo sin JS.
   */
@@ -1161,7 +1164,7 @@ const fichas = patrocinadores.map((p) => {
          que es exactamente lo contrario de lo que la ficha tiene que hacer.
 
     Apilado, el logo dispone del ancho entero de la ficha y se limita por el
-    ALTO, así que los seis salen a 112px —contra los 88 de la tarjeta— sin
+    ALTO, así que todos salen a 112px —contra los 88 de la tarjeta— sin
     importar su proporción.
   */
   .pficha__cabecera {
@@ -1177,12 +1180,13 @@ const fichas = patrocinadores.map((p) => {
     5.5rem (88px).
 
     No sube más porque los WebP se sirven a 176px de alto —el DPR2 exacto del
-    render de la TARJETA, que es donde se ven los seis— y a 112 CSS px un
+    render de la TARJETA, que es donde se ven todos— y a 112 CSS px un
     DPR2 pide 224. Se comparó el reescalado contra el nativo a 224 y la
     diferencia no se aprecia; a 120 ya empezaba a notarse en el texto en arco
     del sello de Victoria Linares. Subir el origen a 240px de alto sacaría a
-    los seis del presupuesto de 70 KB, y tres de ellos ni siquiera tienen un
-    original del que re-derivarse a ese tamaño sin rehacer su un-blend.
+    los logos originales del presupuesto histórico de 70 KB, y tres de ellos
+    ni siquiera tienen un original del que re-derivarse a ese tamaño sin
+    rehacer su un-blend.
   */
   .pficha__marco {
     --patro-alto: 7rem;

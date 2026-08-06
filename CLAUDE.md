@@ -4742,3 +4742,40 @@ después las reglas evita dejar temporalmente fuera a todas las cuentas.
 **Estado:** el código está listo. No se tocaron cuentas ni reglas remotas porque
 la consola de Firebase no tenía una sesión abierta; no se deben pedir ni pegar
 contraseñas en este chat.
+
+---
+
+### Séptimo patrocinador — Farmacia Veterinaria Santacruz · COMPLETADA
+
+Se agregó la ficha entregada por el cliente a `patrocinadores.json`, sin
+inventar los campos ausentes: ubicación `Tehuacán, Puebla`, contacto
+`L.A.E. Cruz Amelia Saldívar`, teléfono `238 386 5530`, descripción de venta de
+medicamentos, vitaminas, vacunas, desparasitantes, accesorios, implementos y
+aves de corral, e Instagram con su URL completa. Correo, web, Facebook y
+WhatsApp quedan en `null`; un teléfono no se declara WhatsApp sin evidencia.
+
+El material recibido era una pieza cuadrada de 1181×1181 con logotipo, lema y
+otro teléfono. Para que la marca no quedara ilegible dentro de la tarjeta se
+extrajo únicamente el logotipo central, sin redibujarlo, y se guardó como
+`public/img/patrocinadores/santacruz.png`: 389×300, 163 837 bytes y fondo blanco
+propio. La ficha pública usa el teléfono escrito en la entrega, no el impreso
+en la imagen: la pieza muestra `238 383 6019`, mientras el texto recibido dice
+`238 386 5530`. **Pendiente del cliente:** confirmar cuál es el vigente antes
+de reutilizar el número en folletos.
+
+La rejilla pasó de Grid a Flex conservando el máximo de 20rem por tarjeta. El
+cambio era necesario con siete elementos: Grid centraba el bloque de tres
+columnas, pero dejaba la última tarjeta en la columna izquierda; Flex mantiene
+`3 + 3 + 1` y centra de verdad la fila incompleta, también en repartos futuros.
+
+**Verificación local**
+
+- `astro check`: 37 archivos, 0 errores, 0 warnings y 0 hints.
+- `npm run build`: cinco rutas estáticas generadas correctamente.
+- Escritorio 1440×1000: siete tarjetas en `3 + 3 + 1`; última tarjeta de
+  320 px centrada, logotipo cargado y 0 px de desborde horizontal.
+- Móvil 390×844: tarjeta de 320 px, modal de 350.4×759.6 con desplazamiento
+  interno y 0 px de desborde horizontal.
+- Ficha: `tel:+522383865530`, enlace canónico de Instagram, logotipo natural
+  389×300 y hash directo
+  `#patrocinador-farmacia-veterinaria-santacruz`, todo comprobado en navegador.
