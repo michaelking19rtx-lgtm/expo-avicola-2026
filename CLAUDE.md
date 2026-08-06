@@ -4867,6 +4867,8 @@ por el material oficial entregado por el cliente:
   y 376 178 bytes, con aro dorado, centro verde, cinco estrellas y laureles. La
   imagen no contiene letras: vista previa y PDF superponen «EXCELENCIA ·
   CONOCIMIENTO · Y COMPROMISO» como texto real para mantenerlo siempre nítido.
+  Tras la revisión del cliente, las tres líneas se redujeron alrededor de 22 %
+  y ocupan solo 60 % del ancho interior para respetar estrellas y laureles.
 
 La interfaz agrega un bloque **Datos del reconocimiento** para editar el texto
 de participación, la fecha y el lugar. Las tres firmas oficiales se muestran

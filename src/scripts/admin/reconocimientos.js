@@ -97,12 +97,12 @@ function dibujarSello(doc, colores, sello) {
   }
   doc.setTextColor(...colores.doradoClaro);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(5.1);
-  doc.text('EXCELENCIA', x, y - 5.6, { align: 'center', charSpace: 0.25 });
-  doc.setFontSize(4.6);
-  doc.text('CONOCIMIENTO', x, y - 1.4, { align: 'center', charSpace: 0.12 });
-  doc.setFontSize(4.2);
-  doc.text('Y COMPROMISO', x, y + 2.4, { align: 'center', charSpace: 0.1 });
+  doc.setFontSize(4);
+  doc.text('EXCELENCIA', x, y - 5.4, { align: 'center', charSpace: 0.18 });
+  doc.setFontSize(3.55);
+  doc.text('CONOCIMIENTO', x, y - 1.4, { align: 'center', charSpace: 0.08 });
+  doc.setFontSize(3.35);
+  doc.text('Y COMPROMISO', x, y + 2.2, { align: 'center', charSpace: 0.06 });
 }
 
 function dibujarPagina(doc, persona, indice, colores, config, recursos) {

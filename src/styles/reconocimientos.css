@@ -432,20 +432,20 @@
   z-index: 1;
   inset: 43% auto auto 50%;
   display: grid;
-  gap: 0.28cqi;
-  width: 70%;
+  gap: 0.22cqi;
+  width: 60%;
   color: var(--reco-dorado-claro);
   font-family: Arial, sans-serif;
-  font-size: 0.52cqi;
+  font-size: 0.4cqi;
   font-weight: 750;
-  letter-spacing: 0.035em;
+  letter-spacing: 0.025em;
   text-shadow: 0 0.08cqi 0.1cqi rgb(0 0 0 / 45%);
   transform: translate(-50%, -50%);
 }
 
 .reco-hoja__sello-texto strong {
-  font-size: 0.64cqi;
-  letter-spacing: 0.06em;
+  font-size: 0.48cqi;
+  letter-spacing: 0.045em;
 }
 
 .reco-hoja__firmas-oficiales {
