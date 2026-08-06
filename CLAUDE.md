@@ -4779,3 +4779,65 @@ columnas, pero dejaba la última tarjeta en la columna izquierda; Flex mantiene
 - Ficha: `tel:+522383865530`, enlace canónico de Instagram, logotipo natural
   389×300 y hash directo
   `#patrocinador-farmacia-veterinaria-santacruz`, todo comprobado en navegador.
+
+---
+
+### Generador privado de reconocimientos · COMPLETADO
+
+Se agregó `/reconocimientos/`, accesible desde `/admin/` y protegido con la
+misma combinación de Firebase Auth + `admins/{uid}.activo` o custom claim
+`admin: true` que usan el panel y el control de asistencia. La ruta lleva
+`noindex` y está excluida del sitemap. El HTML estático no contiene nombres:
+sin una sesión autorizada solo se muestra el formulario de acceso.
+
+**Flujo**
+
+- Importa `.xlsx` o `.csv` con una columna `Nombre`. El archivo se abre y se
+  procesa dentro del navegador; nunca se envía a un servidor, no se guarda en
+  Firestore y no se convierte en un JSON del repositorio.
+- Normaliza espacios, puntuación final y mayúsculas/minúsculas para que los
+  nombres no salgan como texto crudo en el documento.
+- Omite duplicados literales, marca reservas tipo «cupo 2», nombres unidos y
+  cadenas que parecen una empresa, y permite buscar, corregir, agregar o quitar
+  personas antes de generar.
+- La lista se borra del DOM y de la memoria al cerrar la sesión.
+- Descarga el reconocimiento seleccionado o un único PDF con una página A4
+  horizontal por persona, en el orden visible. El folio es interno
+  (`EAP-2026-001`, etc.); no se presenta como verificación pública.
+
+**Diseño**
+
+El ejemplo entregado era para ponentes. La versión de asistentes conserva su
+lenguaje visual —papel claro, verde profundo, dorado, esquinas diagonales,
+sello y nombre protagonista— pero cambia el texto a participación como
+asistente. No se inventaron firmas: queda una línea real para el Comité
+Organizador. La paleta vive en tokens `--reco-*` de `tokens.css`, y el generador
+de jsPDF lee esos mismos tokens antes de dibujar para que vista previa y PDF no
+tengan dos fuentes de color.
+
+**Dependencia nueva (convención 7): `fflate`.** jsPDF ya la traía de forma
+transitiva, pero el proyecto ahora la importa directamente y por eso se declaró
+como dependencia propia. Se usa para abrir el contenedor ZIP de XLSX y leer
+solo el XML necesario. Evita añadir un procesador completo de hojas de cálculo
+para una tarea que únicamente necesita localizar una columna de nombres. El
+módulo se carga dinámicamente al seleccionar un archivo, así que no entra en la
+landing ni en la carga inicial del panel.
+
+**Verificación con `Alumnos congreso.xlsx`**
+
+- 58 renglones con nombre → **55 personas únicas**; 3 renglones repetidos
+  omitidos.
+- 5 entradas señaladas para revisión: una empresa, un nombre unido y tres
+  reservas de cupo.
+- Importación real, búsqueda y corrección individual ejercitadas en navegador.
+- PDF individual abierto y revisado visualmente en el visor: una página,
+  proporción horizontal correcta, acentos, nombre, sello, línea de firma y
+  folio legibles.
+- PDF general generado en Descargas: **55 objetos de página**, 137 913 bytes,
+  encabezado `%PDF-1.3` y cierre `%%EOF` confirmados.
+- Sin errores ni avisos de consola durante importación o generación.
+
+El Excel reveló que «JuanPedro Hernándezcruz cupo 2/3/4» todavía son lugares
+reservados, no identidades finales. El generador los conserva y los señala en
+vez de inventar nombres; deben corregirse desde la propia interfaz antes de
+imprimir la versión oficial.

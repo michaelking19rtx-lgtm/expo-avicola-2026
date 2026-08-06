@@ -183,11 +183,13 @@ export default defineConfig({
            sitemap sería deshacer justo eso.
          - `/asistencia`: es el control privado de llegadas. Solo se enlaza
            desde el panel ya autenticado y tampoco debe anunciarse a buscadores.
+         - `/reconocimientos`: procesa listas y genera documentos personales.
+           Solo se enlaza desde el panel autenticado.
 
-         Las cuatro llevan además `noindex`, porque quedar fuera del sitemap no
+         Las cinco llevan además `noindex`, porque quedar fuera del sitemap no
         impide que un buscador las encuentre por otro camino.
       */
-      filter: (page) => !/\/(404|admin|agenda|asistencia)\/?$/.test(page),
+      filter: (page) => !/\/(404|admin|agenda|asistencia|reconocimientos)\/?$/.test(page),
       changefreq: 'monthly',
     }),
   ],

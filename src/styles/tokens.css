@@ -181,4 +181,16 @@
      (Patrocinadores, `fondoPropio`) que necesitan destacar de la superficie
      clara de su sección en vez de heredarla. */
   --blanco-marca: #ffffff;
+
+  /* Reconocimientos impresos. Esta paleta es fija: el documento conserva la
+     misma identidad verde/dorada aunque el panel esté usando el tema azul. */
+  --reco-papel: #fbfaf6;
+  --reco-papel-sombra: #eee9df;
+  --reco-verde: #073c2b;
+  --reco-verde-profundo: #04291e;
+  --reco-dorado: #b78931;
+  --reco-dorado-claro: #dec174;
+  --reco-tinta: #17261f;
+  --reco-tinta-suave: #56635d;
+  --reco-borde: rgba(183, 137, 49, 0.45);
 }
