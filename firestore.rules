@@ -8,19 +8,87 @@ rules_version = '2';
 // `firebase deploy --only firestore:rules` desde una máquina con el CLI
 // autenticado contra expo-avicola-2026.
 //
-// Diseño: NO hay registro público en este proyecto — cada cuenta de
-// Firebase Auth la crea a mano quien administra la consola (Authentication →
-// Users → Add user). Por eso "estar autenticado" y "estar autorizado" son lo
-// mismo aquí: no hace falta una lista de UIDs aparte para decidir quién lee
-// la clave de Stripe, basta con exigir sesión válida.
+// Iniciar sesión NO equivale a estar autorizado: cuando Correo/Contraseña está
+// habilitado, Firebase Auth permite crear cuentas desde su API aunque el sitio
+// no muestre un formulario de registro. Cada administrador autorizado tiene un
+// documento `admins/{uid}` con `{ activo: true }`, creado solo desde la consola,
+// o el custom claim `admin: true` si se configura desde un entorno de servidor.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function esAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.activo == true
+        )
+      );
+    }
+
+    function registroValido() {
+      let datos = request.resource.data;
+      return datos.keys().hasOnly([
+          'origen',
+          'nombre',
+          'nombreBusqueda',
+          'correo',
+          'telefono',
+          'empresa',
+          'cantidad',
+          'estadoPago',
+          'stripeSessionId',
+          'cantidadLlegadas',
+          'ultimaLlegada',
+          'creadoEn',
+          'actualizadoEn',
+          'actualizadoPorUid',
+          'actualizadoPorCorreo'
+        ]) &&
+        datos.origen in ['stripe', 'manual'] &&
+        datos.nombre is string &&
+        datos.nombre.size() > 0 &&
+        datos.nombre.size() <= 160 &&
+        datos.nombreBusqueda is string &&
+        datos.nombreBusqueda.size() <= 160 &&
+        (datos.correo == null || datos.correo is string) &&
+        (datos.telefono == null || datos.telefono is string) &&
+        (datos.empresa == null || datos.empresa is string) &&
+        datos.cantidad is int &&
+        datos.cantidad >= 1 &&
+        datos.cantidad <= 20 &&
+        datos.estadoPago in ['pagado', 'manual'] &&
+        (datos.stripeSessionId == null || datos.stripeSessionId is string) &&
+        datos.cantidadLlegadas is int &&
+        datos.cantidadLlegadas >= 0 &&
+        datos.cantidadLlegadas <= datos.cantidad &&
+        (datos.ultimaLlegada == null || datos.ultimaLlegada is timestamp) &&
+        datos.creadoEn is timestamp &&
+        datos.actualizadoEn == request.time &&
+        datos.actualizadoPorUid == request.auth.uid &&
+        (datos.actualizadoPorCorreo == null || datos.actualizadoPorCorreo is string);
+    }
+
+    // Solo cada usuario puede consultar si su propio UID está habilitado.
+    // Nadie puede crear administradores desde el cliente.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
     // config/stripe.restrictedKey: la Restricted Key de Stripe (solo lectura
-    // de Checkout Sessions). Legible solo con sesión de Firebase; nunca
-    // escribible desde el cliente — se captura a mano en la consola.
+    // de Checkout Sessions). Legible solo por administradores autorizados;
+    // nunca escribible desde el cliente — se captura a mano en la consola.
     match /config/stripe {
-      allow read: if request.auth != null;
+      allow read: if esAdmin();
       allow write: if false;
+    }
+
+    // Lista manual + estado de llegada. Los cambios se validan y registran con
+    // la hora del servidor y el UID del administrador que los hizo.
+    match /eventos/expo-avicola-2026/registros/{registroId} {
+      allow read: if esAdmin();
+      allow create, update: if esAdmin() && registroValido();
+      allow delete: if false;
     }
 
     // Todo lo demás, cerrado por defecto.

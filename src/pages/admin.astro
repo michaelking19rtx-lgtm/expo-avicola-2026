@@ -6,6 +6,8 @@ const opcionesTema = [
   { value: 'green', label: 'Verde', swatch: 'var(--swatch-green)' },
   { value: 'blue', label: 'Azul', swatch: 'var(--swatch-blue)' },
 ] as const;
+
+const rutaAsistencia = `${import.meta.env.BASE_URL}asistencia/`;
 ---
 
 {/*
@@ -72,19 +74,27 @@ const opcionesTema = [
           <p class="panel__eyebrow">{site.nombre}</p>
           <h1 class="dash__title" id="dash-title">Asistentes</h1>
         </div>
-        <button class="boton boton--fantasma" type="button" id="btn-logout">
-          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-            <path
-              d="M7.5 17.5h-3a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 4.5 2.5h3M13 14l4-4-4-4M17 10H7.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          Cerrar sesión
-        </button>
+        <div class="dash__acciones">
+          <a class="boton boton--linea" href={rutaAsistencia}>
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path d="m4.5 10.5 3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Control de asistencia
+          </a>
+          <button class="boton boton--fantasma" type="button" id="btn-logout">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path
+                d="M7.5 17.5h-3a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 4.5 2.5h3M13 14l4-4-4-4M17 10H7.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            Cerrar sesión
+          </button>
+        </div>
       </header>
 
       <p class="dash__mensaje" id="dash-mensaje" role="status" hidden></p>
@@ -205,6 +215,7 @@ const opcionesTema = [
 <script>
   import { setTheme, getTheme, isTheme } from '../scripts/theme.js';
   import { firebaseListo } from '../scripts/admin/firebase.js';
+  import { obtenerAutorizacionAdmin } from '../scripts/admin/autorizacion.js';
   import { obtenerAsistentes } from '../scripts/admin/asistentes.js';
   import { descargarPdf } from '../scripts/admin/pdf.js';
 
@@ -294,6 +305,7 @@ const opcionesTema = [
 
   /** @type {any[]} */
   let asistentesCache: any[] = [];
+  let intentoAuth = 0;
 
   function formatoImporte(importe: number, moneda: string) {
     try {
@@ -523,12 +535,37 @@ const opcionesTema = [
       authMod.signOut(auth);
     });
 
-    authMod.onAuthStateChanged(auth, (usuario: unknown) => {
+    authMod.onAuthStateChanged(auth, async (usuario: any) => {
+      const intento = ++intentoAuth;
       if (!main) return;
 
       if (usuario) {
-        main.dataset.auth = 'in';
-        cargarAsistentes(db, dbMod);
+        main.dataset.auth = 'cargando';
+        const textoCargando = document.querySelector<HTMLParagraphElement>('#cargando-texto');
+        if (textoCargando) textoCargando.textContent = 'Verificando permisos de administrador…';
+
+        try {
+          const permiso = await obtenerAutorizacionAdmin(dbMod, db, usuario);
+          if (intento !== intentoAuth) return;
+          if (!permiso.autorizado) {
+            await authMod.signOut(auth);
+            if (loginError) {
+              loginError.textContent = 'Esta cuenta existe, pero no está autorizada como administradora.';
+              loginError.hidden = false;
+            }
+            return;
+          }
+
+          main.dataset.auth = 'in';
+          cargarAsistentes(db, dbMod);
+        } catch (error) {
+          console.error('[admin] No se pudo verificar la autorización:', error);
+          await authMod.signOut(auth);
+          if (loginError) {
+            loginError.textContent = 'No se pudo verificar el acceso. Recarga la página e inténtalo de nuevo.';
+            loginError.hidden = false;
+          }
+        }
       } else {
         main.dataset.auth = 'out';
         asistentesCache = [];
@@ -723,6 +760,7 @@ const opcionesTema = [
     font: inherit;
     font-size: var(--step--1);
     font-weight: 600;
+    text-decoration: none;
     cursor: pointer;
     transition:
       background-color var(--t-base) var(--ease-out),
@@ -775,6 +813,13 @@ const opcionesTema = [
     justify-content: space-between;
     gap: var(--space-md);
     margin-block-end: var(--space-xl);
+  }
+
+  .dash__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-sm);
   }
 
   .dash__title {

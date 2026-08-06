@@ -4675,3 +4675,70 @@ por ser la ficha más llena— y el modo sin JavaScript (convención 15). Los fa
 los cuatro dan 10 dígitos. El `238 129 1241` es el que llegó como
 `+52 1 238 129 1241` —formato viejo, con el 1 de móvil después del 52—; quitando
 lada de país y ese 1 queda el mismo número de 10 dígitos que ya estaba escrito.
+
+---
+
+### Control privado de asistencia — código completado, configuración externa pendiente
+
+Se agregó `/asistencia/`, una superficie privada para el registro en puerta. La
+página reutiliza Firebase Auth y el lector de Stripe del panel, pero muestra
+solo compras con estado `pagado`. Las combina con personas agregadas
+manualmente en Firestore; ningún dato de esa lista se incrusta en el HTML ni se
+commitea al repositorio.
+
+**Flujo**
+
+- Buscador por nombre, empresa, teléfono o correo.
+- Filtros `Todos`, `Por llegar` y `Ya llegaron`.
+- Métricas por PERSONA, no por fila: registradas, presentes y pendientes.
+- Un boleto se palomea con un botón. Una compra de varios boletos usa contador
+  atómico (`0/2`, `1/2`, `2/2`) porque Stripe solo conoce al comprador, no el
+  nombre de cada acompañante.
+- `onSnapshot` mantiene las llegadas sincronizadas entre varios equipos. Cada
+  cambio guarda hora de servidor, UID y correo del administrador. Una
+  transacción evita perder marcas cuando dos equipos actualizan la misma fila.
+- `Agregar persona` escribe la lista manual directamente en Firestore. La
+  importación masiva se hará cuando llegue el archivo del cliente, sobre este
+  mismo modelo, sin crear un JSON público.
+- `/admin/` estrena un acceso directo al control de asistencia.
+
+**Corrección de seguridad previa a publicar**
+
+Las reglas anteriores aceptaban `request.auth != null` como autorización. Eso
+era insuficiente: la propia verificación de la Fase 8 creó una cuenta desde
+`accounts:signUp` usando la API pública, prueba directa de que ocultar el
+formulario de alta no cerraba el registro. Esa cuenta podía leer
+`config/stripe` porque cualquier usuario autenticado pasaba las reglas.
+
+Ahora `firestore.rules` exige `admins/{uid}.activo == true` o el custom claim
+`admin: true` para leer Stripe y para leer/escribir asistencia. Cada usuario
+solo puede consultar su propio documento de autorización y ningún cliente puede
+crear, editar o borrar administradores. Las escrituras de llegada además
+validan campos, cantidades, hora del servidor y UID responsable.
+
+**Configuración externa obligatoria antes del despliegue**
+
+1. En Firebase Console → Authentication → Users, copiar el UID de cada cuenta
+   que realmente sea administradora.
+2. En Firestore crear `admins/{UID}` con el campo booleano `activo: true` para
+   cada una. Conviene agregar `correo` como referencia humana, aunque las reglas
+   no dependen de él.
+3. Publicar el contenido actualizado de `firestore.rules`. Este repositorio no
+   despliega reglas desde GitHub Actions.
+
+El orden importa: crear primero los documentos de administradores y publicar
+después las reglas evita dejar temporalmente fuera a todas las cuentas.
+
+**Verificación local**
+
+- `npm run build`: genera `/asistencia/index.html` correctamente.
+- `astro check`: 0 errores, 0 warnings y 0 hints en 37 archivos.
+- Prueba de combinación: conserva el contador guardado de Stripe, incluye la
+  lista manual y excluye una sesión fallida.
+- Login mirado en escritorio y 360 px. Panel completo mirado con datos de
+  prueba en 1280 y 360 px; tabla en escritorio, tarjetas en móvil y 0 px de
+  desbordamiento horizontal después de cerrar el ancho mínimo del grid.
+
+**Estado:** el código está listo. No se tocaron cuentas ni reglas remotas porque
+la consola de Firebase no tenía una sesión abierta; no se deben pedir ni pegar
+contraseñas en este chat.

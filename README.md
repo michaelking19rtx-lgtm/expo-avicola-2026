@@ -36,6 +36,18 @@ Para cambiarlo: `/admin`. Esa es la única página que carga `theme.js`, así qu
 `setTheme('blue')` desde la consola solo funciona estando en `/admin`. El resto
 del sitio no lleva JS de módulo: solo el script inline que aplica el tema.
 
+## Paneles privados
+
+- `/admin/`: ventas pagadas, pendientes y fallidas obtenidas desde Stripe,
+  métricas y exportaciones CSV/PDF.
+- `/asistencia/`: combina las compras pagadas con la lista manual guardada en
+  Firestore y permite registrar llegadas en tiempo real desde varios equipos.
+
+Los dos paneles usan Firebase Auth, pero una sesión por sí sola no autoriza.
+Cada cuenta administrativa debe tener un documento `admins/{uid}` con
+`activo: true`. Las reglas de `firestore.rules` deben publicarse manualmente en
+Firebase antes de usar el control de asistencia.
+
 ## Estructura
 
 ```text
@@ -44,12 +56,12 @@ public/
   video/
   favicon.svg
 src/
-  components/          # vacío en Fase 1
-  data/site.json       # datos del evento
+  components/          # secciones de la landing
+  data/                 # contenido estructurado del evento
   layouts/Base.astro   # <html>, head, anti-FOUC del tema
-  pages/               # index.astro, admin.astro
-  scripts/theme.js     # setTheme / getTheme / toggleTheme
-  styles/              # tokens.css (variables), global.css (reset + bases)
+  pages/               # index, agenda, admin, asistencia y 404
+  scripts/admin/       # Firebase, Stripe, autorización y asistencia
+  styles/              # tokens, estilos globales y de asistencia
 ```
 
 Antes de tocar el proyecto, lee [`CLAUDE.md`](./CLAUDE.md): contiene las
