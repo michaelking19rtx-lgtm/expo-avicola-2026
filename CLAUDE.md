@@ -4810,10 +4810,11 @@ sin una sesión autorizada solo se muestra el formulario de acceso.
 El ejemplo entregado era para ponentes. La versión de asistentes conserva su
 lenguaje visual —papel claro, verde profundo, dorado, esquinas diagonales,
 sello y nombre protagonista— pero cambia el texto a participación como
-asistente. No se inventaron firmas: queda una línea real para el Comité
-Organizador. La paleta vive en tokens `--reco-*` de `tokens.css`, y el generador
-de jsPDF lee esos mismos tokens antes de dibujar para que vista previa y PDF no
-tengan dos fuentes de color.
+asistente. El material oficial recibido después aportó tres firmas reales, el
+logotipo Avipró y el emblema técnico inferior; se usan como imagen y no se
+redibujan como texto. La paleta vive en tokens `--reco-*` de `tokens.css`, y el
+generador de jsPDF lee esos mismos tokens antes de dibujar para que vista previa
+y PDF no tengan dos fuentes de color.
 
 **Dependencia nueva (convención 7): `fflate`.** jsPDF ya la traía de forma
 transitiva, pero el proyecto ahora la importa directamente y por eso se declaró
@@ -4842,32 +4843,35 @@ reservados, no identidades finales. El generador los conserva y los señala en
 vez de inventar nombres; deben corregirse desde la propia interfaz antes de
 imprimir la versión oficial.
 
-#### Ampliación visual y firmantes configurables
+#### Ampliación visual con identidad y firmas oficiales
 
-El generador ahora usa dos recursos originales creados expresamente para el
-evento, sin copiar texto, firmas ni identidades del ejemplo recibido:
+El fondo original aprobado se conserva y el resto de la identidad se sustituyó
+por el material oficial entregado por el cliente:
 
 - `public/img/reconocimientos/fondo-reconocimiento.jpg`: fondo A4 horizontal de
   1492×1054, 245 816 bytes, con papel marfil, cintas verde esmeralda, bordes
   dorados y gallo-plumaje en marca de agua. El centro queda deliberadamente
   limpio para el contenido variable.
-- `public/img/reconocimientos/marca-expo.png`: símbolo original de gallo y hoja
-  de 640×640, 155 252 bytes y transparencia real. El nombre del evento se
-  compone aparte como texto para que conserve nitidez y ortografía en pantalla
-  y PDF.
+- `public/img/reconocimientos/logo-avipro-oficial.png`: recorte transparente de
+  309×157 y 57 621 bytes del logotipo «1er Expo Avipró 2026» recibido. Sustituye
+  y elimina por completo la marca provisional generada en la primera versión.
+- `public/img/reconocimientos/emblema-inferior.png`: versión limpia y
+  transparente de 438×640 y 209 587 bytes del gallo con engrane azul que ocupa
+  la esquina inferior derecha.
+- `public/img/reconocimientos/firmas-oficiales.png`: franja transparente de
+  613×123 y 43 916 bytes. Conserva los trazos y rótulos de Jesus Alberto
+  Betanzo, Ricardo Olmos Rivera y Comité Organizador / 1er Expo Avipró 2026.
 
 La interfaz agrega un bloque **Datos del reconocimiento** para editar el texto
-de participación, la fecha y el lugar. También incluye dos bloques de firma,
-cada uno con nombre y cargo o función. Los cuatro campos de firmantes empiezan
-vacíos: el documento muestra únicamente las dos líneas hasta que el equipo
-escriba datos reales. No se generaron firmas manuscritas ni nombres de
-autoridades.
+de participación, la fecha y el lugar. Las tres firmas oficiales se muestran
+en ese bloque como confirmación y se aplican automáticamente tanto a la vista
+previa como a cada página del PDF; ya no existen campos manuales que pudieran
+alterar nombres o cargos.
 
-Vista previa y jsPDF consumen los mismos dos archivos. El PDF incrusta el fondo
-una sola vez como JPEG y la marca como PNG con alfa, por lo que las páginas
-subsecuentes pueden reutilizarlos sin multiplicar innecesariamente el peso.
-Una prueba directa con el motor de PDF produjo un archivo de 428 583 bytes con
-encabezado `%PDF-1.3` y cierre `%%EOF`; las dos imágenes y las dos líneas de
-firma fueron aceptadas. `astro check`: 40 archivos, 0 errores, 0 warnings y 0
-hints. `npm run build`: seis rutas estáticas; sin binarios nuevos por encima de
-400 KB.
+Vista previa y jsPDF consumen los mismos cuatro archivos. El PDF incrusta el
+fondo una sola vez como JPEG y los tres elementos oficiales como PNG con alfa,
+por lo que las páginas subsecuentes pueden reutilizarlos sin multiplicar
+innecesariamente el peso. Una prueba directa con el motor produjo 595 262 bytes
+con encabezado `%PDF-1.3` y cierre `%%EOF`; fondo, logotipo, firmas y emblema
+fueron aceptados. `astro check`: 40 archivos, 0 errores, 0 warnings y 0 hints.
+`npm run build`: seis rutas estáticas; ningún binario nuevo supera 400 KB.

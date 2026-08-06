@@ -7,7 +7,9 @@ import '../styles/reconocimientos.css';
 
 const rutaAdmin = `${import.meta.env.BASE_URL}admin/`;
 const fondoReconocimiento = asset('img/reconocimientos/fondo-reconocimiento.jpg');
-const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
+const logoReconocimiento = asset('img/reconocimientos/logo-avipro-oficial.png');
+const emblemaReconocimiento = asset('img/reconocimientos/emblema-inferior.png');
+const firmasReconocimiento = asset('img/reconocimientos/firmas-oficiales.png');
 ---
 
 <Base title={`Reconocimientos — ${site.nombre}`} noindex>
@@ -143,31 +145,10 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
                 <label for="fecha-reconocimiento">Fecha y lugar</label>
                 <input id="fecha-reconocimiento" maxlength="160" value="7 de agosto de 2026 · Tehuacán, Puebla, México" />
               </div>
-              <div class="reco-config__firmantes">
-                <fieldset>
-                  <legend>Firma 1</legend>
-                  <div class="campo">
-                    <label for="firma-1-nombre">Nombre</label>
-                    <input id="firma-1-nombre" maxlength="100" placeholder="Déjalo vacío por ahora" autocomplete="off" />
-                  </div>
-                  <div class="campo">
-                    <label for="firma-1-cargo">Cargo o función</label>
-                    <input id="firma-1-cargo" maxlength="120" placeholder="Déjalo vacío por ahora" autocomplete="off" />
-                  </div>
-                </fieldset>
-                <fieldset>
-                  <legend>Firma 2</legend>
-                  <div class="campo">
-                    <label for="firma-2-nombre">Nombre</label>
-                    <input id="firma-2-nombre" maxlength="100" placeholder="Déjalo vacío por ahora" autocomplete="off" />
-                  </div>
-                  <div class="campo">
-                    <label for="firma-2-cargo">Cargo o función</label>
-                    <input id="firma-2-cargo" maxlength="120" placeholder="Déjalo vacío por ahora" autocomplete="off" />
-                  </div>
-                </fieldset>
+              <div class="reco-config__oficial">
+                <img src={firmasReconocimiento} width="613" height="123" alt="Firmas oficiales de Jesus Alberto Betanzo, Ricardo Olmos Rivera y Comité Organizador" />
+                <p>Se aplicarán las tres firmas oficiales proporcionadas para el evento.</p>
               </div>
-              <p class="reco-config__nota">Las líneas sí aparecen en el PDF; nombres y cargos solo se imprimen cuando los escribas.</p>
             </div>
           </details>
         </div>
@@ -185,13 +166,12 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
             class="reco-hoja"
             aria-label="Vista previa del reconocimiento"
             data-fondo={fondoReconocimiento}
-            data-marca={marcaReconocimiento}
+            data-logo={logoReconocimiento}
+            data-emblema={emblemaReconocimiento}
+            data-firmas={firmasReconocimiento}
           >
             <img class="reco-hoja__fondo" src={fondoReconocimiento} width="1492" height="1054" alt="" aria-hidden="true" />
-            <div class="reco-hoja__marca">
-              <img src={marcaReconocimiento} width="640" height="640" alt="" aria-hidden="true" />
-              <span><strong>EXPO AVÍCOLA</strong><small>PRODUCTIVA 2026</small></span>
-            </div>
+            <img class="reco-hoja__logo-principal" src={logoReconocimiento} width="309" height="157" alt="1er Expo Avipró 2026" />
             <h3>RECONOCIMIENTO</h3>
             <p class="reco-hoja__tipo">DE PARTICIPACIÓN</p>
             <p class="reco-hoja__otorga">Se otorga a</p>
@@ -200,10 +180,8 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
             <p class="reco-hoja__texto" id="preview-texto">Por su valiosa participación como asistente en la Expo Avícola Productiva 2026 y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.</p>
             <p class="reco-hoja__fecha" id="preview-fecha">7 DE AGOSTO DE 2026 · TEHUACÁN, PUEBLA, MÉXICO</p>
             <div class="reco-hoja__sello" aria-hidden="true"><span>PARTICIPACIÓN</span><strong>2026</strong><span>COMPROMISO</span></div>
-            <div class="reco-hoja__firmas">
-              <div class="reco-hoja__firma"><span></span><strong id="preview-firma-1-nombre"></strong><small id="preview-firma-1-cargo"></small></div>
-              <div class="reco-hoja__firma"><span></span><strong id="preview-firma-2-nombre"></strong><small id="preview-firma-2-cargo"></small></div>
-            </div>
+            <img class="reco-hoja__firmas-oficiales" src={firmasReconocimiento} width="613" height="123" alt="Firmas oficiales" />
+            <img class="reco-hoja__emblema" src={emblemaReconocimiento} width="438" height="640" alt="" aria-hidden="true" />
           </article>
 
           <div class="reco-descargas">
@@ -259,16 +237,8 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
   const hojaPreview = document.querySelector<HTMLElement>('.reco-hoja');
   const inputTextoReconocimiento = document.querySelector<HTMLTextAreaElement>('#texto-reconocimiento');
   const inputFechaReconocimiento = document.querySelector<HTMLInputElement>('#fecha-reconocimiento');
-  const inputFirma1Nombre = document.querySelector<HTMLInputElement>('#firma-1-nombre');
-  const inputFirma1Cargo = document.querySelector<HTMLInputElement>('#firma-1-cargo');
-  const inputFirma2Nombre = document.querySelector<HTMLInputElement>('#firma-2-nombre');
-  const inputFirma2Cargo = document.querySelector<HTMLInputElement>('#firma-2-cargo');
   const previewTexto = document.querySelector<HTMLParagraphElement>('#preview-texto');
   const previewFecha = document.querySelector<HTMLParagraphElement>('#preview-fecha');
-  const previewFirma1Nombre = document.querySelector<HTMLElement>('#preview-firma-1-nombre');
-  const previewFirma1Cargo = document.querySelector<HTMLElement>('#preview-firma-1-cargo');
-  const previewFirma2Nombre = document.querySelector<HTMLElement>('#preview-firma-2-nombre');
-  const previewFirma2Cargo = document.querySelector<HTMLElement>('#preview-firma-2-cargo');
   const botonDescargarUno = document.querySelector<HTMLButtonElement>('#btn-descargar-uno');
   const botonDescargarTodos = document.querySelector<HTMLButtonElement>('#btn-descargar-todos');
 
@@ -290,16 +260,10 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
     return {
       texto: inputTextoReconocimiento?.value.trim() ?? '',
       fecha: inputFechaReconocimiento?.value.trim() ?? '',
-      firma1: {
-        nombre: inputFirma1Nombre?.value.trim() ?? '',
-        cargo: inputFirma1Cargo?.value.trim() ?? '',
-      },
-      firma2: {
-        nombre: inputFirma2Nombre?.value.trim() ?? '',
-        cargo: inputFirma2Cargo?.value.trim() ?? '',
-      },
       fondoUrl: hojaPreview?.dataset.fondo ?? '',
-      marcaUrl: hojaPreview?.dataset.marca ?? '',
+      logoUrl: hojaPreview?.dataset.logo ?? '',
+      emblemaUrl: hojaPreview?.dataset.emblema ?? '',
+      firmasUrl: hojaPreview?.dataset.firmas ?? '',
     };
   }
 
@@ -311,10 +275,6 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
     if (previewFolio) previewFolio.textContent = `EAP-2026-${String(Math.max(indice + 1, 1)).padStart(3, '0')}`;
     if (previewTexto) previewTexto.textContent = config.texto;
     if (previewFecha) previewFecha.textContent = config.fecha.toLocaleUpperCase('es-MX');
-    if (previewFirma1Nombre) previewFirma1Nombre.textContent = config.firma1.nombre;
-    if (previewFirma1Cargo) previewFirma1Cargo.textContent = config.firma1.cargo;
-    if (previewFirma2Nombre) previewFirma2Nombre.textContent = config.firma2.nombre;
-    if (previewFirma2Cargo) previewFirma2Cargo.textContent = config.firma2.cargo;
     if (botonDescargarUno) botonDescargarUno.disabled = !persona;
     if (botonDescargarTodos) botonDescargarTodos.disabled = personas.length === 0;
   }
@@ -453,14 +413,7 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
 
   buscador?.addEventListener('input', pintarLista);
 
-  for (const entrada of [
-    inputTextoReconocimiento,
-    inputFechaReconocimiento,
-    inputFirma1Nombre,
-    inputFirma1Cargo,
-    inputFirma2Nombre,
-    inputFirma2Cargo,
-  ]) {
+  for (const entrada of [inputTextoReconocimiento, inputFechaReconocimiento]) {
     entrada?.addEventListener('input', actualizarPreview);
   }
 
@@ -587,9 +540,6 @@ const marcaReconocimiento = asset('img/reconocimientos/marca-expo.png');
         if (workspace) workspace.hidden = true;
         if (estadoArchivo) estadoArchivo.hidden = true;
         if (inputNombre) inputNombre.value = '';
-        for (const entrada of [inputFirma1Nombre, inputFirma1Cargo, inputFirma2Nombre, inputFirma2Cargo]) {
-          if (entrada) entrada.value = '';
-        }
         actualizarPreview();
         main.dataset.auth = 'out';
         return;

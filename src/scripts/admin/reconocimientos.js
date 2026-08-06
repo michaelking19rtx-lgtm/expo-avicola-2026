@@ -53,16 +53,10 @@ function normalizarConfig(config = {}) {
   return {
     texto: texto(config.texto, textoPredeterminado),
     fecha: texto(config.fecha, '7 de agosto de 2026 · Tehuacán, Puebla, México'),
-    firma1: {
-      nombre: texto(config.firma1?.nombre),
-      cargo: texto(config.firma1?.cargo),
-    },
-    firma2: {
-      nombre: texto(config.firma2?.nombre),
-      cargo: texto(config.firma2?.cargo),
-    },
     fondoUrl: texto(config.fondoUrl),
-    marcaUrl: texto(config.marcaUrl),
+    logoUrl: texto(config.logoUrl),
+    emblemaUrl: texto(config.emblemaUrl),
+    firmasUrl: texto(config.firmasUrl),
   };
 }
 
@@ -91,7 +85,7 @@ function textoAjustado(doc, texto, anchoMaximo, tamanoInicial, tamanoMinimo) {
 
 function dibujarSello(doc, colores) {
   const x = 38;
-  const y = 166;
+  const y = 174;
   doc.setFillColor(...colores.doradoClaro);
   doc.circle(x, y, 18, 'F');
   doc.setFillColor(...colores.verdeProfundo);
@@ -109,24 +103,6 @@ function dibujarSello(doc, colores) {
   doc.text('COMPROMISO', x, y + 7, { align: 'center', charSpace: 0.5 });
 }
 
-function dibujarFirma(doc, firma, centroX, colores) {
-  doc.setDrawColor(...colores.tintaSuave);
-  doc.setLineWidth(0.35);
-  doc.line(centroX - 28, 171, centroX + 28, 171);
-  if (firma.nombre) {
-    doc.setTextColor(...colores.tinta);
-    doc.setFont('helvetica', 'bold');
-    textoAjustado(doc, firma.nombre, 54, 7.6, 5.8);
-    doc.text(firma.nombre, centroX, 177, { align: 'center' });
-  }
-  if (firma.cargo) {
-    doc.setTextColor(...colores.tintaSuave);
-    doc.setFont('helvetica', 'normal');
-    textoAjustado(doc, firma.cargo, 54, 6.6, 5.2);
-    doc.text(firma.cargo, centroX, 182, { align: 'center' });
-  }
-}
-
 function dibujarPagina(doc, persona, indice, colores, config, recursos) {
   const centro = 148.5;
   if (recursos.fondo) {
@@ -139,15 +115,7 @@ function dibujarPagina(doc, persona, indice, colores, config, recursos) {
     doc.rect(5, 5, 287, 200, 'S');
   }
 
-  if (recursos.marca) doc.addImage(recursos.marca, 'PNG', centro - 30, 6.5, 17, 17, undefined, 'FAST');
-
-  doc.setTextColor(...colores.verde);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13.5);
-  doc.text('EXPO AVÍCOLA', centro + 4, 15.2, { align: 'center', charSpace: 0.7 });
-  doc.setTextColor(...colores.dorado);
-  doc.setFontSize(6.8);
-  doc.text('PRODUCTIVA 2026', centro + 4, 21.2, { align: 'center', charSpace: 1.25 });
+  if (recursos.logo) doc.addImage(recursos.logo, 'PNG', centro - 32.5, 2.7, 65, 33, undefined, 'FAST');
 
   doc.setTextColor(...colores.verdeProfundo);
   doc.setFont('times', 'normal');
@@ -199,20 +167,25 @@ function dibujarPagina(doc, persona, indice, colores, config, recursos) {
   });
 
   dibujarSello(doc, colores);
-  dibujarFirma(doc, config.firma1, 118, colores);
-  dibujarFirma(doc, config.firma2, 191, colores);
+  if (recursos.firmas) doc.addImage(recursos.firmas, 'PNG', 73, 162, 151, 30.5, undefined, 'FAST');
+  if (recursos.emblema) doc.addImage(recursos.emblema, 'PNG', 263, 162, 20, 29.2, undefined, 'FAST');
 
   doc.setTextColor(...colores.tintaSuave);
   doc.setFontSize(6.2);
-  doc.text(`Folio interno: ${folio(indice)}`, 283, 198, { align: 'right' });
+  doc.text(`Folio interno: ${folio(indice)}`, centro, 201, { align: 'center' });
 }
 
 async function crearDocumento(personas, indices = personas.map((_, indice) => indice), opciones = {}) {
   const { jsPDF } = await import('jspdf');
   const colores = paleta();
   const config = normalizarConfig(opciones);
-  const [fondo, marca] = await Promise.all([cargarImagen(config.fondoUrl), cargarImagen(config.marcaUrl)]);
-  const recursos = { fondo, marca };
+  const [fondo, logo, emblema, firmas] = await Promise.all([
+    cargarImagen(config.fondoUrl),
+    cargarImagen(config.logoUrl),
+    cargarImagen(config.emblemaUrl),
+    cargarImagen(config.firmasUrl),
+  ]);
+  const recursos = { fondo, logo, emblema, firmas };
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
   doc.setProperties({
     title: `Reconocimientos — ${site.nombre}`,

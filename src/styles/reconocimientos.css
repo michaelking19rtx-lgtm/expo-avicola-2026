@@ -263,31 +263,22 @@
   resize: vertical;
 }
 
-.reco-config__firmantes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-sm);
-}
-
-.reco-config fieldset {
+.reco-config__oficial {
   display: grid;
   gap: var(--space-sm);
-  min-width: 0;
   padding: var(--space-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  background-color: var(--surface-2);
 }
 
-.reco-config legend {
-  padding-inline: var(--space-xs);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.reco-config__oficial img {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0.2rem 0.4rem rgb(0 0 0 / 8%));
 }
 
-.reco-config__nota {
+.reco-config__oficial p {
   color: var(--text-muted);
   font-size: 0.75rem;
   line-height: 1.55;
@@ -338,40 +329,14 @@
   object-fit: cover;
 }
 
-.reco-hoja__marca {
-  display: flex;
-  align-items: center;
-  gap: 0.8cqi;
-  color: var(--reco-verde);
-  line-height: 1;
-}
-
-.reco-hoja__marca > img {
-  width: 6.2cqi;
-  height: 6.2cqi;
+.reco-hoja__logo-principal {
+  width: 22cqi;
+  height: auto;
   object-fit: contain;
 }
 
-.reco-hoja__marca > span:last-child {
-  display: grid;
-  gap: 0.45cqi;
-}
-
-.reco-hoja__marca strong {
-  font-family: var(--font-display);
-  font-size: 2.45cqi;
-  letter-spacing: 0.05em;
-}
-
-.reco-hoja__marca small {
-  color: var(--reco-dorado);
-  font-size: 1.1cqi;
-  font-weight: 750;
-  letter-spacing: 0.18em;
-}
-
 .reco-hoja h3 {
-  margin-block-start: 0.7cqi;
+  margin-block-start: 0.45cqi;
   color: var(--reco-verde-profundo);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 4.8cqi;
@@ -442,7 +407,7 @@
 
 .reco-hoja__sello {
   position: absolute;
-  inset: auto auto 2.2cqi 3.1cqi;
+  inset: auto auto 5.5cqi 3.1cqi;
   display: grid;
   place-items: center;
   width: 10.5cqi;
@@ -466,35 +431,20 @@
   font-size: 1.8cqi;
 }
 
-.reco-hoja__firmas {
+.reco-hoja__firmas-oficiales {
   position: absolute;
-  inset: auto 12cqi 2.5cqi 17cqi;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4.5cqi;
+  inset: auto auto 5.7cqi 24.6cqi;
+  width: 50.8cqi;
+  height: auto;
+  object-fit: contain;
 }
 
-.reco-hoja__firma {
-  display: grid;
-  gap: 0.3cqi;
-  color: var(--reco-tinta);
-}
-
-.reco-hoja__firma > span {
-  height: 0.1cqi;
-  background-color: var(--reco-tinta-suave);
-}
-
-.reco-hoja__firma strong {
-  min-height: 0.85cqi;
-  font-size: 0.85cqi;
-  letter-spacing: 0.07em;
-}
-
-.reco-hoja__firma small {
-  min-height: 0.75cqi;
-  color: var(--reco-tinta-suave);
-  font-size: 0.75cqi;
+.reco-hoja__emblema {
+  position: absolute;
+  inset: auto 4.7cqi 5.8cqi auto;
+  width: 6.8cqi;
+  height: auto;
+  object-fit: contain;
 }
 
 .reco-descargas {
@@ -522,9 +472,6 @@
     padding: var(--space-lg);
   }
 
-  .reco-config__firmantes {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 40rem) {
