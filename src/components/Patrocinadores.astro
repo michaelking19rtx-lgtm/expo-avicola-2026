@@ -46,6 +46,10 @@ import { waUrl } from '../scripts/contacto.js';
 /** Dígitos limpios para `tel:`. El JSON los guarda agrupados para leerlos. */
 const soloDigitos = (t: unknown) => String(t ?? '').replace(/\D/g, '');
 
+type PatrocinadorConVideo = (typeof patrocinadores)[number] & {
+  video?: string | null;
+};
+
 /**
  * Un valor de red social puede venir como URL COMPLETA o como nombre de página.
  *
@@ -81,12 +85,13 @@ function web(valor: string | null) {
   }
 }
 
-const fichas = patrocinadores.map((p) => {
+const fichas = (patrocinadores as PatrocinadorConVideo[]).map((p) => {
   const digitosWa = soloDigitos(p.whatsapp);
 
   return {
     ...p,
     logoSrc: asset(p.logo),
+    videoSrc: p.video ? asset(p.video) : null,
     telefonos: (p.telefonos ?? []).map((t) => ({
       legible: t,
       tel: `+52${soloDigitos(t)}`,
@@ -251,6 +256,27 @@ const fichas = patrocinadores.map((p) => {
             </header>
 
             <p class="pficha__desc">{p.descripcionLarga}</p>
+
+            {p.videoSrc && (
+              <section class="pficha__video-bloque" aria-labelledby={`pficha-video-${p.slug}`}>
+                <h4 class="pbloque__titulo" id={`pficha-video-${p.slug}`}>
+                  Conoce más
+                </h4>
+                <video
+                  class="pficha__video"
+                  src={p.videoSrc}
+                  controls
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  preload="metadata"
+                  data-video-patro
+                >
+                  Tu navegador no admite la reproducción de video.
+                </video>
+              </section>
+            )}
 
             {(p.ubicacion || p.contacto) && (
               <dl class="datos">
@@ -537,7 +563,29 @@ const fichas = patrocinadores.map((p) => {
     quien no tiene JS—; con JS pasan a ser modales. Se hace en cuanto corre el
     script, no en 'load', para que no se vea el bloque un instante.
   */
-  for (const f of fichas) f.close();
+  const videoDe = (f: HTMLDialogElement) =>
+    f.querySelector<HTMLVideoElement>('[data-video-patro]');
+
+  const detenerVideo = (f: HTMLDialogElement) => {
+    const video = videoDe(f);
+    if (!video) return;
+    video.pause();
+    video.currentTime = 0;
+  };
+
+  const reproducirVideo = (f: HTMLDialogElement) => {
+    const video = videoDe(f);
+    if (!video) return;
+    video.muted = true;
+    void video.play().catch(() => {
+      /* Los controles quedan visibles si el navegador bloquea el autoplay. */
+    });
+  };
+
+  for (const f of fichas) {
+    detenerVideo(f);
+    f.close();
+  }
 
   const porId = new Map(fichas.map((f) => [f.id, f]));
 
@@ -560,6 +608,7 @@ const fichas = patrocinadores.map((p) => {
     for (const otra of fichas) if (otra !== f && otra.open) otra.close();
 
     f.showModal();
+    reproducirVideo(f);
   };
 
   /*
@@ -594,6 +643,7 @@ const fichas = patrocinadores.map((p) => {
       reabriría la ficha sin que nadie lo haya pedido.
     */
     f.addEventListener('close', () => {
+      detenerVideo(f);
       if (location.hash === `#${f.id}`) {
         history.replaceState(null, '', location.pathname + location.search);
       }
@@ -1242,6 +1292,20 @@ const fichas = patrocinadores.map((p) => {
     font-size: var(--step-0);
     line-height: 1.6;
     color: var(--text);
+  }
+
+  .pficha__video-bloque {
+    margin-block-start: var(--space-lg);
+  }
+
+  .pficha__video {
+    display: block;
+    inline-size: 100%;
+    max-block-size: min(65vh, 32rem);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: #050806;
+    object-fit: contain;
   }
 
   .datos {
