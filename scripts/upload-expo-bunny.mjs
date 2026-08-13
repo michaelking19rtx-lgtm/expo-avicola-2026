@@ -16,7 +16,6 @@ const collectionNames = {
   atmosphere: 'Expo Avícola 2026 · 02 · Recorrido y ambiente',
   interviews: 'Expo Avícola 2026 · 03 · Entrevistas',
   panel: 'Expo Avícola 2026 · 04 · Panel y clausura',
-  archive: 'Expo Avícola 2026 · 99 · Archivo técnico',
 };
 
 const manifest = [
@@ -75,10 +74,6 @@ const manifest = [
   { source: 'IMG_0576.MOV', title: 'Ambiente y asistentes — Parte 6', collection: 'atmosphere', thumbnailTime: 6000 },
   { source: 'IMG_0577.MOV', title: 'Exhibición y networking — Parte 1', collection: 'atmosphere', thumbnailTime: 15000 },
   { source: 'IMG_0578.MOV', title: 'Exhibición y networking — Parte 2', collection: 'atmosphere', thumbnailTime: 6000 },
-
-  { source: 'IMG_0605.MOV', title: 'Archivo técnico — Prueba de cámara para entrevistas', collection: 'archive', thumbnailTime: 800 },
-  { source: 'IMG_0622.MOV', title: 'Archivo técnico — Toma oscura para revisión', collection: 'archive', thumbnailTime: 8000 },
-  { source: 'IMG_0628.MOV', title: 'Archivo técnico — Convivencia posterior al evento', collection: 'archive', thumbnailTime: 16000 },
 ];
 
 function parseArgs(argv) {
