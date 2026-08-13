@@ -1,8 +1,8 @@
 {
   "generatedAt": "2026-08-13T03:18:58.668Z",
   "libraryId": 726814,
-  "expectedTotal": 55,
-  "publishedTotal": 55,
+  "expectedTotal": 52,
+  "publishedTotal": 52,
   "videos": [
     {
       "id": "3e46b381-6a33-42cc-9696-0027e5705dfb",
@@ -783,51 +783,6 @@
       "thumbnailUrl": "https://vz-05ec5b4f-f74.b-cdn.net/8337a3f6-0fc5-4cf0-999a-219568fe6d2e/thumbnail.jpg",
       "previewUrl": "https://vz-05ec5b4f-f74.b-cdn.net/8337a3f6-0fc5-4cf0-999a-219568fe6d2e/preview.webp",
       "embedUrl": "https://player.mediadelivery.net/embed/726814/8337a3f6-0fc5-4cf0-999a-219568fe6d2e"
-    },
-    {
-      "id": "aa86d642-583c-4f1a-8297-cd8727050837",
-      "title": "Archivo técnico — Prueba de cámara para entrevistas",
-      "category": "archivo",
-      "categoryLabel": "Archivo técnico",
-      "duration": 2,
-      "width": 1920,
-      "height": 1080,
-      "rotation": -90,
-      "orientation": "horizontal",
-      "uploadedAt": "2026-08-13T02:39:31.77",
-      "thumbnailUrl": "https://vz-05ec5b4f-f74.b-cdn.net/aa86d642-583c-4f1a-8297-cd8727050837/thumbnail.jpg",
-      "previewUrl": "https://vz-05ec5b4f-f74.b-cdn.net/aa86d642-583c-4f1a-8297-cd8727050837/preview.webp",
-      "embedUrl": "https://player.mediadelivery.net/embed/726814/aa86d642-583c-4f1a-8297-cd8727050837"
-    },
-    {
-      "id": "793b8322-67f5-4ff9-a320-235a10ae3fa8",
-      "title": "Archivo técnico — Toma oscura para revisión",
-      "category": "archivo",
-      "categoryLabel": "Archivo técnico",
-      "duration": 23,
-      "width": 1920,
-      "height": 1080,
-      "rotation": 0,
-      "orientation": "horizontal",
-      "uploadedAt": "2026-08-13T02:39:38.69",
-      "thumbnailUrl": "https://vz-05ec5b4f-f74.b-cdn.net/793b8322-67f5-4ff9-a320-235a10ae3fa8/thumbnail.jpg",
-      "previewUrl": "https://vz-05ec5b4f-f74.b-cdn.net/793b8322-67f5-4ff9-a320-235a10ae3fa8/preview.webp",
-      "embedUrl": "https://player.mediadelivery.net/embed/726814/793b8322-67f5-4ff9-a320-235a10ae3fa8"
-    },
-    {
-      "id": "01fae4b4-8517-4117-af1c-02997ca623a1",
-      "title": "Archivo técnico — Convivencia posterior al evento",
-      "category": "archivo",
-      "categoryLabel": "Archivo técnico",
-      "duration": 46,
-      "width": 1920,
-      "height": 1080,
-      "rotation": -90,
-      "orientation": "horizontal",
-      "uploadedAt": "2026-08-13T02:39:50.735",
-      "thumbnailUrl": "https://vz-05ec5b4f-f74.b-cdn.net/01fae4b4-8517-4117-af1c-02997ca623a1/thumbnail.jpg",
-      "previewUrl": "https://vz-05ec5b4f-f74.b-cdn.net/01fae4b4-8517-4117-af1c-02997ca623a1/preview.webp",
-      "embedUrl": "https://player.mediadelivery.net/embed/726814/01fae4b4-8517-4117-af1c-02997ca623a1"
     }
   ]
 }

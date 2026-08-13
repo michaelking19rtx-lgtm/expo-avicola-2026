@@ -6,7 +6,7 @@ import catalog from '../data/videos-expo.json';
 
 const videos = catalog.videos;
 const featured = videos[0] ?? null;
-const categoryOrder = ['conferencias', 'panel', 'entrevistas', 'recorrido', 'archivo'];
+const categoryOrder = ['conferencias', 'panel', 'entrevistas', 'recorrido'];
 const categories = categoryOrder
   .map((slug) => {
     const matches = videos.filter((video) => video.category === slug);
