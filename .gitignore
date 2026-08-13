@@ -16,6 +16,12 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+.bunny-upload-state.json
+.bunny-tus-urls.json
+.bunny-upload.log
+.bunny-upload-error.log
+.bunny-supervisor.log
+.bunny-supervisor-error.log
 
 # macOS-specific files
 .DS_Store

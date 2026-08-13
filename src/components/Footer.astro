@@ -57,6 +57,14 @@ const vias = [
 ];
 
 const anio = new Date(site.fecha).getUTCFullYear();
+const inicio = asset('');
+const normalizar = (ruta: string) => ruta.replace(/\/+$/, '') || '/';
+const enInicio = normalizar(Astro.url.pathname) === normalizar(inicio);
+const hrefSitio = (href: string) => {
+  if (href.startsWith('#')) return enInicio ? href : `${inicio}${href}`;
+  if (/^(?:https?:|mailto:|tel:)/.test(href)) return href;
+  return asset(href.replace(/^\/+/, ''));
+};
 ---
 
 <footer class="pie">
@@ -79,7 +87,7 @@ const anio = new Date(site.fecha).getUTCFullYear();
       <ul class="pie__enlaces" role="list">
         {enlaces.map((enlace) => (
           <li>
-            <a class="pie__enlace" href={enlace.href}>{enlace.label}</a>
+            <a class="pie__enlace" href={hrefSitio(enlace.href)}>{enlace.label}</a>
           </li>
         ))}
       </ul>

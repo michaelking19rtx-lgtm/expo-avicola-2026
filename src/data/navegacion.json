@@ -1,6 +1,7 @@
 [
   { "href": "#ponentes", "label": "Ponentes" },
   { "href": "#programa", "label": "Programa" },
+  { "href": "memoria/", "label": "Memoria" },
   { "href": "#sede", "label": "Sede" },
   { "href": "#boletos", "label": "Boletos" }
 ]
