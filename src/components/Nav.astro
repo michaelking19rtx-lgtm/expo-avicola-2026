@@ -6,6 +6,16 @@ import { asset } from '../scripts/paths.js';
   que algún día se desincronizaran.
 */
 import enlaces from '../data/navegacion.json';
+
+const inicio = asset('');
+const normalizar = (ruta: string) => ruta.replace(/\/+$/, '') || '/';
+const enInicio = normalizar(Astro.url.pathname) === normalizar(inicio);
+const hrefSitio = (href: string) => {
+  if (href.startsWith('#')) return enInicio ? href : `${inicio}${href}`;
+  if (/^(?:https?:|mailto:|tel:)/.test(href)) return href;
+  return asset(href.replace(/^\/+/, ''));
+};
+const hrefBoletos = enInicio ? '#boletos' : `${inicio}#boletos`;
 ---
 
 <a class="skip" href="#contenido" data-anchor-immediate>Saltar al contenido</a>
@@ -18,12 +28,12 @@ import enlaces from '../data/navegacion.json';
 
     <nav class="nav__links" aria-label="Secciones del sitio">
       {enlaces.map((enlace) => (
-        <a class="nav__link" href={enlace.href}>{enlace.label}</a>
+        <a class="nav__link" href={hrefSitio(enlace.href)}>{enlace.label}</a>
       ))}
     </nav>
 
     <div class="nav__actions">
-      <a class="nav__cta" href="#boletos">Comprar boleto</a>
+      <a class="nav__cta" href={hrefBoletos}>Comprar boleto</a>
 
       <button
         class="nav__toggle"
@@ -54,10 +64,10 @@ import enlaces from '../data/navegacion.json';
 >
   <nav class="menu__links" aria-label="Secciones">
     {enlaces.map((enlace) => (
-      <a class="menu__link" href={enlace.href} data-menu-link>{enlace.label}</a>
+      <a class="menu__link" href={hrefSitio(enlace.href)} data-menu-link>{enlace.label}</a>
     ))}
   </nav>
-  <a class="menu__cta" href="#boletos" data-menu-link>Comprar boleto</a>
+  <a class="menu__cta" href={hrefBoletos} data-menu-link>Comprar boleto</a>
 </div>
 
 <script>
