@@ -3,8 +3,12 @@ import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import catalog from '../data/videos-expo.json';
+import photoCatalog from '../data/fotos-expo.json';
 
 const videos = catalog.videos;
+const photos = photoCatalog.photos;
+const featuredPhotos = photos.filter((photo) => photo.featured);
+const morePhotos = photos.filter((photo) => !photo.featured);
 const featured = videos[0] ?? null;
 const categoryOrder = ['conferencias', 'panel', 'entrevistas', 'recorrido'];
 const categories = categoryOrder
@@ -62,6 +66,93 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
         </p>
       </aside>
     </header>
+
+    <section class="momentos" aria-labelledby="momentos-titulo">
+      <div class="momentos__cabecera">
+        <div>
+          <p class="eyebrow">La Expo en imágenes</p>
+          <h2 id="momentos-titulo">Momentos que<br /><span>se quedan.</span></h2>
+        </div>
+        <div class="momentos__intro">
+          <p>
+            Una mirada al encuentro más allá del escenario: la comunidad, las conversaciones,
+            las demostraciones y la energía que se vivió durante toda la jornada.
+          </p>
+          <span>{photos.length} fotografías seleccionadas · 7 de agosto de 2026</span>
+        </div>
+      </div>
+
+      <div class="momentos-collage">
+        {featuredPhotos.map((photo) => (
+          <button
+            class="momento"
+            type="button"
+            data-photo
+            data-photo-index={photo.id - 1}
+            data-photo-full={photo.full}
+            data-photo-alt={photo.alt}
+            data-photo-title={photo.label}
+            data-photo-caption={photo.caption}
+            aria-label={`Ampliar fotografía: ${photo.label}`}
+          >
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              width={photo.width}
+              height={photo.height}
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="momento__copy">
+              <strong>{photo.label}</strong>
+              <span>{photo.caption}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="momentos__mas">
+        <div class="momentos__mas-cabecera">
+          <div>
+            <p class="eyebrow">Más momentos</p>
+            <p>Desliza para seguir recorriendo el día.</p>
+          </div>
+          <div class="momentos__controles" aria-label="Controles de la galería">
+            <button type="button" data-strip-prev aria-label="Fotografías anteriores">←</button>
+            <button type="button" data-strip-next aria-label="Fotografías siguientes">→</button>
+          </div>
+        </div>
+
+        <div class="momentos-tira" data-photo-strip>
+          {morePhotos.map((photo) => (
+            <button
+              class="momento-tira"
+              type="button"
+              data-photo
+              data-photo-index={photo.id - 1}
+              data-photo-full={photo.full}
+              data-photo-alt={photo.alt}
+              data-photo-title={photo.label}
+              data-photo-caption={photo.caption}
+              aria-label={`Ampliar fotografía: ${photo.label}`}
+            >
+              <img
+                src={photo.src}
+                alt={photo.alt}
+                width={photo.width}
+                height={photo.height}
+                loading="lazy"
+                decoding="async"
+              />
+              <span>
+                <strong>{photo.label}</strong>
+                <small>{photo.caption}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
 
     {featured ? (
       <section class="reproductor" aria-labelledby="reproductor-titulo" data-player-section>
@@ -152,6 +243,24 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
         </div>
       </section>
     )}
+
+    <dialog class="foto-modal" data-photo-modal aria-label="Fotografía ampliada">
+      <div class="foto-modal__contenido">
+        <button class="foto-modal__cerrar" type="button" data-photo-close aria-label="Cerrar fotografía">×</button>
+        <button class="foto-modal__nav foto-modal__nav--prev" type="button" data-photo-prev aria-label="Fotografía anterior">←</button>
+        <figure>
+          <div class="foto-modal__imagen">
+            <img src="" alt="" data-photo-image />
+          </div>
+          <figcaption>
+            <p class="eyebrow" data-photo-counter></p>
+            <h2 data-photo-title></h2>
+            <p data-photo-caption></p>
+          </figcaption>
+        </figure>
+        <button class="foto-modal__nav foto-modal__nav--next" type="button" data-photo-next aria-label="Fotografía siguiente">→</button>
+      </div>
+    </dialog>
   </main>
 
   <Footer />
@@ -167,6 +276,71 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
   const playerCategory = document.querySelector<HTMLElement>('[data-player-category]');
   const playerDuration = document.querySelector<HTMLElement>('[data-player-duration]');
   const playerSection = document.querySelector<HTMLElement>('[data-player-section]');
+  const photoButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-photo]'));
+  const photoModal = document.querySelector<HTMLDialogElement>('[data-photo-modal]');
+  const photoImage = photoModal?.querySelector<HTMLImageElement>('[data-photo-image]');
+  const photoTitle = photoModal?.querySelector<HTMLElement>('[data-photo-title]');
+  const photoCaption = photoModal?.querySelector<HTMLElement>('[data-photo-caption]');
+  const photoCounter = photoModal?.querySelector<HTMLElement>('[data-photo-counter]');
+  const photoStrip = document.querySelector<HTMLElement>('[data-photo-strip]');
+  let activePhotoIndex = 0;
+  let lastPhotoTrigger: HTMLButtonElement | null = null;
+
+  const photoByIndex = (index: number) => photoButtons.find(
+    (button) => Number(button.dataset.photoIndex) === index,
+  );
+
+  const updatePhoto = (requestedIndex: number) => {
+    if (!photoButtons.length || !photoImage) return;
+    activePhotoIndex = (requestedIndex + photoButtons.length) % photoButtons.length;
+    const photo = photoByIndex(activePhotoIndex);
+    if (!photo) return;
+    photoImage.src = photo.dataset.photoFull ?? '';
+    photoImage.alt = photo.dataset.photoAlt ?? '';
+    if (photoTitle) photoTitle.textContent = photo.dataset.photoTitle ?? '';
+    if (photoCaption) photoCaption.textContent = photo.dataset.photoCaption ?? '';
+    if (photoCounter) photoCounter.textContent = `${activePhotoIndex + 1} de ${photoButtons.length} · Memoria fotográfica`;
+
+    for (const neighborIndex of [activePhotoIndex - 1, activePhotoIndex + 1]) {
+      const neighbor = photoByIndex((neighborIndex + photoButtons.length) % photoButtons.length);
+      const source = neighbor?.dataset.photoFull;
+      if (source) new Image().src = source;
+    }
+  };
+
+  const movePhoto = (direction: number) => updatePhoto(activePhotoIndex + direction);
+
+  for (const button of photoButtons) {
+    button.addEventListener('click', () => {
+      lastPhotoTrigger = button;
+      updatePhoto(Number(button.dataset.photoIndex ?? 0));
+      photoModal?.showModal();
+    });
+  }
+
+  document.querySelector<HTMLElement>('[data-photo-close]')?.addEventListener('click', () => photoModal?.close());
+  document.querySelector<HTMLElement>('[data-photo-prev]')?.addEventListener('click', () => movePhoto(-1));
+  document.querySelector<HTMLElement>('[data-photo-next]')?.addEventListener('click', () => movePhoto(1));
+
+  photoModal?.addEventListener('click', (event) => {
+    if (event.target === photoModal) photoModal.close();
+  });
+  photoModal?.addEventListener('close', () => {
+    if (photoImage) photoImage.src = '';
+    lastPhotoTrigger?.focus();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (!photoModal?.open) return;
+    if (event.key === 'ArrowLeft') movePhoto(-1);
+    if (event.key === 'ArrowRight') movePhoto(1);
+  });
+
+  const scrollPhotos = (direction: number) => photoStrip?.scrollBy({
+    left: direction * photoStrip.clientWidth * 0.82,
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+  });
+  document.querySelector<HTMLElement>('[data-strip-prev]')?.addEventListener('click', () => scrollPhotos(-1));
+  document.querySelector<HTMLElement>('[data-strip-next]')?.addEventListener('click', () => scrollPhotos(1));
 
   for (const filter of filterButtons) {
     filter.addEventListener('click', () => {
@@ -210,6 +384,7 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
   }
 
   .memoria-hero,
+  .momentos,
   .reproductor,
   .archivo,
   .procesando {
@@ -251,6 +426,316 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
     margin-block-start: var(--space-xl);
     color: var(--text-muted);
     font-size: var(--step-1);
+  }
+
+  .momentos {
+    padding-block: var(--space-3xl);
+  }
+
+  .momentos__cabecera {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.55fr);
+    align-items: end;
+    gap: var(--space-2xl);
+    margin-block-end: var(--space-2xl);
+  }
+
+  .momentos__cabecera h2 {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-4);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+  }
+
+  .momentos__cabecera h2 span {
+    color: var(--accent);
+  }
+
+  .momentos__intro > p {
+    color: var(--text-muted);
+    font-size: var(--step-1);
+  }
+
+  .momentos__intro > span {
+    display: block;
+    margin-block-start: var(--space-lg);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .momentos-collage {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-rows: clamp(120px, 13vw, 205px);
+    gap: var(--space-sm);
+  }
+
+  .momento,
+  .momento-tira {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    text-align: start;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .momento {
+    border-radius: var(--radius-media);
+  }
+
+  .momento:nth-child(1) {
+    grid-column: span 7;
+    grid-row: span 2;
+  }
+
+  .momento:nth-child(2),
+  .momento:nth-child(3) {
+    grid-column: span 5;
+  }
+
+  .momento:nth-child(4),
+  .momento:nth-child(5) {
+    grid-column: span 4;
+    grid-row: span 2;
+  }
+
+  .momento:nth-child(6),
+  .momento:nth-child(7) {
+    grid-column: span 4;
+  }
+
+  .momento img,
+  .momento-tira img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--t-slow) var(--ease-out);
+  }
+
+  .momento::after,
+  .momento-tira::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, color-mix(in srgb, var(--bg) 92%, transparent), transparent 62%);
+    content: '';
+    pointer-events: none;
+  }
+
+  .momento:hover img,
+  .momento:focus-visible img,
+  .momento-tira:hover img,
+  .momento-tira:focus-visible img {
+    transform: scale(1.035);
+  }
+
+  .momento:focus-visible,
+  .momento-tira:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .momento__copy {
+    position: absolute;
+    z-index: 1;
+    inset: auto var(--space-lg) var(--space-lg);
+    display: grid;
+    gap: var(--space-xs);
+    pointer-events: none;
+  }
+
+  .momento__copy strong,
+  .momento-tira strong {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    line-height: 1.05;
+  }
+
+  .momento__copy > span,
+  .momento-tira small {
+    max-width: 48ch;
+    color: color-mix(in srgb, var(--text) 78%, transparent);
+    font-size: var(--step--1);
+    line-height: 1.45;
+  }
+
+  .momento:nth-child(2) .momento__copy > span,
+  .momento:nth-child(3) .momento__copy > span,
+  .momento:nth-child(6) .momento__copy > span,
+  .momento:nth-child(7) .momento__copy > span {
+    display: none;
+  }
+
+  .momentos__mas {
+    margin-block-start: var(--space-2xl);
+  }
+
+  .momentos__mas-cabecera {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    margin-block-end: var(--space-lg);
+  }
+
+  .momentos__mas-cabecera > div:first-child > p:last-child {
+    margin-block-start: var(--space-xs);
+    color: var(--text-muted);
+  }
+
+  .momentos__controles {
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  .momentos__controles button,
+  .foto-modal__nav,
+  .foto-modal__cerrar {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.25rem;
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      background-color var(--t-base) var(--ease-out),
+      color var(--t-base) var(--ease-out);
+  }
+
+  .momentos__controles button:hover,
+  .foto-modal__nav:hover,
+  .foto-modal__cerrar:hover {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .momentos-tira {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: clamp(260px, 30vw, 390px);
+    gap: var(--space-md);
+    padding: var(--space-xs) var(--gutter) var(--space-md);
+    margin-inline: calc(var(--gutter) * -1);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-color: var(--accent) var(--surface-2);
+  }
+
+  .momento-tira {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-card);
+    scroll-snap-align: start;
+  }
+
+  .momento-tira > span {
+    position: absolute;
+    z-index: 1;
+    inset: auto var(--space-lg) var(--space-lg);
+    display: grid;
+    gap: var(--space-xs);
+    pointer-events: none;
+  }
+
+  .momento-tira small {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .foto-modal {
+    width: min(95vw, 1500px);
+    max-width: none;
+    height: min(90vh, 920px);
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .foto-modal::backdrop {
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .foto-modal__contenido,
+  .foto-modal figure {
+    height: 100%;
+  }
+
+  .foto-modal figure {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    margin: 0;
+  }
+
+  .foto-modal__imagen {
+    display: grid;
+    min-width: 0;
+    place-items: center;
+    overflow: hidden;
+    border-radius: var(--radius-card) 0 0 var(--radius-card);
+    background: var(--bg);
+  }
+
+  .foto-modal__imagen img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .foto-modal figcaption {
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    padding: clamp(1.5rem, 4vw, 3rem);
+  }
+
+  .foto-modal figcaption h2 {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-2);
+  }
+
+  .foto-modal figcaption > p:last-child {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+  }
+
+  .foto-modal__cerrar,
+  .foto-modal__nav {
+    position: absolute;
+    z-index: 2;
+    box-shadow: var(--shadow-md);
+  }
+
+  .foto-modal__cerrar {
+    inset: var(--space-md) var(--space-md) auto auto;
+  }
+
+  .foto-modal__nav {
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+  }
+
+  .foto-modal__nav--prev {
+    inset-inline-start: var(--space-md);
+  }
+
+  .foto-modal__nav--next {
+    inset-inline-end: calc(360px + var(--space-md));
   }
 
   .publicacion {
@@ -555,6 +1040,32 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
   }
 
   @media (max-width: 900px) {
+    .momentos__cabecera {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .momentos__intro {
+      max-width: 680px;
+    }
+
+    .foto-modal figure {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .foto-modal__imagen {
+      border-radius: var(--radius-card) var(--radius-card) 0 0;
+    }
+
+    .foto-modal figcaption {
+      padding-block-start: var(--space-lg);
+    }
+
+    .foto-modal__nav--next {
+      inset-inline-end: var(--space-md);
+    }
+
     .memoria-hero {
       grid-template-columns: 1fr;
       align-items: start;
@@ -584,6 +1095,83 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
 
     .memoria-hero__lead {
       font-size: var(--step-0);
+    }
+
+    .momentos {
+      padding-block: var(--space-2xl);
+    }
+
+    .momentos__cabecera h2 {
+      font-size: var(--step-3);
+    }
+
+    .momentos__intro > p {
+      font-size: var(--step-0);
+    }
+
+    .momentos-collage {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 170px;
+      gap: var(--space-xs);
+    }
+
+    .momento:nth-child(n) {
+      grid-column: span 1;
+      grid-row: span 1;
+    }
+
+    .momento:nth-child(1) {
+      grid-column: 1 / -1;
+      grid-row: span 2;
+    }
+
+    .momento:nth-child(4),
+    .momento:nth-child(5) {
+      grid-row: span 2;
+    }
+
+    .momento__copy {
+      inset: auto var(--space-sm) var(--space-sm);
+    }
+
+    .momento__copy > span {
+      display: none;
+    }
+
+    .momento__copy strong {
+      font-size: var(--step-0);
+    }
+
+    .momentos__mas-cabecera > div:first-child > p:last-child {
+      display: none;
+    }
+
+    .momentos__controles button {
+      width: 42px;
+    }
+
+    .momentos-tira {
+      grid-auto-columns: 82vw;
+    }
+
+    .foto-modal {
+      width: 100vw;
+      height: 100dvh;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .foto-modal__imagen {
+      border-radius: 0;
+    }
+
+    .foto-modal figcaption {
+      padding: var(--space-lg);
+    }
+
+    .foto-modal__cerrar,
+    .foto-modal__nav {
+      width: 42px;
     }
 
     .publicacion {
