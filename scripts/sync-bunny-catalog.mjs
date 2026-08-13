@@ -5,14 +5,13 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = path.join(projectRoot, '.env');
 const outputPath = path.join(projectRoot, 'src', 'data', 'videos-expo.json');
-const expectedTotal = 55;
+const expectedTotal = 52;
 
 const categoryOrder = [
   ['Expo Avícola 2026 · 01 · Conferencias', 'conferencias', 'Conferencias'],
   ['Expo Avícola 2026 · 04 · Panel y clausura', 'panel', 'Panel y clausura'],
   ['Expo Avícola 2026 · 03 · Entrevistas', 'entrevistas', 'Entrevistas'],
   ['Expo Avícola 2026 · 02 · Recorrido y ambiente', 'recorrido', 'Recorrido y ambiente'],
-  ['Expo Avícola 2026 · 99 · Archivo técnico', 'archivo', 'Archivo técnico'],
 ];
 
 function parseEnv(contents) {
