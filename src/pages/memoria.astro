@@ -27,6 +27,7 @@ const totalHours = Math.floor(totalSeconds / 3600);
 const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
 const totalDuration = totalHours ? `${totalHours} h ${totalMinutes} min` : `${totalMinutes} min`;
 const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 100);
+const memoriaApiUrl = import.meta.env.PUBLIC_MEMORIA_API_URL?.replace(/\/$/, '') ?? '';
 ---
 
 <Base
@@ -36,7 +37,63 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
 >
   <Nav />
 
-  <main class="memoria" id="contenido" tabindex="-1">
+  <main
+    class="memoria"
+    id="contenido"
+    tabindex="-1"
+    data-memoria
+    data-api-url={memoriaApiUrl}
+    data-featured-id={featured?.id ?? ''}
+  >
+    <section class="acceso" data-access-panel aria-labelledby="acceso-titulo">
+      <div class="acceso__presentacion">
+        <p class="eyebrow">Archivo privado · Expo Avícola Productiva 2026</p>
+        <h1 id="acceso-titulo">Tu lugar en la Expo<br /><span>continúa aquí.</span></h1>
+        <p class="acceso__lead">
+          Esta memoria audiovisual fue preparada exclusivamente para quienes formaron
+          parte del encuentro. Entra con el correo que usaste para adquirir tu acceso.
+        </p>
+        <div class="acceso__sellos" aria-label="Beneficios del archivo">
+          <span>55 videos</span>
+          <span>{totalDuration}</span>
+          <span>Acceso personal</span>
+        </div>
+      </div>
+
+      <aside class="acceso-card">
+        <div class="acceso-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10M6 10h12v10H6V10Z" />
+          </svg>
+        </div>
+        <p class="eyebrow">Acceso de asistente</p>
+        <h2>Recibe tu enlace privado</h2>
+        <p class="acceso-card__intro" data-access-status>
+          Estamos verificando si ya tienes una sesión activa…
+        </p>
+
+        <form class="acceso-form" data-access-form hidden>
+          <label for="correo-memoria">Correo de tu registro o compra</label>
+          <input
+            id="correo-memoria"
+            name="email"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            placeholder="tu@correo.com"
+            required
+          />
+          <button type="submit" data-access-submit>Enviarme mi acceso</button>
+        </form>
+
+        <p class="acceso-card__message" data-access-message role="status" aria-live="polite"></p>
+        <p class="acceso-card__help">
+          ¿No reconocemos tu correo? <a href="https://wa.me/522361138979?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20la%20memoria%20de%20la%20Expo" target="_blank" rel="noreferrer">Escríbenos por WhatsApp</a>.
+        </p>
+      </aside>
+    </section>
+
+    <div class="memoria-privada" data-private-content hidden>
     <header class="memoria-hero">
       <div class="memoria-hero__copy">
         <p class="eyebrow">Memoria audiovisual · Tehuacán, Puebla</p>
@@ -45,6 +102,10 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
           Conferencias, conversaciones y momentos del encuentro que reunió al sector
           avícola el 7 de agosto de 2026. Un archivo para volver a las ideas y compartirlas.
         </p>
+        <div class="miembro">
+          <span><i aria-hidden="true"></i> Acceso de asistente · <strong data-member-name>Invitado</strong></span>
+          <button type="button" data-logout>Cerrar sesión</button>
+        </div>
       </div>
 
       <aside class="publicacion" aria-label="Estado de publicación">
@@ -76,7 +137,6 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
         </div>
         <div class="reproductor__frame">
           <iframe
-            src={`${featured.embedUrl}?autoplay=false&preload=false`}
             title={`Reproducir: ${featured.title}`}
             loading="eager"
             allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
@@ -123,7 +183,7 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
                 type="button"
                 class="video-card__button"
                 data-video-card
-                data-embed={video.embedUrl}
+                data-video-id={video.id}
                 data-title={video.title}
                 data-category-label={video.categoryLabel}
                 data-duration={formatDuration(video.duration)}
@@ -152,12 +212,24 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
         </div>
       </section>
     )}
+    </div>
   </main>
 
   <Footer />
 </Base>
 
 <script>
+  const memoria = document.querySelector<HTMLElement>('[data-memoria]');
+  const apiUrl = memoria?.dataset.apiUrl ?? '';
+  const featuredId = memoria?.dataset.featuredId ?? '';
+  const accessPanel = document.querySelector<HTMLElement>('[data-access-panel]');
+  const privateContent = document.querySelector<HTMLElement>('[data-private-content]');
+  const accessForm = document.querySelector<HTMLFormElement>('[data-access-form]');
+  const accessStatus = document.querySelector<HTMLElement>('[data-access-status]');
+  const accessMessage = document.querySelector<HTMLElement>('[data-access-message]');
+  const accessSubmit = document.querySelector<HTMLButtonElement>('[data-access-submit]');
+  const memberName = document.querySelector<HTMLElement>('[data-member-name]');
+  const logoutButton = document.querySelector<HTMLButtonElement>('[data-logout]');
   const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter]'));
   const cards = Array.from(document.querySelectorAll<HTMLElement>('.video-card'));
   const videoButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-video-card]'));
@@ -167,6 +239,172 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
   const playerCategory = document.querySelector<HTMLElement>('[data-player-category]');
   const playerDuration = document.querySelector<HTMLElement>('[data-player-duration]');
   const playerSection = document.querySelector<HTMLElement>('[data-player-section]');
+  const sessionKey = 'expo_memoria_session_v1';
+
+  type SessionProfile = { email: string; name?: string };
+
+  const request = async <T,>(path: string, options: RequestInit = {}, sessionToken = ''): Promise<T> => {
+    const response = await fetch(`${apiUrl}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        ...(options.headers ?? {}),
+      },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.error ?? 'No pudimos completar la solicitud.');
+      Object.assign(error, { status: response.status });
+      throw error;
+    }
+    return payload as T;
+  };
+
+  const showLogin = (message = '') => {
+    accessPanel?.removeAttribute('hidden');
+    if (privateContent) privateContent.hidden = true;
+    accessForm?.removeAttribute('hidden');
+    if (accessStatus) {
+      accessStatus.textContent = 'Te enviaremos un enlace de un solo uso. No necesitas contraseña.';
+    }
+    if (accessMessage) accessMessage.textContent = message;
+  };
+
+  const showPrivateContent = (profile: SessionProfile) => {
+    if (accessPanel) accessPanel.hidden = true;
+    privateContent?.removeAttribute('hidden');
+    if (memberName) memberName.textContent = profile.name?.trim() || profile.email;
+  };
+
+  const clearSession = (message = '') => {
+    localStorage.removeItem(sessionKey);
+    if (player) player.src = 'about:blank';
+    showLogin(message);
+  };
+
+  const loadVideo = async (button: HTMLButtonElement | null, autoplay: boolean) => {
+    const videoId = button?.dataset.videoId || featuredId;
+    const sessionToken = localStorage.getItem(sessionKey) ?? '';
+    if (!videoId || !sessionToken || !player) return;
+
+    if (button) button.disabled = true;
+    try {
+      const result = await request<{ embedUrl: string }>('/memoria/reproducir', {
+        method: 'POST',
+        body: JSON.stringify({ videoId }),
+      }, sessionToken);
+      const separator = result.embedUrl.includes('?') ? '&' : '?';
+      player.src = `${result.embedUrl}${separator}autoplay=${autoplay}&preload=true`;
+
+      if (button) {
+        for (const candidate of videoButtons) {
+          candidate.setAttribute('aria-pressed', String(candidate === button));
+        }
+        player.title = `Reproducir: ${button.dataset.title ?? 'Video de la Expo'}`;
+        if (playerTitle) playerTitle.textContent = button.dataset.title ?? '';
+        if (playerCategory) playerCategory.textContent = button.dataset.categoryLabel ?? '';
+        if (playerDuration) playerDuration.textContent = button.dataset.duration ?? '';
+      }
+    } catch (error) {
+      if ((error as Error & { status?: number }).status === 401) {
+        clearSession('Tu sesión terminó. Solicita un nuevo enlace para continuar.');
+        return;
+      }
+      window.alert('No pudimos abrir este video. Intenta nuevamente en unos segundos.');
+      return;
+    } finally {
+      if (button) button.disabled = false;
+    }
+
+    if (button) {
+      playerSection?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
+  const activateSession = async (sessionToken: string, profile?: SessionProfile) => {
+    const resolvedProfile = profile ?? await request<SessionProfile>(
+      '/memoria/sesion',
+      { method: 'POST', body: '{}' },
+      sessionToken,
+    );
+    localStorage.setItem(sessionKey, sessionToken);
+    showPrivateContent(resolvedProfile);
+    await loadVideo(videoButtons[0] ?? null, false);
+  };
+
+  const initializeAccess = async () => {
+    if (!apiUrl) {
+      showLogin('El acceso está en preparación. Vuelve a intentarlo en unos minutos.');
+      accessForm?.setAttribute('hidden', '');
+      return;
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const accessToken = currentUrl.searchParams.get('acceso');
+    if (accessToken) {
+      if (accessStatus) accessStatus.textContent = 'Abriendo tu archivo privado…';
+      try {
+        const result = await request<{ sessionToken: string; profile: SessionProfile }>(
+          '/memoria/canjear',
+          { method: 'POST', body: JSON.stringify({ token: accessToken }) },
+        );
+        currentUrl.searchParams.delete('acceso');
+        window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+        await activateSession(result.sessionToken, result.profile);
+        return;
+      } catch {
+        currentUrl.searchParams.delete('acceso');
+        window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+        showLogin('Este enlace ya fue usado o expiró. Solicita uno nuevo.');
+        return;
+      }
+    }
+
+    const sessionToken = localStorage.getItem(sessionKey);
+    if (sessionToken) {
+      try {
+        await activateSession(sessionToken);
+        return;
+      } catch {
+        localStorage.removeItem(sessionKey);
+      }
+    }
+    showLogin();
+  };
+
+  accessForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(accessForm);
+    const email = String(formData.get('email') ?? '').trim();
+    if (!email || !accessSubmit) return;
+
+    accessSubmit.disabled = true;
+    accessSubmit.textContent = 'Enviando…';
+    if (accessMessage) accessMessage.textContent = '';
+    try {
+      await request('/memoria/solicitar', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      if (accessMessage) {
+        accessMessage.textContent = 'Listo. Si ese correo está registrado, recibirás tu enlace privado en unos minutos. Revisa también spam.';
+      }
+      accessForm.reset();
+    } catch {
+      if (accessMessage) {
+        accessMessage.textContent = 'No pudimos enviar el enlace en este momento. Intenta de nuevo en unos minutos.';
+      }
+    } finally {
+      accessSubmit.disabled = false;
+      accessSubmit.textContent = 'Enviarme mi acceso';
+    }
+  });
+
+  logoutButton?.addEventListener('click', () => clearSession('Sesión cerrada correctamente.'));
 
   for (const filter of filterButtons) {
     filter.addEventListener('click', () => {
@@ -185,28 +423,193 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
   }
 
   for (const button of videoButtons) {
-    button.addEventListener('click', () => {
-      const embed = button.dataset.embed;
-      if (!embed || !player) return;
-      for (const candidate of videoButtons) {
-        candidate.setAttribute('aria-pressed', String(candidate === button));
-      }
-      player.src = `${embed}?autoplay=true&preload=true`;
-      player.title = `Reproducir: ${button.dataset.title ?? 'Video de la Expo'}`;
-      if (playerTitle) playerTitle.textContent = button.dataset.title ?? '';
-      if (playerCategory) playerCategory.textContent = button.dataset.categoryLabel ?? '';
-      if (playerDuration) playerDuration.textContent = button.dataset.duration ?? '';
-      playerSection?.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'start',
-      });
-    });
+    button.addEventListener('click', () => loadVideo(button, true));
   }
+
+  void initializeAccess();
 </script>
 
 <style>
+  [hidden] {
+    display: none !important;
+  }
+
   .memoria {
+    min-height: 100vh;
     padding-block-start: calc(var(--nav-h) + var(--space-2xl));
+  }
+
+  .acceso {
+    width: min(100%, var(--container));
+    min-height: calc(100vh - var(--nav-h) - var(--space-2xl));
+    margin-inline: auto;
+    padding: clamp(3rem, 8vw, 7rem) var(--gutter) var(--space-3xl);
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+    align-items: center;
+    gap: clamp(2.5rem, 8vw, 8rem);
+  }
+
+  .acceso__presentacion {
+    position: relative;
+  }
+
+  .acceso__presentacion::before {
+    position: absolute;
+    z-index: -1;
+    inset: -18% auto auto -18%;
+    width: 24rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    filter: blur(70px);
+    content: '';
+  }
+
+  .acceso h1 {
+    max-width: 850px;
+    margin-block-start: var(--space-md);
+    font-size: clamp(3.8rem, 8.6vw, 8rem);
+    line-height: 0.86;
+    letter-spacing: -0.06em;
+  }
+
+  .acceso h1 span {
+    color: var(--accent);
+  }
+
+  .acceso__lead {
+    max-width: 650px;
+    margin-block-start: var(--space-xl);
+    color: var(--text-muted);
+    font-size: var(--step-1);
+  }
+
+  .acceso__sellos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-xl);
+  }
+
+  .acceso__sellos span,
+  .miembro {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+  }
+
+  .acceso__sellos span {
+    padding: var(--space-xs) var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .acceso-card {
+    position: relative;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+    border-radius: var(--radius-card);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 94%, var(--accent)), var(--surface));
+    box-shadow: var(--shadow-lg);
+  }
+
+  .acceso-card::after {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: var(--accent);
+    content: '';
+  }
+
+  .acceso-card__icon {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    aspect-ratio: 1;
+    margin-block-end: var(--space-xl);
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .acceso-card__icon svg {
+    width: 1.4rem;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .acceso-card h2 {
+    margin-block-start: var(--space-xs);
+    font-size: var(--step-2);
+  }
+
+  .acceso-card__intro,
+  .acceso-card__help {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+  }
+
+  .acceso-form {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-xl);
+  }
+
+  .acceso-form label {
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+
+  .acceso-form input {
+    width: 100%;
+    min-height: 52px;
+    padding-inline: var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .acceso-form input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .acceso-form button {
+    min-height: 52px;
+    padding-inline: var(--space-lg);
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 700;
+  }
+
+  .acceso-form button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .acceso-card__message {
+    min-height: 1.5em;
+    margin-block-start: var(--space-md);
+    color: var(--accent);
+    font-size: var(--step--1);
+  }
+
+  .acceso-card__help {
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid var(--border);
+    font-size: var(--step--1);
+  }
+
+  .acceso-card__help a {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   .memoria-hero,
@@ -251,6 +654,42 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
     margin-block-start: var(--space-xl);
     color: var(--text-muted);
     font-size: var(--step-1);
+  }
+
+  .miembro {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-block-start: var(--space-xl);
+    padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .miembro span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .miembro i {
+    width: 0.5rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .miembro strong {
+    color: var(--text);
+  }
+
+  .miembro button {
+    min-height: 36px;
+    padding-inline: var(--space-md);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    font-weight: 600;
   }
 
   .publicacion {
@@ -555,6 +994,17 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
   }
 
   @media (max-width: 900px) {
+    .acceso {
+      min-height: auto;
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: var(--space-2xl);
+    }
+
+    .acceso-card {
+      width: min(100%, 560px);
+    }
+
     .memoria-hero {
       grid-template-columns: 1fr;
       align-items: start;
@@ -576,6 +1026,29 @@ const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 1
 
     .memoria-hero {
       padding-block-end: var(--space-2xl);
+    }
+
+    .acceso {
+      padding-block-start: var(--space-2xl);
+    }
+
+    .acceso h1 {
+      font-size: clamp(3.2rem, 17vw, 5rem);
+    }
+
+    .acceso__lead {
+      font-size: var(--step-0);
+    }
+
+    .miembro {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-radius: var(--radius-card);
+    }
+
+    .miembro span {
+      align-items: flex-start;
     }
 
     .memoria-hero h1 {
