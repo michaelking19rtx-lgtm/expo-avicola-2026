@@ -1,0 +1,612 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import catalog from '../data/videos-expo.json';
+
+const videos = catalog.videos;
+const featured = videos[0] ?? null;
+const categoryOrder = ['conferencias', 'panel', 'entrevistas', 'recorrido', 'archivo'];
+const categories = categoryOrder
+  .map((slug) => {
+    const matches = videos.filter((video) => video.category === slug);
+    return matches.length
+      ? { slug, label: matches[0].categoryLabel, count: matches.length }
+      : null;
+  })
+  .filter(Boolean);
+
+const formatDuration = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
+  return `${minutes}:${String(remaining).padStart(2, '0')}`;
+};
+
+const totalSeconds = videos.reduce((total, video) => total + video.duration, 0);
+const totalHours = Math.floor(totalSeconds / 3600);
+const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+const totalDuration = totalHours ? `${totalHours} h ${totalMinutes} min` : `${totalMinutes} min`;
+const progress = Math.round((catalog.publishedTotal / catalog.expectedTotal) * 100);
+---
+
+<Base
+  title={`Memoria audiovisual — Expo Avícola Productiva 2026`}
+  description="Conferencias, entrevistas, paneles y momentos de la Expo Avícola Productiva 2026, disponibles en video."
+  noindex
+>
+  <Nav />
+
+  <main class="memoria" id="contenido" tabindex="-1">
+    <header class="memoria-hero">
+      <div class="memoria-hero__copy">
+        <p class="eyebrow">Memoria audiovisual · Tehuacán, Puebla</p>
+        <h1>La expo,<br /><span>completa.</span></h1>
+        <p class="memoria-hero__lead">
+          Conferencias, conversaciones y momentos del encuentro que reunió al sector
+          avícola el 7 de agosto de 2026. Un archivo para volver a las ideas y compartirlas.
+        </p>
+      </div>
+
+      <aside class="publicacion" aria-label="Estado de publicación">
+        <span class="publicacion__estado">
+          <span aria-hidden="true"></span>
+          {catalog.publishedTotal < catalog.expectedTotal ? 'Publicación en curso' : 'Archivo completo'}
+        </span>
+        <strong>{catalog.publishedTotal}<small>/{catalog.expectedTotal}</small></strong>
+        <p>videos disponibles</p>
+        <div class="publicacion__barra" aria-hidden="true">
+          <span style={`--avance: ${progress}%`}></span>
+        </div>
+        <p class="publicacion__detalle">
+          {totalDuration} publicados · el archivo se actualiza conforme termina cada video.
+        </p>
+      </aside>
+    </header>
+
+    {featured ? (
+      <section class="reproductor" aria-labelledby="reproductor-titulo" data-player-section>
+        <div class="reproductor__cabecera">
+          <div>
+            <p class="eyebrow" data-player-category>{featured.categoryLabel}</p>
+            <h2 id="reproductor-titulo" data-player-title>{featured.title}</h2>
+          </div>
+          <span class="reproductor__duracion" data-player-duration>
+            {formatDuration(featured.duration)}
+          </span>
+        </div>
+        <div class="reproductor__frame">
+          <iframe
+            src={`${featured.embedUrl}?autoplay=false&preload=false`}
+            title={`Reproducir: ${featured.title}`}
+            loading="eager"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+            allowfullscreen
+            data-player
+          ></iframe>
+        </div>
+      </section>
+    ) : (
+      <section class="procesando" aria-labelledby="procesando-titulo">
+        <p class="eyebrow">Preparando el archivo</p>
+        <h2 id="procesando-titulo">Los primeros videos están procesándose.</h2>
+        <p>Vuelve pronto: aparecerán aquí automáticamente cuando estén listos.</p>
+      </section>
+    )}
+
+    {videos.length > 0 && (
+      <section class="archivo" aria-labelledby="archivo-titulo">
+        <div class="archivo__cabecera">
+          <div>
+            <p class="eyebrow">Explora el encuentro</p>
+            <h2 id="archivo-titulo">Todo lo que pasó, por capítulo</h2>
+          </div>
+          <p class="archivo__resultado" aria-live="polite" data-result-count>
+            {videos.length} {videos.length === 1 ? 'video' : 'videos'}
+          </p>
+        </div>
+
+        <div class="filtros" role="group" aria-label="Filtrar videos por categoría">
+          <button class="filtro" type="button" data-filter="todos" aria-pressed="true">
+            Todos <span>{videos.length}</span>
+          </button>
+          {categories.map((category) => category && (
+            <button class="filtro" type="button" data-filter={category.slug} aria-pressed="false">
+              {category.label} <span>{category.count}</span>
+            </button>
+          ))}
+        </div>
+
+        <div class="videoteca" data-video-grid>
+          {videos.map((video, index) => (
+            <article class="video-card" data-category={video.category}>
+              <button
+                type="button"
+                class="video-card__button"
+                data-video-card
+                data-embed={video.embedUrl}
+                data-title={video.title}
+                data-category-label={video.categoryLabel}
+                data-duration={formatDuration(video.duration)}
+                aria-label={`Reproducir ${video.title}`}
+                aria-pressed={index === 0 ? 'true' : 'false'}
+              >
+                <span class="video-card__media">
+                  <img
+                    src={video.thumbnailUrl}
+                    alt=""
+                    width="640"
+                    height="360"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="video-card__play" aria-hidden="true"></span>
+                  <span class="video-card__time">{formatDuration(video.duration)}</span>
+                </span>
+                <span class="video-card__body">
+                  <span class="video-card__category">{video.categoryLabel}</span>
+                  <strong>{video.title}</strong>
+                </span>
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+    )}
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter]'));
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('.video-card'));
+  const videoButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-video-card]'));
+  const resultCount = document.querySelector<HTMLElement>('[data-result-count]');
+  const player = document.querySelector<HTMLIFrameElement>('[data-player]');
+  const playerTitle = document.querySelector<HTMLElement>('[data-player-title]');
+  const playerCategory = document.querySelector<HTMLElement>('[data-player-category]');
+  const playerDuration = document.querySelector<HTMLElement>('[data-player-duration]');
+  const playerSection = document.querySelector<HTMLElement>('[data-player-section]');
+
+  for (const filter of filterButtons) {
+    filter.addEventListener('click', () => {
+      const selected = filter.dataset.filter ?? 'todos';
+      let visible = 0;
+      for (const button of filterButtons) {
+        button.setAttribute('aria-pressed', String(button === filter));
+      }
+      for (const card of cards) {
+        const show = selected === 'todos' || card.dataset.category === selected;
+        card.hidden = !show;
+        if (show) visible += 1;
+      }
+      if (resultCount) resultCount.textContent = `${visible} ${visible === 1 ? 'video' : 'videos'}`;
+    });
+  }
+
+  for (const button of videoButtons) {
+    button.addEventListener('click', () => {
+      const embed = button.dataset.embed;
+      if (!embed || !player) return;
+      for (const candidate of videoButtons) {
+        candidate.setAttribute('aria-pressed', String(candidate === button));
+      }
+      player.src = `${embed}?autoplay=true&preload=true`;
+      player.title = `Reproducir: ${button.dataset.title ?? 'Video de la Expo'}`;
+      if (playerTitle) playerTitle.textContent = button.dataset.title ?? '';
+      if (playerCategory) playerCategory.textContent = button.dataset.categoryLabel ?? '';
+      if (playerDuration) playerDuration.textContent = button.dataset.duration ?? '';
+      playerSection?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    });
+  }
+</script>
+
+<style>
+  .memoria {
+    padding-block-start: calc(var(--nav-h) + var(--space-2xl));
+  }
+
+  .memoria-hero,
+  .reproductor,
+  .archivo,
+  .procesando {
+    width: min(100%, var(--container));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .memoria-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
+    align-items: end;
+    gap: var(--space-2xl);
+    padding-block: var(--space-xl) var(--space-3xl);
+  }
+
+  .eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .memoria-hero h1 {
+    max-width: 900px;
+    margin-block-start: var(--space-md);
+    font-size: var(--step-5);
+    line-height: 0.86;
+    letter-spacing: -0.055em;
+  }
+
+  .memoria-hero h1 span {
+    color: var(--accent);
+  }
+
+  .memoria-hero__lead {
+    max-width: 690px;
+    margin-block-start: var(--space-xl);
+    color: var(--text-muted);
+    font-size: var(--step-1);
+  }
+
+  .publicacion {
+    padding: var(--space-xl);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .publicacion__estado {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+
+  .publicacion__estado span {
+    width: 0.55rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--accent);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+
+  .publicacion strong {
+    display: block;
+    margin-block-start: var(--space-lg);
+    font-family: var(--font-display);
+    font-size: var(--step-4);
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+  }
+
+  .publicacion strong small {
+    color: var(--text-muted);
+    font-size: var(--step-1);
+  }
+
+  .publicacion > p:not(.publicacion__detalle) {
+    margin-block-start: var(--space-xs);
+    color: var(--text-muted);
+  }
+
+  .publicacion__barra {
+    height: 5px;
+    margin-block-start: var(--space-lg);
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background-color: var(--surface-2);
+  }
+
+  .publicacion__barra span {
+    display: block;
+    width: var(--avance);
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--accent);
+  }
+
+  .publicacion__detalle {
+    margin-block-start: var(--space-sm);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .reproductor {
+    scroll-margin-block-start: calc(var(--nav-h) + var(--space-lg));
+  }
+
+  .reproductor__cabecera {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    margin-block-end: var(--space-lg);
+  }
+
+  .reproductor h2 {
+    max-width: 900px;
+    margin-block-start: var(--space-xs);
+    font-size: var(--step-2);
+  }
+
+  .reproductor__duracion {
+    flex: none;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reproductor__frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-media);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .reproductor iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .archivo {
+    padding-block: var(--space-3xl);
+  }
+
+  .archivo__cabecera {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--space-lg);
+  }
+
+  .archivo h2,
+  .procesando h2 {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+  }
+
+  .archivo__resultado {
+    flex: none;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .filtros {
+    display: flex;
+    gap: var(--space-sm);
+    margin-block: var(--space-xl);
+    padding-block-end: var(--space-xs);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .filtros::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filtro {
+    flex: none;
+    min-height: 44px;
+    padding-inline: var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--text-muted);
+    transition:
+      border-color var(--t-base) var(--ease-out),
+      background-color var(--t-base) var(--ease-out),
+      color var(--t-base) var(--ease-out);
+  }
+
+  .filtro span {
+    margin-inline-start: var(--space-xs);
+    font-size: var(--step--1);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filtro:hover,
+  .filtro[aria-pressed='true'] {
+    border-color: var(--accent);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .videoteca {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .video-card {
+    min-width: 0;
+  }
+
+  .video-card__button {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    text-align: start;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      box-shadow var(--t-base) var(--ease-out);
+  }
+
+  .video-card__button:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    box-shadow: var(--shadow-md);
+  }
+
+  .video-card__button[aria-pressed='true'] {
+    border-color: var(--accent);
+  }
+
+  .video-card__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: var(--surface-2);
+  }
+
+  .video-card__media::after {
+    position: absolute;
+    inset: auto 0 0;
+    height: 45%;
+    background: linear-gradient(to top, color-mix(in srgb, var(--bg) 78%, transparent), transparent);
+    content: '';
+    pointer-events: none;
+  }
+
+  .video-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--t-slow) var(--ease-out);
+  }
+
+  .video-card__button:hover img {
+    transform: scale(1.035);
+  }
+
+  .video-card__play {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: 1;
+    width: 48px;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  .video-card__play::after {
+    position: absolute;
+    inset: 50% auto auto 53%;
+    width: 0;
+    height: 0;
+    transform: translate(-50%, -50%);
+    border-block: 7px solid transparent;
+    border-inline-start: 11px solid var(--accent-ink);
+    content: '';
+  }
+
+  .video-card__time {
+    position: absolute;
+    inset: auto var(--space-sm) var(--space-sm) auto;
+    z-index: 1;
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg);
+    color: var(--text);
+    font-size: var(--step--1);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .video-card__body {
+    display: grid;
+    gap: var(--space-xs);
+    min-height: 124px;
+    padding: var(--space-lg);
+  }
+
+  .video-card__category {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .video-card strong {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    line-height: 1.16;
+  }
+
+  .procesando {
+    padding-block: var(--space-3xl);
+    text-align: center;
+  }
+
+  .procesando p:last-child {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 900px) {
+    .memoria-hero {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .publicacion {
+      max-width: 460px;
+    }
+
+    .videoteca {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 620px) {
+    .memoria {
+      padding-block-start: calc(var(--nav-h) + var(--space-xl));
+    }
+
+    .memoria-hero {
+      padding-block-end: var(--space-2xl);
+    }
+
+    .memoria-hero h1 {
+      font-size: clamp(3.6rem, 19vw, 5.4rem);
+    }
+
+    .memoria-hero__lead {
+      font-size: var(--step-0);
+    }
+
+    .publicacion {
+      width: 100%;
+      padding: var(--space-lg);
+    }
+
+    .reproductor__cabecera,
+    .archivo__cabecera {
+      align-items: start;
+    }
+
+    .reproductor__duracion,
+    .archivo__resultado {
+      display: none;
+    }
+
+    .videoteca {
+      grid-template-columns: 1fr;
+    }
+
+    .video-card__body {
+      min-height: 0;
+    }
+  }
+</style>
