@@ -48,7 +48,8 @@ async function cargarImagen(url) {
 }
 
 function normalizarConfig(config = {}) {
-  const textoPredeterminado = `Por su valiosa participación como asistente en la ${site.nombre} y por su compromiso con la formación, la innovación y el fortalecimiento del sector avícola.`;
+  const textoPredeterminado =
+    'Su presencia y compromiso contribuyeron al intercambio de conocimientos y al fortalecimiento del sector avícola.';
   const texto = (valor, respaldo = '') => (typeof valor === 'string' ? valor.trim() : respaldo);
   return {
     texto: texto(config.texto, textoPredeterminado),
@@ -71,10 +72,6 @@ function slugArchivo(nombre) {
     .slice(0, 70);
 }
 
-function folio(indice) {
-  return `EAP-2026-${String(indice + 1).padStart(3, '0')}`;
-}
-
 function textoAjustado(doc, texto, anchoMaximo, tamanoInicial, tamanoMinimo) {
   let tamano = tamanoInicial;
   doc.setFontSize(tamano);
@@ -84,28 +81,37 @@ function textoAjustado(doc, texto, anchoMaximo, tamanoInicial, tamanoMinimo) {
   }
 }
 
-function dibujarSello(doc, colores, sello) {
-  const x = 38;
-  const y = 174;
-  if (sello) {
-    doc.addImage(sello, 'PNG', 20, 156.2, 36, 35.6, undefined, 'FAST');
-  } else {
-    doc.setFillColor(...colores.doradoClaro);
-    doc.circle(x, y, 18, 'F');
-    doc.setFillColor(...colores.verdeProfundo);
-    doc.circle(x, y, 15.3, 'F');
-  }
-  doc.setTextColor(...colores.doradoClaro);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(4);
-  doc.text('EXCELENCIA', x, y - 5.4, { align: 'center', charSpace: 0.18 });
-  doc.setFontSize(3.55);
-  doc.text('CONOCIMIENTO', x, y - 1.4, { align: 'center', charSpace: 0.08 });
-  doc.setFontSize(3.35);
-  doc.text('Y COMPROMISO', x, y + 2.2, { align: 'center', charSpace: 0.06 });
+function textoCentradoEspaciado(doc, texto, x, y, charSpace, opciones = {}) {
+  const correccion = ((texto.length - 1) * charSpace) / 2;
+  doc.text(texto, x - correccion, y, {
+    ...opciones,
+    align: 'center',
+    charSpace,
+  });
 }
 
-function dibujarPagina(doc, persona, indice, colores, config, recursos) {
+function dibujarSello(doc, colores, sello) {
+  const x = 38;
+  const y = 179.5;
+  if (sello) {
+    doc.addImage(sello, 'PNG', 17, 159, 42, 42, undefined, 'FAST');
+  } else {
+    doc.setFillColor(...colores.doradoClaro);
+    doc.circle(x, y, 20.5, 'F');
+    doc.setFillColor(...colores.verdeProfundo);
+    doc.circle(x, y, 17.6, 'F');
+    doc.setTextColor(...colores.doradoClaro);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(4.5);
+    textoCentradoEspaciado(doc, 'EXCELENCIA', x, y - 6.1, 0.18);
+    doc.setFontSize(4);
+    textoCentradoEspaciado(doc, 'CONOCIMIENTO', x, y - 1.5, 0.08);
+    doc.setFontSize(3.75);
+    textoCentradoEspaciado(doc, 'Y COMPROMISO', x, y + 2.8, 0.06);
+  }
+}
+
+function dibujarPagina(doc, persona, colores, config, recursos) {
   const centro = 148.5;
   if (recursos.fondo) {
     doc.addImage(recursos.fondo, 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
@@ -117,67 +123,74 @@ function dibujarPagina(doc, persona, indice, colores, config, recursos) {
     doc.rect(5, 5, 287, 200, 'S');
   }
 
-  if (recursos.logo) doc.addImage(recursos.logo, 'PNG', centro - 32.5, 4.7, 65, 33, undefined, 'FAST');
+  if (recursos.logo) doc.addImage(recursos.logo, 'PNG', centro - 38.5, 3.8, 77, 39, undefined, 'FAST');
 
   doc.setTextColor(...colores.verdeProfundo);
   doc.setFont('times', 'normal');
-  doc.setFontSize(28);
-  doc.text('RECONOCIMIENTO', centro, 47, { align: 'center', charSpace: 1.25 });
+  doc.setFontSize(40);
+  textoCentradoEspaciado(doc, 'CERTIFICADO', centro, 61.5, 2);
   doc.setTextColor(...colores.dorado);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.2);
-  doc.text('DE PARTICIPACIÓN', centro, 58, { align: 'center', charSpace: 2.1 });
+  doc.setFontSize(10.5);
+  textoCentradoEspaciado(doc, 'DE RECONOCIMIENTO', centro, 73.5, 1.6);
   doc.setLineWidth(0.45);
-  doc.line(94, 55.2, 119, 55.2);
-  doc.line(178, 55.2, 203, 55.2);
+  doc.line(66, 70.8, 101, 70.8);
+  doc.line(196, 70.8, 231, 70.8);
+  doc.line(117, 79, 142.5, 79);
+  doc.line(154.5, 79, 180, 79);
+  doc.setFillColor(...colores.dorado);
+  doc.rect(146.7, 77.2, 3.6, 3.6, 'F');
 
   doc.setTextColor(...colores.tintaSuave);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.text('Se otorga a', centro, 69, { align: 'center' });
+  doc.setFontSize(10.5);
+  doc.text('Otorgado a:', centro, 87, { align: 'center' });
 
   doc.setTextColor(...colores.verde);
   doc.setFont('times', 'bolditalic');
-  textoAjustado(doc, persona.nombre, 205, 29, 17);
-  doc.text(persona.nombre, centro, 88.5, { align: 'center' });
+  textoAjustado(doc, persona.nombre, 205, 31, 18);
+  doc.text(persona.nombre, centro, 104, { align: 'center' });
 
   doc.setDrawColor(...colores.dorado);
   doc.setLineWidth(0.45);
-  doc.line(63, 98.5, 234, 98.5);
+  doc.line(62, 112, 235, 112);
   doc.setFillColor(...colores.dorado);
-  doc.rect(146.4, 96.4, 4.2, 4.2, 'F');
+  doc.rect(146.4, 109.9, 4.2, 4.2, 'F');
 
   doc.setTextColor(...colores.tinta);
   doc.setFont('helvetica', 'normal');
-  let tamanoTexto = 9.1;
+  doc.setFontSize(10.5);
+  doc.text('Por su valiosa participación como asistente en la:', centro, 122, { align: 'center' });
+  doc.setTextColor(...colores.verdeProfundo);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(site.nombre.toLocaleUpperCase('es-MX'), centro, 132, { align: 'center' });
+
+  doc.setTextColor(...colores.tinta);
+  doc.setFont('helvetica', 'normal');
+  let tamanoTexto = 9.3;
   doc.setFontSize(tamanoTexto);
-  let lineas = doc.splitTextToSize(config.texto, 169);
-  while (lineas.length > 5 && tamanoTexto > 7) {
+  let lineas = doc.splitTextToSize(config.texto, 165);
+  while (lineas.length > 3 && tamanoTexto > 7.5) {
     tamanoTexto -= 0.4;
     doc.setFontSize(tamanoTexto);
-    lineas = doc.splitTextToSize(config.texto, 169);
+    lineas = doc.splitTextToSize(config.texto, 165);
   }
-  doc.text(lineas.slice(0, 5), centro, 111, { align: 'center', lineHeightFactor: 1.35 });
+  doc.text(lineas.slice(0, 3), centro, 143, { align: 'center', lineHeightFactor: 1.35 });
 
   doc.setTextColor(...colores.verde);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.7);
-  doc.text(config.fecha.toLocaleUpperCase('es-MX'), centro, 149, {
-    align: 'center',
-    charSpace: 0.35,
+  doc.setFontSize(8.4);
+  textoCentradoEspaciado(doc, config.fecha.toLocaleUpperCase('es-MX'), centro, 157, 0.35, {
     maxWidth: 190,
   });
 
   dibujarSello(doc, colores, recursos.sello);
-  if (recursos.firmas) doc.addImage(recursos.firmas, 'PNG', 73, 162, 151, 30.5, undefined, 'FAST');
-  if (recursos.emblema) doc.addImage(recursos.emblema, 'PNG', 263, 162, 20, 29.2, undefined, 'FAST');
-
-  doc.setTextColor(...colores.tintaSuave);
-  doc.setFontSize(6.2);
-  doc.text(`Folio interno: ${folio(indice)}`, centro, 201, { align: 'center' });
+  if (recursos.firmas) doc.addImage(recursos.firmas, 'PNG', 71.5, 172.5, 154, 31, undefined, 'FAST');
+  if (recursos.emblema) doc.addImage(recursos.emblema, 'PNG', 263, 173, 20, 29.2, undefined, 'FAST');
 }
 
-async function crearDocumento(personas, indices = personas.map((_, indice) => indice), opciones = {}) {
+async function crearDocumento(personas, opciones = {}) {
   const { jsPDF } = await import('jspdf');
   const colores = paleta();
   const config = normalizarConfig(opciones);
@@ -198,17 +211,17 @@ async function crearDocumento(personas, indices = personas.map((_, indice) => in
 
   personas.forEach((persona, indice) => {
     if (indice > 0) doc.addPage('a4', 'landscape');
-    dibujarPagina(doc, persona, indices[indice] ?? indice, colores, config, recursos);
+    dibujarPagina(doc, persona, colores, config, recursos);
   });
   return doc;
 }
 
-export async function descargarReconocimiento(persona, indice = 0, config = {}) {
-  const doc = await crearDocumento([persona], [indice], config);
+export async function descargarReconocimiento(persona, _indice = 0, config = {}) {
+  const doc = await crearDocumento([persona], config);
   doc.save(`reconocimiento-${slugArchivo(persona.nombre) || 'participante'}.pdf`);
 }
 
 export async function descargarReconocimientos(personas, config = {}) {
-  const doc = await crearDocumento(personas, undefined, config);
+  const doc = await crearDocumento(personas, config);
   doc.save('reconocimientos-expo-avicola-productiva-2026.pdf');
 }

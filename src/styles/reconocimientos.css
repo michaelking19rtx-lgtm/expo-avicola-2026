@@ -302,13 +302,10 @@
   container-type: inline-size;
   position: relative;
   isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   aspect-ratio: 297 / 210;
   overflow: hidden;
   margin-block: var(--space-lg);
-  padding: 2.2cqi 7cqi 2.1cqi;
+  padding: 0;
   border: 0;
   background-color: var(--reco-papel);
   color: var(--reco-tinta);
@@ -330,56 +327,85 @@
 }
 
 .reco-hoja__logo-principal {
+  position: absolute;
+  inset-block-start: 1.3cqi;
+  inset-inline-start: 50%;
   width: 22cqi;
   height: auto;
-  margin-block-end: -0.75cqi;
   object-fit: contain;
-  transform: translateY(0.75cqi);
+  transform: translateX(-50%);
 }
 
 .reco-hoja h3 {
-  margin-block-start: 0.45cqi;
+  position: absolute;
+  inset-block-start: 16.4cqi;
+  inset-inline: 0;
+  margin: 0;
   color: var(--reco-verde-profundo);
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 4.8cqi;
+  font-size: 6.1cqi;
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  line-height: 1;
 }
 
 .reco-hoja__tipo {
-  margin-block-start: 0.35cqi;
+  position: absolute;
+  inset-block-start: 23.6cqi;
+  inset-inline-start: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3.2cqi;
+  width: 56cqi;
+  margin: 0;
   color: var(--reco-dorado);
-  font-size: 1.4cqi;
-  letter-spacing: 0.26em;
+  font-size: 1.55cqi;
+  letter-spacing: 0.24em;
+  transform: translateX(-50%);
+}
+
+.reco-hoja__tipo::before,
+.reco-hoja__tipo::after {
+  flex: 1;
+  height: 0.1cqi;
+  background-color: var(--reco-dorado);
+  content: '';
 }
 
 .reco-hoja__otorga {
-  margin-block-start: 1.15cqi;
+  position: absolute;
+  inset-block-start: 28.7cqi;
+  inset-inline: 0;
+  margin: 0;
   color: var(--reco-tinta-suave);
-  font-size: 1.4cqi;
+  font-size: 1.5cqi;
 }
 
 .reco-hoja__nombre {
-  display: -webkit-box;
+  position: absolute;
+  inset-block-start: 32.1cqi;
+  inset-inline-start: 50%;
   max-width: 76%;
-  overflow: hidden;
-  margin-block-start: 0.5cqi;
+  margin: 0;
   color: var(--reco-verde);
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 4.05cqi;
+  font-size: 4.65cqi;
   font-style: italic;
   font-weight: 700;
-  line-height: 1.08;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  line-height: 1.05;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .reco-hoja__linea {
-  position: relative;
-  width: 61%;
+  position: absolute;
+  inset-block-start: 39.3cqi;
+  inset-inline-start: 50%;
+  width: 61cqi;
   height: 0.1cqi;
-  margin-block: 1.05cqi 1cqi;
   background-color: var(--reco-dorado);
+  transform: translateX(-50%);
 }
 
 .reco-hoja__linea::after {
@@ -393,27 +419,54 @@
 }
 
 .reco-hoja__texto {
-  max-width: 70%;
-  font-size: 1.35cqi;
+  position: absolute;
+  inset-block-start: 49.5cqi;
+  inset-inline-start: 50%;
+  max-width: 66%;
+  margin: 0;
+  font-size: 1.38cqi;
   line-height: 1.55;
+  transform: translateX(-50%);
+}
+
+.reco-hoja__participacion,
+.reco-hoja__evento {
+  position: absolute;
+  inset-inline: 0;
+  margin: 0;
+}
+
+.reco-hoja__participacion {
+  inset-block-start: 42.2cqi;
+  color: var(--reco-tinta);
+  font-size: 1.5cqi;
+}
+
+.reco-hoja__evento {
+  inset-block-start: 45.1cqi;
+  color: var(--reco-verde-profundo);
+  font-size: 2.35cqi;
+  font-weight: 800;
 }
 
 .reco-hoja__fecha {
-  max-width: 68%;
-  margin-block-start: 0.8cqi;
+  position: absolute;
+  inset-block-start: 55.2cqi;
+  inset-inline: 0;
+  margin: 0;
   color: var(--reco-verde);
-  font-size: 1.15cqi;
+  font-size: 1.2cqi;
   font-weight: 750;
   letter-spacing: 0.08em;
 }
 
 .reco-hoja__sello {
   position: absolute;
-  inset: auto auto 5.2cqi 2.6cqi;
+  inset: auto auto 1.8cqi 2.1cqi;
   display: grid;
   place-items: center;
-  width: 12cqi;
-  aspect-ratio: 480 / 475;
+  width: 14.2cqi;
+  aspect-ratio: 1;
   color: var(--reco-dorado-claro);
   filter: drop-shadow(0 0.35cqi 0.4cqi rgb(70 40 0 / 24%));
   line-height: 1;
@@ -427,31 +480,10 @@
   object-fit: contain;
 }
 
-.reco-hoja__sello-texto {
-  position: absolute;
-  z-index: 1;
-  inset: 43% auto auto 50%;
-  display: grid;
-  gap: 0.22cqi;
-  width: 60%;
-  color: var(--reco-dorado-claro);
-  font-family: Arial, sans-serif;
-  font-size: 0.4cqi;
-  font-weight: 750;
-  letter-spacing: 0.025em;
-  text-shadow: 0 0.08cqi 0.1cqi rgb(0 0 0 / 45%);
-  transform: translate(-50%, -50%);
-}
-
-.reco-hoja__sello-texto strong {
-  font-size: 0.48cqi;
-  letter-spacing: 0.045em;
-}
-
 .reco-hoja__firmas-oficiales {
   position: absolute;
-  inset: auto auto 5.7cqi 24.6cqi;
-  width: 50.8cqi;
+  inset: auto auto 1.8cqi 24cqi;
+  width: 52cqi;
   height: auto;
   filter: contrast(1.04);
   object-fit: contain;
@@ -459,8 +491,8 @@
 
 .reco-hoja__emblema {
   position: absolute;
-  inset: auto 4.7cqi 5.8cqi auto;
-  width: 6.8cqi;
+  inset: auto 4.7cqi 1.9cqi auto;
+  width: 7.2cqi;
   height: auto;
   object-fit: contain;
 }

@@ -1,5 +1,6 @@
 import { createWriteStream } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { once } from 'node:events';
 import path from 'node:path';
 import process from 'node:process';
 import { spawn } from 'node:child_process';
@@ -44,11 +45,20 @@ async function uploadFinished() {
   }
 }
 
-function run(command, args, { appendUploadLogs = false } = {}) {
+async function run(command, args, { appendUploadLogs = false } = {}) {
   const stdoutPath = appendUploadLogs ? uploadLogPath : supervisorLogPath;
   const stderrPath = appendUploadLogs ? uploadErrorPath : supervisorLogPath;
   const stdout = createWriteStream(stdoutPath, { flags: 'a' });
   const stderr = createWriteStream(stderrPath, { flags: 'a' });
+
+  // En Windows con Node 24, spawn rechaza un WriteStream cuyo descriptor aún
+  // no terminó de abrirse (`fd: null`). Esperar el evento `open` evita que el
+  // supervisor falle justo al lanzar la sincronización final del catálogo.
+  await Promise.all([
+    typeof stdout.fd === 'number' ? Promise.resolve() : once(stdout, 'open'),
+    typeof stderr.fd === 'number' ? Promise.resolve() : once(stderr, 'open'),
+  ]);
+
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: projectRoot,
@@ -101,7 +111,8 @@ await ensureUploadCompletes();
 await log('Las 55 fuentes terminaron de subir; esperando la codificación final de Bunny.');
 await syncUntilEncoded();
 
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const buildCode = await run(npmCommand, ['run', 'build']);
+const npmCommand = process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'npm';
+const npmArgs = process.platform === 'win32' ? ['/d', '/s', '/c', 'npm run build'] : ['run', 'build'];
+const buildCode = await run(npmCommand, npmArgs);
 if (buildCode !== 0) throw new Error(`La compilación final terminó con código ${buildCode}.`);
 await log('COMPLETADO: 55 videos codificados, catálogo actualizado y sitio compilado.');
