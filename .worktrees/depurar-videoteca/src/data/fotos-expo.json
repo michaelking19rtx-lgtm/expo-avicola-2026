@@ -1,0 +1,169 @@
+{
+  "photos": [
+    {
+      "id": 1,
+      "src": "/img/memoria/fotos/conocimiento-en-accion-960.webp",
+      "full": "/img/memoria/fotos/conocimiento-en-accion-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Conocimiento en acción",
+      "caption": "Conferencias técnicas con una sala llena de preguntas, experiencias y nuevas ideas.",
+      "alt": "Conferencia ante una sala llena de asistentes de la Expo Avícola Productiva 2026.",
+      "featured": true
+    },
+    {
+      "id": 2,
+      "src": "/img/memoria/fotos/ritmo-del-encuentro-960.webp",
+      "full": "/img/memoria/fotos/ritmo-del-encuentro-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "También hubo ritmo",
+      "caption": "La música abrió un respiro para convivir y disfrutar el encuentro.",
+      "alt": "Saxofonista y DJ durante un momento musical de la Expo.",
+      "featured": true
+    },
+    {
+      "id": 3,
+      "src": "/img/memoria/fotos/avicultura-de-cerca-960.webp",
+      "full": "/img/memoria/fotos/avicultura-de-cerca-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "La avicultura de cerca",
+      "caption": "La curiosidad del público convirtió cada demostración en una experiencia compartida.",
+      "alt": "Asistentes observando y fotografiando pollitos durante una demostración.",
+      "featured": true
+    },
+    {
+      "id": 4,
+      "src": "/img/memoria/fotos/comunidad-avicola-960.webp",
+      "full": "/img/memoria/fotos/comunidad-avicola-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "La comunidad",
+      "caption": "Productores, especialistas y empresas se reunieron para comenzar una jornada de aprendizaje.",
+      "alt": "Grupo de asistentes reunido frente al escenario al inicio de la Expo.",
+      "featured": true
+    },
+    {
+      "id": 5,
+      "src": "/img/memoria/fotos/ideas-que-transforman-960.webp",
+      "full": "/img/memoria/fotos/ideas-que-transforman-1800.webp",
+      "width": 800,
+      "height": 1200,
+      "label": "Ideas que transforman",
+      "caption": "Experiencia de campo convertida en decisiones más productivas.",
+      "alt": "Ponente compartiendo conclusiones técnicas frente a la pantalla principal.",
+      "featured": true
+    },
+    {
+      "id": 6,
+      "src": "/img/memoria/fotos/conexiones-que-continuan-960.webp",
+      "full": "/img/memoria/fotos/conexiones-que-continuan-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Conexiones que continúan",
+      "caption": "El intercambio entre productores y proveedores siguió más allá del escenario.",
+      "alt": "Asistentes conversando y conociendo soluciones en la zona de exposición.",
+      "featured": true
+    },
+    {
+      "id": 7,
+      "src": "/img/memoria/fotos/equipo-del-encuentro-960.webp",
+      "full": "/img/memoria/fotos/equipo-del-encuentro-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Detrás del encuentro",
+      "caption": "El equipo que recibió a cada asistente y puso la jornada en marcha.",
+      "alt": "Integrantes del equipo de registro trabajando junto a una computadora.",
+      "featured": true
+    },
+    {
+      "id": 8,
+      "src": "/img/memoria/fotos/sala-conectada-960.webp",
+      "full": "/img/memoria/fotos/sala-conectada-1800.webp",
+      "width": 800,
+      "height": 1200,
+      "label": "Una sala conectada",
+      "caption": "El sector escuchó, preguntó y compartió los retos que enfrenta todos los días.",
+      "alt": "Vista vertical de la audiencia siguiendo una conferencia.",
+      "featured": false
+    },
+    {
+      "id": 9,
+      "src": "/img/memoria/fotos/quienes-hacen-industria-960.webp",
+      "full": "/img/memoria/fotos/quienes-hacen-industria-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Quienes hacen industria",
+      "caption": "Empresas avícolas presentaron soluciones nacidas de la experiencia diaria.",
+      "alt": "Dos expositoras sonríen frente a productos y material de su empresa.",
+      "featured": false
+    },
+    {
+      "id": 10,
+      "src": "/img/memoria/fotos/experiencia-tecnica-960.webp",
+      "full": "/img/memoria/fotos/experiencia-tecnica-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Experiencia técnica",
+      "caption": "Diagnóstico, prevención y productividad explicados desde la práctica.",
+      "alt": "Especialista explica causas de mortalidad avícola junto a una pantalla.",
+      "featured": false
+    },
+    {
+      "id": 11,
+      "src": "/img/memoria/fotos/soluciones-cara-a-cara-960.webp",
+      "full": "/img/memoria/fotos/soluciones-cara-a-cara-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Soluciones cara a cara",
+      "caption": "Conversaciones directas entre proveedores, especialistas y productores.",
+      "alt": "Expositores conversan con visitantes frente a una mesa de productos.",
+      "featured": false
+    },
+    {
+      "id": 12,
+      "src": "/img/memoria/fotos/tecnologia-en-vivo-960.webp",
+      "full": "/img/memoria/fotos/tecnologia-en-vivo-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Tecnología en vivo",
+      "caption": "Demostraciones que permitieron ver, preguntar y comparar en el momento.",
+      "alt": "Expositor realiza una demostración de equipo ante varios asistentes.",
+      "featured": false
+    },
+    {
+      "id": 13,
+      "src": "/img/memoria/fotos/somos-comunidad-960.webp",
+      "full": "/img/memoria/fotos/somos-comunidad-1800.webp",
+      "width": 800,
+      "height": 1200,
+      "label": "Somos comunidad",
+      "caption": "Cada asistente fue parte de la identidad y la energía de esta primera edición.",
+      "alt": "Dos asistentes sonríen junto al muro de identidad y patrocinadores de la Expo.",
+      "featured": false
+    },
+    {
+      "id": 14,
+      "src": "/img/memoria/fotos/aprender-para-prevenir-960.webp",
+      "full": "/img/memoria/fotos/aprender-para-prevenir-1800.webp",
+      "width": 960,
+      "height": 640,
+      "label": "Aprender para prevenir",
+      "caption": "Información útil para tomar mejores decisiones y proteger la producción.",
+      "alt": "Vista general de una ponencia sobre prevención ante la audiencia.",
+      "featured": false
+    },
+    {
+      "id": 15,
+      "src": "/img/memoria/fotos/futuro-en-las-manos-960.webp",
+      "full": "/img/memoria/fotos/futuro-en-las-manos-1800.webp",
+      "width": 800,
+      "height": 1200,
+      "label": "El futuro en nuestras manos",
+      "caption": "Un momento que resume la cercanía, el oficio y el propósito de la Expo.",
+      "alt": "Expositor y asistente sostienen pollitos mientras miran a la cámara.",
+      "featured": false
+    }
+  ]
+}

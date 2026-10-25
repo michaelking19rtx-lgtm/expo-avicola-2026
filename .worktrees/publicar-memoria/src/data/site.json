@@ -1,0 +1,26 @@
+{
+  "nombre": "Expo Avícola Productiva 2026",
+  "subtitulo": "Innovación y productividad para el sector avícola",
+  "tagline": "Donde la producción avícola se vuelve rentable",
+  "fecha": "2026-08-07",
+  "inicio": "2026-08-07T08:00:00-06:00",
+  "horario": "08:00 – 16:30",
+  "ciudad": "Tehuacán, Puebla",
+  "localidad": "Tehuacán",
+  "region": "Puebla",
+  "pais": "MX",
+  "recinto": "Salón de Eventos Bugambilias",
+  "direccion": "López Rayón 3, Centro de la Ciudad, 75700 Tehuacán, Pue.",
+  "telefonoRecinto": "+52 238 383 2490",
+  "coordenadas": {
+    "lat": 18.462627,
+    "lng": -97.391909
+  },
+  "contacto": {
+    "correo": "contacto@visionpecuariamx.com",
+    "telefono": null,
+    "whatsapp": "522361138979",
+    "whatsappLegible": "236 113 8979"
+  },
+  "temaDefault": "green"
+}

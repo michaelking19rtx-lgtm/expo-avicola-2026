@@ -1,0 +1,767 @@
+---
+import boletos from '../data/boletos.json';
+import site from '../data/site.json';
+import { conConteo } from '../scripts/programa.js';
+import { whatsappUrl as construirEnlaceWhatsapp, MENSAJES } from '../scripts/contacto.js';
+
+/*
+  Punto de conversión del sitio. TODO sale de src/data/boletos.json y
+  src/data/site.json — aquí no hay ni un precio ni una fecha escritos a mano.
+
+  Hoy existe un único boleto. El componente itera el array de todos modos: si
+  algún día hay dos, se apilan sin romper nada (el ancho máximo es de la
+  tarjeta, no del contenedor).
+*/
+
+/*
+  timeZone UTC a propósito: site.fecha es una fecha sin hora ("2026-08-07"), y
+  el motor la interpreta como medianoche UTC. Formateándola en la zona local de
+  México saldría el día 6. La hora con offset real vive en site.inicio, que usa
+  el hero para la cuenta regresiva; aquí solo se necesita el día.
+*/
+const fechaLarga = new Intl.DateTimeFormat('es-MX', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+}).format(new Date(site.fecha));
+
+const formatoNumero = new Intl.NumberFormat('es-MX');
+
+/*
+  Contacto para apartar lugar mientras la pasarela no existe.
+
+  DATO PENDIENTE: site.contacto.whatsapp está en null. Mientras siga así, el
+  aviso NO promete WhatsApp — prometer un canal sin número es peor que no
+  ofrecerlo. En cuanto se rellene la clave, el enlace aparece solo.
+*/
+const whatsapp = site.contacto?.whatsapp ?? null;
+const whatsappUrl = whatsapp
+  ? `https://wa.me/${String(whatsapp).replace(/\D/g, '')}`
+  : null;
+
+const avisoTexto = whatsappUrl
+  ? 'La venta en línea abre muy pronto. Mientras tanto puedes apartar tu lugar por WhatsApp.'
+  : 'La venta en línea abre muy pronto. En cuanto se active, este botón te llevará directo al pago seguro.';
+
+/*
+  Un mensaje de WhatsApp por PERFIL, no por código. El `codigo` de cada
+  descuento (SOCIO, COMUNIDAD) existe en boletos.json para que el backend lo
+  use — hoy nada lo consume ahí, pero es donde vive por si el vigilante o un
+  futuro flujo automatizado lo necesita— y NUNCA debe llegar al marcado: quien
+  lo vea podría aplicárselo sin pedirlo. Por eso el mapeo vive aquí, en build,
+  y `entradas` más abajo reconstruye cada descuento SIN el campo `codigo`.
+*/
+const MENSAJE_POR_CODIGO: Record<string, string> = {
+  SOCIO: MENSAJES.descuentoSocioIPCI,
+  COMUNIDAD: MENSAJES.descuentoEstudiante,
+};
+
+const entradas = boletos.map((boleto) => ({
+  ...boleto,
+  // precio null es un estado válido: la tarjeta muestra "Por definir".
+  precioTexto: boleto.precio == null ? null : formatoNumero.format(boleto.precio),
+  /*
+    `checkoutUrl` es lo ÚNICO que decide si el botón compra o avisa. Un boleto
+    agotado no compra aunque haya pasarela, de ahí que se exijan las dos cosas.
+
+    Hasta ahora esta condición no existía: el componente pintaba siempre el
+    <button> con aviso, y el bloque de "sustituir cuando exista la pasarela"
+    era un COMENTARIO, no código. Rellenar el JSON no habría cambiado nada.
+  */
+  compraAbierta: Boolean(boleto.disponible && boleto.checkoutUrl),
+  /*
+    Reconstruido a propósito, campo a campo, y no un spread: un `...d` habría
+    colado `codigo` (y `descuento`, la resta en pesos) al objeto que consume
+    la plantilla. Verificado en el HTML compilado: ni "SOCIO" ni "COMUNIDAD"
+    aparecen en dist/index.html.
+  */
+  descuentos: (boleto.descuentos ?? []).map((d) => ({
+    nombre: d.nombre,
+    final: d.final,
+    enlaceWhatsapp: construirEnlaceWhatsapp(
+      MENSAJE_POR_CODIGO[d.codigo] ?? MENSAJES.descuentoGeneral
+    ),
+  })),
+}));
+---
+
+<section class="boletos" id="boletos">
+  <div class="boletos__inner">
+    <header class="boletos__head">
+      <p class="boletos__eyebrow" data-anim>Boletos</p>
+      <h2 class="boletos__titulo" data-anim>Aparta tu lugar</h2>
+      <p class="boletos__lead" data-anim>
+        Un solo día, un solo boleto: {fechaLarga} en {site.ciudad}.
+      </p>
+    </header>
+
+    {entradas.map((boleto) => (
+      <article
+        class="tarjeta"
+        data-anim
+        data-agotado={boleto.disponible ? undefined : 'true'}
+      >
+        <div class="tarjeta__halo" aria-hidden="true"></div>
+
+        {/*
+          TARJETA PARTIDA EN DOS MITADES.
+
+          Izquierda: el precio, dominante, sobre --accent. Es lo primero que se
+          lee — antes iba en el mismo color que todo lo demás y la tarjeta se
+          leía como una lista con un número arriba.
+
+          Derecha: qué incluye y el botón, JUSTO detrás del último punto.
+
+          En móvil se apilan (precio arriba, lista y botón abajo) y por eso
+          desapareció el CTA duplicado de cabecera que había aquí: existía solo
+          porque el botón caía 628px por debajo del precio y no había forma de
+          ver los dos a la vez. Con el precio en su propio panel compacto esa
+          distancia se desploma, así que el duplicado sobra — y un CTA repetido
+          dos veces en la misma tarjeta era ruido, no ayuda.
+        */}
+        <div class="tarjeta__split">
+          <div class="panel-precio">
+            <div class="tarjeta__encabezado">
+              <h3 class="tarjeta__nombre">{boleto.nombre}</h3>
+              {!boleto.disponible && <span class="tarjeta__etiqueta">Agotado</span>}
+            </div>
+
+            {boleto.precioTexto ? (
+              <p class="precio">
+                <span class="precio__simbolo" aria-hidden="true">$</span>
+                <span class="precio__valor" aria-hidden="true">{boleto.precioTexto}</span>
+                <span class="precio__moneda" aria-hidden="true">{boleto.moneda}</span>
+                {/*
+                  El precio se lee entero de una vez, sin deletrear los trozos.
+                  Los tres tramos visuales van en aria-hidden: sin eso el lector
+                  recitaba «699 MXN 699 pesos MXN» —los trozos y luego la frase—.
+                  Mismo criterio que BarraCompra.astro.
+                */}
+                <span class="sr-only">
+                  {boleto.precioTexto} pesos {boleto.moneda}
+                </span>
+              </p>
+            ) : (
+              <p class="precio precio--pendiente">Por definir</p>
+            )}
+
+            <p class="tarjeta__nota">Precio por persona · Cupo limitado</p>
+
+            {/*
+              DESCUENTOS: mismo checkout, distinto código de promoción. No son
+              boletos aparte —boleto.checkoutUrl es el único enlace de compra
+              que existe, para los tres precios— así que aquí solo se enseña
+              la cifra final y el código; el enlace real vive en el CTA de la
+              mitad derecha.
+
+              Van DEBAJO del precio principal, en el mismo panel de acento
+              pero más pequeños y sin botón propio: es información de precio,
+              no una segunda decisión que compita con "Comprar mi boleto".
+            */}
+            {boleto.descuentos?.length > 0 && (
+              <ul class="descuentos" role="list">
+                {boleto.descuentos.map((d) => (
+                  <li class="descuentos__item">
+                    <p class="descuentos__precio">
+                      <span aria-hidden="true">
+                        <span class="descuentos__simbolo">$</span>
+                        {formatoNumero.format(d.final)}
+                      </span>
+                      <span class="sr-only">
+                        {formatoNumero.format(d.final)} pesos {boleto.moneda}
+                      </span>
+                      <span class="descuentos__etiqueta">{d.nombre}</span>
+                    </p>
+                    {d.enlaceWhatsapp ? (
+                      <p class="descuentos__nota">
+                        <a
+                          class="descuentos__enlace"
+                          href={d.enlaceWhatsapp}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Solicita tu código por WhatsApp
+                        </a>
+                      </p>
+                    ) : (
+                      // Sin número de WhatsApp configurado no se promete un
+                      // canal que no existe (mismo criterio que el aviso de
+                      // arriba: prometer sin poder cumplir es peor que callar).
+                      <p class="descuentos__nota">Escríbenos para solicitar tu código</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div class="panel-detalle">
+          <ul class="incluye" role="list">
+            {boleto.incluye.map((punto) => (
+              <li class="incluye__item" data-anim-punto>
+                <svg
+                  class="incluye__check"
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m4.8 12.6 4.7 4.7L19.2 7"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                {/* conConteo: el primer punto lleva {conferencias}, que sale
+                    de contar las ponencias de programa.json. */}
+                <span>{conConteo(punto)}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/*
+            TRES ESTADOS, y los tres salen de boletos.json:
+
+            1. Con `checkoutUrl` y disponible → ENLACE real al checkout.
+            2. Disponible pero sin `checkoutUrl` → botón que avisa de que la
+               venta todavía no abre. No simula una compra ni manda a una
+               página inexistente.
+            3. Agotado → botón inerte.
+
+            PAGOS: es un Payment Link hospedado por Stripe, sin backend. Por
+            eso `priceId` sigue en null: ese campo solo haría falta para crear
+            una Checkout Session por API, que aquí no existe.
+          */}
+          {boleto.compraAbierta ? (
+            <a
+              class="cta"
+              href={boleto.checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Comprar mi boleto
+              <span class="sr-only">
+                (abre el pago seguro en una pestaña nueva)
+              </span>
+            </a>
+          ) : boleto.disponible ? (
+            <button class="cta" type="button" data-comprar>
+              Comprar mi boleto
+            </button>
+          ) : (
+            <button class="cta" type="button" disabled>
+              Agotado
+            </button>
+          )}
+
+          {boleto.compraAbierta && (
+            <p class="tarjeta__seguro">
+              Pago con tarjeta u OXXO, procesado por Stripe. Recibes la
+              confirmación por correo; si pagas en OXXO, la acreditación puede
+              tardar algunos días.
+            </p>
+          )}
+
+          {/*
+            El aviso solo existe mientras NO haya pasarela. Con el checkout
+            vivo desaparece entero —región, plantilla y respaldo sin JS— en vez
+            de quedarse vacío ocupando marcado.
+          */}
+          {boleto.disponible && !boleto.checkoutUrl && (
+            <>
+              {/*
+                Región viva: existe desde el primer render y arranca VACÍA. Si
+                se insertara junto con el texto, muchos lectores de pantalla no
+                lo anunciarían. Vacía no ocupa alto.
+              */}
+              <p class="aviso" role="status" aria-live="polite" data-aviso></p>
+
+              <template data-aviso-plantilla>
+                {avisoTexto}
+                {whatsappUrl && (
+                  <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
+                    Escribir por WhatsApp
+                  </a>
+                )}
+              </template>
+
+              {/*
+                Sin JS el botón no puede hacer nada, así que el aviso se muestra
+                ya escrito. Con JS manda la región viva de arriba.
+              */}
+              <p class="aviso aviso--sinjs">
+                {avisoTexto}
+                {whatsappUrl && (
+                  <a class="aviso__enlace" href={whatsappUrl} rel="noopener">
+                    Escribir por WhatsApp
+                  </a>
+                )}
+              </p>
+            </>
+          )}
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
+
+<script>
+  const seccion = document.querySelector<HTMLElement>('.boletos');
+
+  // ---------------------------------------------------------------------
+  // Aviso de "todavía no hay pasarela". Sin dependencias: si el chunk de
+  // animaciones no llega, el botón sigue respondiendo.
+  // ---------------------------------------------------------------------
+  (() => {
+    const boton = document.querySelector<HTMLButtonElement>('[data-comprar]');
+    const region = document.querySelector<HTMLElement>('[data-aviso]');
+    const plantilla = document.querySelector<HTMLTemplateElement>(
+      '[data-aviso-plantilla]'
+    );
+    if (!boton || !region || !plantilla) return;
+
+    boton.addEventListener('click', () => {
+      // Ya anunciado: no se repite el trabajo ni se re-anuncia en cada clic.
+      if (region.dataset.state === 'visible') return;
+      region.append(plantilla.content.cloneNode(true));
+      region.dataset.state = 'visible';
+    });
+  })();
+
+  // ---------------------------------------------------------------------
+  // Movimiento: mejora progresiva.
+  // ---------------------------------------------------------------------
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !seccion) return;
+
+      const cabecera = seccion.querySelectorAll<HTMLElement>(
+        '.boletos__head [data-anim]'
+      );
+      const tarjeta = seccion.querySelector<HTMLElement>('.tarjeta[data-anim]');
+      const puntos = seccion.querySelectorAll<HTMLElement>('[data-anim-punto]');
+
+      const tl = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+        scrollTrigger: { trigger: seccion, start: 'top 75%', once: true },
+      });
+
+      tl.fromTo(
+        cabecera,
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.8, stagger: 0.1 }
+      );
+
+      if (tarjeta) {
+        tl.fromTo(
+          tarjeta,
+          { opacity: 0, y: 32, scale: 0.98 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.9 },
+          0.15
+        );
+      }
+
+      /*
+        Los puntos NO llevan data-anim: si lo llevaran, quedarían invisibles por
+        CSS hasta que GSAP los tocara, y aquí van dentro de una tarjeta que ya
+        se anima entera. Se animan desde su estado final, así que un fallo a
+        media carga los deja perfectamente legibles.
+      */
+      tl.from(
+        puntos,
+        { opacity: 0, y: 12, duration: 0.5, stagger: 0.06 },
+        0.5
+      );
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: la sección ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .boletos {
+    padding-block: var(--space-3xl);
+  }
+
+  .boletos__inner {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Encabezado ------------------------------------------------------------- */
+  .boletos__head {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .boletos__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .boletos__titulo {
+    margin-block-start: var(--space-sm);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .boletos__lead {
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  /* Tarjeta ---------------------------------------------------------------- */
+  .tarjeta {
+    position: relative;
+    /*
+      560px era el ancho de la tarjeta de una sola columna. Partida en dos
+      mitades necesita más: a 560 la lista de la derecha se partía en tres
+      líneas por punto.
+    */
+    max-width: 880px;
+    margin-inline: auto;
+    margin-block-start: var(--space-2xl);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background-color: var(--surface);
+    /* overflow clip para que la barra de acento y el panel de precio respeten
+       el radio de las esquinas. */
+    overflow: clip;
+  }
+
+  /*
+    LAS DOS MITADES.
+
+    Apiladas por defecto (móvil) y en dos columnas a partir de 48rem. La
+    columna del precio es la MENOR de las dos: tiene que dominar por tamaño de
+    cifra y por color, no por superficie ocupada — con 50/50 el panel de acento
+    se comía la tarjeta y la lista quedaba apretada.
+  */
+  .tarjeta__split {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 48rem) {
+    .tarjeta__split {
+      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+      /* `stretch` y no `start`: el panel de acento tiene que llegar hasta el
+         borde inferior de la tarjeta, si no queda un escalón de --surface
+         debajo del color. */
+      align-items: stretch;
+    }
+  }
+
+  /* ---------- MITAD IZQUIERDA: el precio ---------- */
+  .panel-precio {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-xl) var(--space-lg);
+    background-color: var(--accent);
+    /*
+      OBLIGATORIO, y es la convención 16. El panel remapea el color de fondo a
+      --accent, pero los hijos que no declaran color propio heredan el valor YA
+      COMPUTADO de body (el claro del tema oscuro) y saldrían casi invisibles
+      sobre el lima. Declararlo aquí hace que hereden la tinta correcta.
+    */
+    color: var(--accent-ink);
+  }
+
+  /* ---------- MITAD DERECHA: qué incluye y el botón ---------- */
+  .panel-detalle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-xl) var(--space-lg);
+  }
+
+  /* Barra de acento: el único punto de la página con este tratamiento. */
+  .tarjeta::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: 2px;
+    background-color: var(--accent);
+  }
+
+  /* Halo muy tenue detrás de la tarjeta: da peso sin ensuciar el fondo. */
+  .tarjeta__halo {
+    position: absolute;
+    z-index: 0;
+    inset-block-start: -20%;
+    inset-inline-start: 50%;
+    width: 70%;
+    aspect-ratio: 1;
+    translate: -50% 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+    opacity: 0.18;
+    filter: blur(70px);
+    pointer-events: none;
+  }
+
+  .tarjeta__encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .tarjeta__nombre {
+    /* Sobre --accent, --text-muted es un gris pensado para fondo oscuro y se
+       pierde. Se atenúa mezclando la TINTA con su propio fondo: mantiene la
+       jerarquía sin salirse de la paleta ni inventar un token. */
+    color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .tarjeta__etiqueta {
+    padding: 0.15rem var(--space-sm);
+    border: 1px solid color-mix(in srgb, var(--accent-ink) 35%, var(--accent));
+    border-radius: var(--radius-pill);
+    color: var(--accent-ink);
+    font-size: var(--step--1);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Precio ----------------------------------------------------------------- */
+  .precio {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    line-height: 1;
+  }
+
+  .precio__simbolo {
+    /* align-self start + fuente menor: el símbolo cuelga de la parte alta de
+       la cifra, como en composición editorial de precios. */
+    align-self: flex-start;
+    margin-block-start: 0.12em;
+    font-size: clamp(1.4rem, 1rem + 1.4vw, 2rem);
+    font-weight: 500;
+  }
+
+  .precio__valor {
+    font-size: clamp(3.5rem, 2.4rem + 3.6vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .precio__moneda {
+    margin-inline-start: var(--space-2xs);
+    color: color-mix(in srgb, var(--accent-ink) 82%, var(--accent));
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+  }
+
+  .precio--pendiente {
+    color: color-mix(in srgb, var(--accent-ink) 82%, var(--accent));
+    font-size: var(--step-2);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .tarjeta__nota {
+    margin-block-start: var(--space-sm);
+    color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
+    font-size: var(--step--1);
+  }
+
+  /* Descuentos --------------------------------------------------------------
+     Deliberadamente menores que .precio en todo: tamaño de cifra, peso y
+     separación. El principal domina por tamaño (convención de esta tarjeta);
+     estos son la letra chica de "también hay estos precios", no una segunda
+     oferta a la misma altura. */
+  .descuentos {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-lg);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid color-mix(in srgb, var(--accent-ink) 20%, transparent);
+  }
+
+  .descuentos__precio {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .descuentos__simbolo {
+    margin-inline-end: 0.05em;
+    font-size: 0.75em;
+    font-weight: 500;
+  }
+
+  .descuentos__etiqueta {
+    margin-inline-start: var(--space-2xs);
+    color: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+  }
+
+  .descuentos__nota {
+    margin-block-start: 0.15rem;
+    color: color-mix(in srgb, var(--accent-ink) 70%, var(--accent));
+    font-size: var(--step--1);
+  }
+
+  .descuentos__enlace {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .descuentos__enlace:hover {
+    color: var(--accent-ink);
+  }
+
+  /* Lista de lo incluido --------------------------------------------------- */
+  .incluye {
+    display: grid;
+    gap: var(--space-md);
+    /*
+      Sin margen, sin padding superior y SIN el borde que tenía antes: los
+      tres existían para separar la lista del precio cuando compartían
+      columna. Con el precio en la otra mitad ese borde separaba de nada, y
+      en móvil —paneles apilados— dibujaba una segunda línea justo debajo
+      del canto del panel de acento. El aire lo pone el gap del panel.
+    */
+    margin-block: 0;
+  }
+
+  .incluye__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-sm);
+    align-items: start;
+  }
+
+  .incluye__check {
+    color: var(--accent);
+    /* Alinea el trazo del check con la primera línea del texto. */
+    margin-block-start: 0.1em;
+  }
+
+  /* CTA -------------------------------------------------------------------- */
+  .cta {
+    display: block;
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step-0);
+    font-weight: 600;
+    text-align: center;
+    transition:
+      filter var(--t-base) var(--ease-out),
+      transform var(--t-fast) var(--ease-out);
+  }
+
+  .cta:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+
+  .cta:disabled {
+    background-color: var(--surface-2);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  .tarjeta__seguro {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+  }
+
+  /*
+    AQUÍ VIVÍA `.cta--movil`, EL CTA DUPLICADO DE CABECERA. Se retiró con el
+    rediseño en dos mitades: existía solo porque en la tarjeta de una columna
+    el botón caía 628px por debajo del precio y no había ningún momento en que
+    se vieran los dos. Ahora el precio ocupa su propio panel compacto y el
+    botón va detrás del último punto, así que la distancia cabe en pantalla
+    sin necesidad de repetir el botón.
+  */
+
+  /* Aviso ------------------------------------------------------------------ */
+  /*
+    Vacía no pinta nada: sin :empty tendría margen y borde permanentes aunque no
+    hubiera mensaje. Así la región viva puede existir desde el principio sin
+    dejar un hueco en la tarjeta.
+  */
+  .aviso:not(:empty) {
+    margin-block-start: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+  }
+
+  .aviso__enlace {
+    display: inline-block;
+    margin-block-start: var(--space-xs);
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  /* Con JS manda la región viva; el aviso estático sobra. */
+  :global([data-js]) .aviso--sinjs {
+    display: none;
+  }
+
+  /* Agotado ---------------------------------------------------------------- */
+  .tarjeta[data-agotado] .tarjeta__halo {
+    display: none;
+  }
+
+  .tarjeta[data-agotado]::before {
+    background-color: var(--border);
+  }
+
+  @media (min-width: 40rem) {
+    .panel-precio,
+    .panel-detalle {
+      padding: var(--space-2xl) var(--space-xl);
+    }
+  }
+</style>

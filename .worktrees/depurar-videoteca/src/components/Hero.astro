@@ -1,0 +1,1689 @@
+---
+import site from '../data/site.json';
+import ponentesHero from '../data/hero-ponentes.json';
+import { asset } from '../scripts/paths.js';
+
+/*
+  El título se parte a mano en líneas en vez de dejar que el navegador decida:
+  el ritmo de las cuatro líneas es parte del diseño, y la animación de entrada
+  las revela una por una. Una línea va en --accent para romper el bloque.
+*/
+const lineasTitulo = [
+  { texto: 'Innovación y', acento: false },
+  { texto: 'productividad', acento: true },
+  { texto: 'para el sector', acento: false },
+  { texto: 'avícola', acento: false },
+];
+
+// El tagline vive en site.json: es dato del evento, no copy del componente.
+const tagline = site.tagline;
+
+/*
+  FONDO DEL HERO. Dos anchos, y el valor se pasa YA ENVUELTO en url().
+
+  Va como variable CSS y no escrito en la hoja porque la ruta tiene que salir
+  de asset() (convención 9): el base cambió una vez y una ruta a mano solo
+  sobrevive por casualidad. Y se envuelve aquí, en el frontmatter, porque
+  `url(var(--x))` NO es CSS válido — no se puede componer un url() desde una
+  variable. La variable tiene que contener la función entera.
+
+  ────────────────────────────────────────────────────────────────────────────
+  NO USAR `define:vars` PARA ESTO. Se probó y se midió: infla el HTML en
+  17 882 BYTES (96 971 → 114 853), porque Astro repite el atributo `style` con
+  las dos variables en CADA elemento del componente, y el hero tiene decenas.
+
+  El coste no era teórico: el LCP en 4G subía ~92 ms **también a 390 px**, un
+  ancho donde la media query no casa y el fondo NI SIQUIERA SE DESCARGA. Ese
+  fue el hilo del que tirar — un LCP que empeora donde la imagen no existe no
+  puede ser culpa de la imagen; era el documento, que bloquea el render.
+
+  Aquí las variables se declaran UNA vez, en el `style` de la propia <section>,
+  y los pseudo-elementos las heredan. Mismo resultado, ~120 bytes.
+  ────────────────────────────────────────────────────────────────────────────
+*/
+const estiloFondoHero = [
+  `--fondo-hero-1280: url("${asset('img/hero/fondo-hero-1280.webp')}")`,
+  `--fondo-hero-1920: url("${asset('img/hero/fondo-hero-1920.webp')}")`,
+].join('; ');
+
+/*
+  Valores iniciales de la cuenta regresiva calculados en build.
+
+  Se pintan ya resueltos —en vez de ceros— para que no haya destello ni salto
+  de layout: el script los corrige en el primer tick. Como el sitio se
+  redespliega en cada push, en producción arrancan prácticamente al día.
+*/
+const restanteMs = Math.max(0, new Date(site.inicio).getTime() - Date.now());
+const totalSegundos = Math.floor(restanteMs / 1000);
+const dosDigitos = (n: number) => String(n).padStart(2, '0');
+
+const unidades = [
+  { clave: 'dias', etiqueta: 'Días', valor: dosDigitos(Math.floor(totalSegundos / 86400)) },
+  { clave: 'horas', etiqueta: 'Horas', valor: dosDigitos(Math.floor((totalSegundos % 86400) / 3600)) },
+  { clave: 'min', etiqueta: 'Min', valor: dosDigitos(Math.floor((totalSegundos % 3600) / 60)) },
+  { clave: 'seg', etiqueta: 'Seg', valor: dosDigitos(totalSegundos % 60) },
+];
+
+/* ===========================================================================
+   COMPOSICIÓN DE PONENTES — DOS RANGOS DE PROFUNDIDAD
+
+   Todo se DERIVA de hero-ponentes.json: número de figuras, reparto por filas,
+   posición, escala, opacidad, elevación, z-index, orden de entrada y
+   duraciones de flotación. No hay ni un valor colocado a mano.
+
+   - Con 3 figuras o menos → UNA fila.
+   - Con más de 3          → DOS rangos: frontal (escala 1, línea base abajo)
+                             y fondo (más pequeño, más apagado y con la línea
+                             base ELEVADA, encajado en los huecos de la fila
+                             frontal para que las caras asomen entre hombros).
+
+   Por qué dos rangos y no una fila de seis: en una sola fila la huella
+   horizontal serían 3.5 anchos de figura y, como el tamaño está limitado por
+   el ancho disponible, cada figura ENCOGERÍA. Con dos rangos la huella la
+   marca la fila frontal (~2.16 anchos) y la figura crece.
+   ======================================================================== */
+
+const n = ponentesHero.length;
+
+/*
+  El reparto por filas sale del número de figuras, nunca de una lista escrita.
+
+  La fila frontal se fuerza a cardinalidad IMPAR cuando hay dos rangos, y no
+  es cosmético: `centrar()` coloca al destacado en Math.floor((total−1)/2), que
+  en una fila PAR no es el centro sino la posición de la izquierda. Con n=4
+  eso dejaba al destacado en el borde izquierdo de toda la composición, con el
+  mismo z-index que su vecina —que además le pintaba encima— y entrando el
+  tercero en la animación en vez del primero. Con la fila impar existe un
+  centro de verdad y los tres síntomas desaparecen de raíz.
+
+      n=4 → 3 frontales + 1 de fondo      n=7 → 5 + 2
+      n=5 → 3 + 2                         n=8 → 5 + 3
+      n=6 → 3 + 3  (sin cambio)
+*/
+const DOS_RANGOS = n > 3;
+const mitad = Math.ceil(n / 2);
+const nFrente = DOS_RANGOS ? (mitad % 2 === 0 ? mitad + 1 : mitad) : n;
+
+/*
+  ORDEN DEL JSON = REPARTO. El destacado va al centro de la fila frontal; de
+  los demás, los primeros del array completan la fila FRONTAL y el resto pasa
+  al FONDO. Es deliberado que lo mande el orden del array: así el reparto se
+  cura desde los datos (ver «regla de recorte» en CLAUDE.md) sin tocar código.
+*/
+const destacado = ponentesHero.find((p) => p.destacado) ?? ponentesHero[0];
+const resto = ponentesHero.filter((p) => p !== destacado);
+const frenteResto = resto.slice(0, nFrente - 1);
+const fondoLista = resto.slice(nFrente - 1);
+
+/*
+  Coloca al destacado en el centro y reparte el resto alternando hacia afuera.
+  Se hace en build y NO con `order` de CSS: así el orden del DOM puede seguir
+  siendo el orden visual, que es el único orden de tabulación con sentido.
+*/
+function centrar<T>(dest: T, otros: T[], total: number): T[] {
+  const pos: T[] = new Array(total);
+  const c = Math.floor((total - 1) / 2);
+  pos[c] = dest;
+  let izq = c - 1;
+  let der = c + 1;
+  let haciaIzquierda = true;
+  for (const p of otros) {
+    if (haciaIzquierda && izq >= 0) pos[izq--] = p;
+    else if (der < total) pos[der++] = p;
+    else pos[izq--] = p;
+    haciaIzquierda = !haciaIzquierda;
+  }
+  return pos;
+}
+
+const frente = centrar(destacado, frenteResto, nFrente);
+const fondo = fondoLista;
+const nFondo = fondo.length;
+
+/* ---------------------------------------------------------------------------
+   GEOMETRÍA. Las unidades son ANCHOS DE FIGURA (x) y ALTOS DE FIGURA (y), así
+   que todo lo de abajo es adimensional y el tamaño real lo decide el CSS.
+   ------------------------------------------------------------------------ */
+
+/*
+  PASO entre figuras vecinas de la misma fila, en anchos de figura.
+
+  0.5 = los lienzos solapan un 50%, que es lo que hace que los CUERPOS solapen
+  un ~19%. Medido sobre los seis recortes, la silueta ocupa entre el 50.7% y el
+  62.4% del ancho del lienzo; con el 62% de las tres frontales:
+
+      solape_cuerpo = (0.62 − 0.5) / 0.62 = 0.194
+
+  El resto del lienzo es margen transparente, y por eso un solape de lienzo
+  del 20% —lo primero que se probó— dejaba los cuerpos SIN tocarse: el hero se
+  leía como seis recortes en fila en vez de como una composición.
+*/
+const PASO = 0.5;
+
+// Fila de fondo: más pequeña, más apagada y con la línea base elevada.
+const ESC_FONDO = 0.82;
+const OPA_FONDO = 0.78;
+const ELEV_FONDO = 0.186; // en altos de figura
+
+/*
+  La fila de fondo va desplazada MEDIO PASO respecto a la frontal: es lo que
+  la mete en los huecos y deja que las caras asomen entre hombro y hombro.
+  Con un número impar de figuras por fila no existe reparto simétrico —
+  centrarlas pondría una justo detrás del destacado, tapándola—, así que el
+  desplazamiento es siempre hacia el mismo lado y el conjunto se equilibra
+  centrando su caja completa.
+*/
+const DESFASE_FONDO = 0.5;
+
+const proporcion = 56 / 75; // ancho/alto del lienzo, 0.746667
+
+const anchoFrente = (nFrente - 1) * PASO + 1;
+const anchoFondo = nFondo
+  ? (nFondo - 1 + DESFASE_FONDO) * PASO + (1 + ESC_FONDO) / 2
+  : 0;
+const wTotal = +Math.max(anchoFrente, anchoFondo).toFixed(4);
+const hTotal = +(nFondo ? Math.max(1, ELEV_FONDO + ESC_FONDO) : 1).toFixed(4);
+
+// Proporción de la caja del conjunto. De aquí sale su alto a partir del ancho.
+const razonConjunto = +((wTotal * proporcion) / hTotal).toFixed(4);
+
+/*
+  Ancho del conjunto por unidad de ALTO DE FIGURA. Es lo que permite
+  dimensionar POR ALTO: se fija el alto de figura deseado y de aquí sale el
+  ancho que hace falta, que luego el CSS topa con `min(100%, …)`.
+*/
+const anchoPorAltoFigura = +(wTotal * proporcion).toFixed(4);
+
+const centroConjunto = wTotal / 2;
+
+type Figura = (typeof ponentesHero)[number];
+const enFila = (lista: Figura[], fila: 'frente' | 'fondo') =>
+  lista.map((p, i) => {
+    const x = fila === 'frente' ? i * PASO : (i + DESFASE_FONDO) * PASO;
+    const esFondo = fila === 'fondo';
+    // Distancia al centro de SU fila, normalizada: manda escala fina y z.
+    const medio = (lista.length - 1) / 2;
+    const dist = medio === 0 ? 0 : Math.abs(i - medio) / medio;
+    return {
+      p,
+      fila,
+      x: +x.toFixed(4),
+      centro: +(x + 0.5).toFixed(4),
+      esc: esFondo ? ESC_FONDO : 1,
+      opa: esFondo ? OPA_FONDO : 1,
+      elev: esFondo ? ELEV_FONDO : 0,
+      /*
+        z-index calculado, nunca a mano: toda la fila frontal por delante de
+        todo el fondo, y dentro de cada fila el centro por delante. Que la
+        fila mande sobre la distancia es lo que impide que una figura de
+        fondo se cuele delante de una frontal al activarse.
+      */
+      z: (esFondo ? 10 : 100) - Math.round(dist * 5),
+      dist,
+    };
+  });
+
+/*
+  Orden del DOM = orden VISUAL de izquierda a derecha, mezclando las dos filas.
+  Es el único orden de tabulación que no hace saltar el foco por la pantalla.
+  El apilado lo resuelve z-index, no el orden del marcado.
+*/
+const ordenVisual = [...enFila(frente, 'frente'), ...enFila(fondo, 'fondo')].sort(
+  (a, b) => a.centro - b.centro
+);
+
+/*
+  ZONA SENSIBLE al puntero, y por qué no vale la caja de la figura.
+
+  Los lienzos solapan un 50% y además traen ~38% de margen transparente. Con
+  la caja entera como área sensible, la figura con más z-index se queda el
+  puntero sobre el margen VACÍO que le tapa a la vecina: medido, de seis
+  figuras solo respondían dos, y al pasar el ratón por encima de una se
+  encendía otra.
+
+  El conjunto se reparte en bandas verticales: cada figura manda desde el
+  punto medio con su vecina de la izquierda hasta el punto medio con la de la
+  derecha, y las de los extremos se estiran hasta el borde. Es una partición
+  completa —sin huecos ni solapes— así que cada punto del conjunto pertenece
+  siempre a una figura y solo a una, sin depender del z-index.
+*/
+/*
+  El orden de entrada se mide contra la DESTACADA, no contra el centro
+  geométrico de la caja. La diferencia importa: la fila de fondo va desplazada
+  medio paso, así que el centro de la caja no coincide con ninguna figura y en
+  varias configuraciones caía más cerca de una de fondo. El reveal arrancaba
+  entonces por una figura encogida y apagada, contradiciendo la premisa del
+  escalonado, que es «primero la protagonista y desde ella hacia afuera».
+*/
+const centroDestacada =
+  ordenVisual.find((f) => f.p.destacado)?.centro ?? centroConjunto;
+
+const figuras = ordenVisual.map((f, i) => {
+  const prev = ordenVisual[i - 1];
+  const sig = ordenVisual[i + 1];
+  const bordeIzq = prev ? (prev.centro + f.centro) / 2 : 0;
+  const bordeDer = sig ? (f.centro + sig.centro) / 2 : wTotal;
+  return {
+    ...f,
+    i,
+    // Coordenadas de la banda RELATIVAS a la caja de la figura, que mide
+    // exactamente un ancho de lienzo.
+    zonaX: +(bordeIzq - f.x).toFixed(4),
+    zonaW: +(bordeDer - bordeIzq).toFixed(4),
+    // Distancia a la DESTACADA: manda el orden de entrada.
+    distConjunto: Math.abs(f.centro - centroDestacada),
+  };
+});
+
+// Entrada escalonada del centro hacia afuera. Se calcula aquí y viaja como
+// data-fig-orden para que el JS no tenga que volver a medir nada.
+const ordenEntrada = new Map(
+  [...figuras]
+    .sort((a, b) => a.distConjunto - b.distConjunto)
+    .map((f, rank) => [f.i, rank])
+);
+
+// Dimensiones reales del WebP. Con valores que no correspondan, el navegador
+// reserva una caja con la proporción equivocada y reaparece el salto de layout.
+const IMG_W = 672;
+const IMG_H = 900;
+---
+
+<section class="hero" id="inicio" style={estiloFondoHero}>
+  <div class="hero__inner">
+    <div class="hero__content">
+      {/*
+        El eyebrow va partido en DOS PIEZAS, y no es cosmético.
+
+        Con el texto corrido, «TEHUACÁN, PUEBLA · 7 DE AGOSTO 2026» cabía en
+        una línea con la fuente de respaldo y se partía en dos al entrar Inter
+        Variable, empujando el título 22px hacia abajo. Medido en 4G a 390px:
+        eyebrow de 21px a 43px y CLS de 0.028, cuatrocientas veces el de
+        escritorio.
+
+        Partiéndolo por CSS el número de líneas lo decide el layout y no la
+        métrica de la fuente, así que no hay reflow posible. De paso el corte
+        cae donde tiene sentido —lugar arriba, fecha abajo— en vez de a mitad
+        de «7 DE / AGOSTO», que es donde caía solo.
+      */}
+      <p class="hero__eyebrow" data-anim>
+        <span class="hero__eyebrow-parte">{site.ciudad}</span>
+        <span class="hero__eyebrow-sep" aria-hidden="true"> · </span>
+        <span class="hero__eyebrow-parte">7 de agosto 2026</span>
+      </p>
+
+      <h1 class="hero__title">
+        {lineasTitulo.map((linea) => (
+          <span
+            class:list={['hero__line', linea.acento && 'hero__line--acento']}
+            data-anim
+          >
+            {linea.texto}
+          </span>
+        ))}
+      </h1>
+
+      <p class="hero__tagline" data-anim>{tagline}</p>
+
+      {/*
+        La cuenta regresiva es información derivada de una fecha que ya se
+        anuncia arriba en texto. Se marca decorativa para no bombardear a los
+        lectores de pantalla con una actualización cada segundo.
+      */}
+      <div class="countdown" data-anim aria-hidden="true">
+        {unidades.map((unidad) => (
+          <div class="countdown__unit">
+            <span class="countdown__value" data-cd={unidad.clave}>{unidad.valor}</span>
+            <span class="countdown__label">{unidad.etiqueta}</span>
+          </div>
+        ))}
+      </div>
+
+      <div class="hero__ctas" data-anim>
+        <a class="btn btn--primary" href="#boletos">Comprar mi boleto</a>
+        <a class="btn btn--ghost" href="#programa">Ver programa</a>
+      </div>
+    </div>
+
+    <div class="hero__media" data-hero-media>
+      <div class="hero__halo" aria-hidden="true"></div>
+
+      <div class="hero__float" data-hero-float>
+        <ul
+          class="conjunto"
+          style={`--w-total: ${wTotal}; --h-total: ${hTotal}; --razon: ${razonConjunto}; --ancho-por-alto: ${anchoPorAltoFigura}`}
+          data-conjunto
+        >
+          {figuras.map((f) => (
+            <li
+              class:list={['pieza', `pieza--${f.fila}`]}
+              style={`--x: ${f.x}; --esc: ${f.esc}; --opa: ${f.opa}; --elev: ${f.elev}; --z: ${f.z}; --zona-x: ${f.zonaX}; --zona-w: ${f.zonaW}`}
+              data-pieza
+            >
+              {/*
+                RESUELTO EN LA FASE 3. La <figure> va envuelta en un enlace a
+                la ficha del ponente, y por eso YA NO LLEVA `tabindex="0"`: el
+                enlace aporta el foco y dejar los dos daría dos paradas de
+                tabulación por ponente.
+
+                El destino existe siempre, con y sin JavaScript: cada ficha es
+                un <dialog open> que sin JS se pinta como un bloque normal. Con
+                JS, Ponentes.astro intercepta el clic y la abre como modal.
+
+                Los seis slug se cotejan contra ponentes.json; si uno no
+                empatara, el enlace no moriría en silencio: el script no
+                encuentra la ficha, NO hace preventDefault y el navegador salta
+                al ancla, que es el comportamiento correcto por defecto.
+              */}
+              <a class="figura__enlace" href={`#ponente-${f.p.slug}`}>
+              <figure class="figura" data-fig-orden={ordenEntrada.get(f.i)}>
+                {/*
+                  Único elemento sensible al puntero de toda la figura. Ver la
+                  explicación de las bandas en el frontmatter.
+                */}
+                <span class="figura__zona" aria-hidden="true"></span>
+                <div class="figura__profundidad">
+                  <div class="figura__flota" data-fig-flota>
+                    <div class="figura__entrada" data-fig-entrada data-anim>
+                      <div class="figura__marco" data-fig-marco>
+                        {/*
+                          PRIORIDAD ALTA = LA FILA FRONTAL ENTERA, no solo la
+                          destacada.
+
+                          Al crecer las figuras, el LCP dejó de ser el título y
+                          pasó a ser una imagen: las tres frontales se dibujan
+                          a ~116 000 px² cada una, contra los ~49 000 px² de la
+                          línea del título. Son tres candidatas de área casi
+                          idéntica, así que el LCP lo fija la ÚLTIMA en llegar.
+                          Medido: con prioridad alta solo en la destacada,
+                          ponente-02 pintaba a 432 ms pero ponente-01 —96 px²
+                          más grande y en prioridad `auto`— llegaba a 916 ms y
+                          se quedaba con el LCP.
+
+                          Las de fondo se quedan en `auto` a propósito: van a
+                          escala 0.82, o sea un 67% del área, y no pueden ser
+                          candidatas al LCP. `eager` en las seis porque todas
+                          están sobre el pliegue.
+                        */}
+                        <img
+                          class="figura__img"
+                          src={asset(f.p.img)}
+                          alt={`Retrato de ${f.p.nombre}`}
+                          width={IMG_W}
+                          height={IMG_H}
+                          loading="eager"
+                          fetchpriority={f.fila === 'frente' ? 'high' : 'auto'}
+                          decoding="async"
+                          data-fig-img
+                        />
+                        {/*
+                          Si la imagen no carga, manda este marco punteado con
+                          el nombre dentro. Nunca un icono de imagen rota.
+                        */}
+                        <div class="figura__placeholder">
+                          <span>{f.p.nombre}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/*
+                  La etiqueta es <figcaption>: está SIEMPRE en el árbol de
+                  accesibilidad, aunque visualmente esté oculta en reposo. Un
+                  lector de pantalla anuncia nombre y tema al llegar a la
+                  figura sin depender del hover, que para él no existe.
+                */}
+                <figcaption class="figura__etiqueta">
+                  <span class="figura__texto">
+                    <span class="figura__nombre">{f.p.nombre}</span>
+                    <span class="figura__tema">{f.p.tema}</span>
+                  </span>
+                  <span class="figura__guia" aria-hidden="true"></span>
+                </figcaption>
+              </figure>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import site from '../data/site.json';
+
+  /*
+    Nada de esto depende de GSAP. La cuenta regresiva y el reemplazo de las
+    imágenes se resuelven primero y sin imports pesados: si el chunk de
+    animaciones (~132 KB) no llega, el hero sigue siendo correcto.
+  */
+  const hero = document.querySelector<HTMLElement>('.hero');
+  const raiz = document.documentElement;
+
+  /* =======================================================================
+     QUIÉN ES DUEÑO DE LA ENTRADA DEL HERO
+
+     La entrada animada es mejora progresiva, no requisito: nadie debería
+     esperar a un chunk de 48 KB para ver una imagen que su navegador ya
+     descargó. Medido en 4G lento: la imagen que marca el LCP acababa de
+     bajar a 1640 ms, pero el LCP se registraba a 2516 ms porque las figuras
+     seguían en opacity 0 esperando a GSAP, que llegaba a 2423 ms.
+
+     Hay un único dueño, decidido una sola vez:
+
+       'gsap' — llegó a tiempo. Corre el escalonado del centro hacia afuera,
+                exactamente igual que antes.
+       'css'  — llegó tarde. El CSS revela cada figura en cuanto carga SU
+                imagen, y GSAP, cuando aparezca, RENUNCIA a la entrada y solo
+                engancha flotación y parallax desde donde esté cada figura.
+
+     REGLA DE ORO: una figura ya visible no se re-anima jamás. Si GSAP
+     reclamara la entrada después de que el CSS la haya corrido, las figuras
+     saltarían 40px hacia abajo para volver a subir — peor que el retraso.
+     De ahí que el dueño se decida una vez y no se pueda cambiar.
+
+     EL PLAZO SE MIDE DESDE EL INICIO DE LA NAVEGACIÓN, no desde que corre
+     este script, y no desde que carga la primera imagen. Con «la primera
+     imagen» como disparador el CSS ganaría SIEMPRE: en red rápida las
+     imágenes están listas a ~43 ms y este módulo corre a ~298 ms, así que
+     `img.complete` ya es true al arrancar y el escalonado de GSAP no se
+     vería nunca. Con 700 ms, GSAP —listo a ~300 ms en red rápida— gana con
+     2.3x de margen, y en 4G —2400 ms— pierde, que es justo lo que se busca.
+     ==================================================================== */
+  const PLAZO_ENTRADA = 700;
+
+  const revelar = (el: HTMLElement | null) => {
+    if (el) el.dataset.revelada = '1';
+  };
+
+  const reclamarEntradaCss = () => {
+    if (raiz.dataset.heroEntrada || !hero) return; // ya hay dueño
+    raiz.dataset.heroEntrada = 'css';
+
+    // El texto no espera a nada: está parseado desde el primer byte.
+    hero
+      .querySelectorAll<HTMLElement>('.hero__content [data-anim]')
+      .forEach(revelar);
+
+    // Las figuras que ya tengan su imagen; el resto, al cargar.
+    hero
+      .querySelectorAll<HTMLElement>('[data-fig-marco][data-state="loaded"]')
+      .forEach((marco) => revelar(marco.closest<HTMLElement>('[data-fig-entrada]')));
+  };
+
+  const revelarFiguraSiTocaAlCss = (marco: HTMLElement) => {
+    if (raiz.dataset.heroEntrada !== 'css') return;
+    revelar(marco.closest<HTMLElement>('[data-fig-entrada]'));
+  };
+
+  setTimeout(
+    reclamarEntradaCss,
+    Math.max(0, PLAZO_ENTRADA - performance.now())
+  );
+
+  // -----------------------------------------------------------------------
+  // Cuenta regresiva. Corre siempre, con o sin movimiento reducido.
+  // -----------------------------------------------------------------------
+  (() => {
+    const objetivo = new Date(site.inicio).getTime();
+    const campos = new Map<string, HTMLElement>();
+    for (const clave of ['dias', 'horas', 'min', 'seg']) {
+      const el = document.querySelector<HTMLElement>(`[data-cd="${clave}"]`);
+      if (el) campos.set(clave, el);
+    }
+    if (!campos.size) return;
+
+    const pinta = (clave: string, valor: number) => {
+      const el = campos.get(clave);
+      const texto = String(valor).padStart(2, '0');
+      // Solo se escribe si cambió: evita trabajo de layout cada segundo.
+      if (el && el.textContent !== texto) el.textContent = texto;
+    };
+
+    const tick = () => {
+      // Fecha inválida en site.json: ceros en vez de "NaN" en pantalla.
+      const restante = Number.isNaN(objetivo)
+        ? 0
+        : Math.max(0, objetivo - Date.now());
+      const seg = Math.floor(restante / 1000);
+
+      pinta('dias', Math.floor(seg / 86400));
+      pinta('horas', Math.floor((seg % 86400) / 3600));
+      pinta('min', Math.floor((seg % 3600) / 60));
+      pinta('seg', seg % 60);
+
+      return restante;
+    };
+
+    if (tick() === 0) return; // El evento ya pasó: ceros fijos, sin intervalo.
+    const id = setInterval(() => {
+      if (tick() === 0) clearInterval(id);
+    }, 1000);
+  })();
+
+  // -----------------------------------------------------------------------
+  // Figuras: nunca debe verse un icono de imagen rota.
+  // Es POR FIGURA, no global: que falle una no debe apagar a las demás.
+  // -----------------------------------------------------------------------
+  (() => {
+    for (const marco of document.querySelectorAll<HTMLElement>('[data-fig-marco]')) {
+      const img = marco.querySelector<HTMLImageElement>('[data-fig-img]');
+      if (!img) continue;
+
+      const cargada = () => {
+        marco.dataset.state = 'loaded';
+        // Si la entrada es del CSS, esta figura aparece ya. Si es de GSAP,
+        // no se toca: la revelará el escalonado.
+        revelarFiguraSiTocaAlCss(marco);
+      };
+      const fallida = () => {
+        marco.dataset.state = 'failed';
+        // Aunque la imagen no llegue, la caja debe aparecer: dentro está el
+        // marco punteado con el nombre, que es contenido, no un hueco.
+        revelarFiguraSiTocaAlCss(marco);
+      };
+
+      if (img.complete) {
+        /*
+          Ya resuelta antes de que corriera este script, así que aparece SIN
+          fundido: no hay nada que suavizar —el píxel ya estaba decodificado
+          antes del primer pintado— y el fundido sí costaba caro. Medido: las
+          seis imágenes acaban de bajar a los 43 ms, pero con la transición de
+          480 ms el LCP se iba a 896 ms, porque desde que las figuras crecieron
+          el elemento LCP ES una de ellas y Chrome no lo da por pintado hasta
+          que el fundido termina.
+
+          El fundido sigue vivo para el caso que lo justificaba: una imagen que
+          llega tarde y entra sobre el marco punteado.
+        */
+        if (img.naturalWidth > 0) {
+          marco.dataset.instantanea = '1';
+          cargada();
+        } else fallida();
+      } else {
+        img.addEventListener('load', cargada, { once: true });
+        img.addEventListener('error', fallida, { once: true });
+      }
+    }
+  })();
+
+  // -----------------------------------------------------------------------
+  // Movimiento: mejora progresiva. Nada corre con prefers-reduced-motion, ni
+  // si el chunk de animaciones falla al cargar.
+  // -----------------------------------------------------------------------
+  import('../scripts/animations.js')
+    .then(({ initMotion }) => {
+      const { gsap, reduced } = initMotion();
+      if (reduced || !gsap || !hero) return;
+
+      const media = hero.querySelector<HTMLElement>('[data-hero-media]');
+      const entradas = hero.querySelectorAll<HTMLElement>('.hero__content [data-anim]');
+
+      /*
+        Las figuras se ordenan por data-fig-orden (0 = la destacada), calculado
+        en build. Así el stagger recorre el conjunto del centro hacia afuera
+        sin que el JS tenga que medir distancias otra vez.
+      */
+      const figuras = [...hero.querySelectorAll<HTMLElement>('.figura')].sort(
+        (a, b) => Number(a.dataset.figOrden ?? 0) - Number(b.dataset.figOrden ?? 0)
+      );
+      const cajasEntrada = figuras
+        .map((f) => f.querySelector<HTMLElement>('[data-fig-entrada]'))
+        .filter((el): el is HTMLElement => el !== null);
+
+      /*
+        Flotación permanente, una timeline INDEPENDIENTE por figura.
+
+        Duración y desfase se derivan del índice de entrada, así que con seis
+        figuras salen seis periodos distintos (5.4 → 9.65 s) y seis arranques
+        distintos. Si subieran a la vez, el conjunto se leería como una sola
+        imagen moviéndose.
+
+        Las de FONDO flotan con menos amplitud: el paralaje de amplitud es lo
+        que refuerza que están más lejos.
+
+        Arranca SIEMPRE desde donde esté la figura —`gsap.to` lee el valor
+        actual— así que sirve igual venga la entrada de GSAP o del CSS. No
+        reposiciona nada.
+      */
+      const arrancarFlotacion = () => {
+        figuras.forEach((figura, i) => {
+          const flota = figura.querySelector<HTMLElement>('[data-fig-flota]');
+          if (!flota) return;
+
+          const esFondo = figura.closest('.pieza--fondo') !== null;
+          const amplitud = esFondo ? 7 : 10;
+          const duracion = 5.4 + i * 0.85;
+          const desfase = i * 0.37;
+
+          /*
+            Tramo de entrada de 0 a −amplitud antes del ciclo: arrancar
+            directamente en el extremo daría un salto seco.
+          */
+          gsap.to(flota, {
+            y: -amplitud,
+            duration: 1.5,
+            delay: desfase,
+            ease: 'sine.out',
+            onComplete: () => {
+              gsap.fromTo(
+                flota,
+                { y: -amplitud },
+                {
+                  y: amplitud,
+                  duration: duracion / 2,
+                  ease: 'sine.inOut',
+                  yoyo: true,
+                  repeat: -1,
+                }
+              );
+            },
+          });
+        });
+      };
+
+      // Parallax: el conjunto se queda atrás respecto al texto al hacer scroll.
+      const arrancarParallax = () => {
+        if (!media) return;
+        gsap.to(media, {
+          yPercent: 12,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 0.5,
+          },
+        });
+      };
+
+      /*
+        GSAP LLEGÓ TARDE: el CSS ya reveló el hero. Se RENUNCIA a la entrada.
+
+        Ni un `fromTo`, ni un `from`, ni un `set`: cualquiera de los tres
+        volvería a poner las figuras en opacity 0 con y=40 para animarlas otra
+        vez, y el usuario vería la composición saltar hacia abajo y volver a
+        subir. Solo se enganchan flotación y parallax, que parten del estado
+        actual y no lo tocan.
+      */
+      if (raiz.dataset.heroEntrada === 'css') {
+        arrancarFlotacion();
+        arrancarParallax();
+        return;
+      }
+
+      raiz.dataset.heroEntrada = 'gsap';
+
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      // Eyebrow, cada línea del título, tagline, cuenta regresiva y botones.
+      tl.fromTo(
+        entradas,
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.8, stagger: 0.08 }
+      );
+
+      if (cajasEntrada.length) {
+        /*
+          LAS FIGURAS ABREN EL TIMELINE, no lo cierran.
+
+          Desde que crecieron, el elemento LCP de la página ES una de las
+          figuras frontales, así que el LCP mide cuándo acaba de aparecer la
+          última. Con la entrada arrancando a 0.2 s, 1.1 s de duración y 0.12
+          de escalonado, la sexta no estaba puesta hasta pasado un segundo y
+          medio. Entrando en el arranque y algo más rápido, el LCP baja sin
+          perder el escalonado del centro hacia afuera, que es lo que hace
+          legible la composición.
+        */
+        tl.fromTo(
+          cajasEntrada,
+          { opacity: 0, y: 40, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.75,
+            stagger: 0.09,
+            onComplete: arrancarFlotacion,
+          },
+          0
+        );
+      } else {
+        arrancarFlotacion();
+      }
+
+      arrancarParallax();
+    })
+    .catch(() => {
+      /* Sin capa de movimiento: el hero ya está en su estado final. */
+    });
+</script>
+
+<style>
+  .hero {
+    display: flex;
+    min-height: 100svh;
+    align-items: center;
+    /*
+      Ver más abajo: en pantallas BAJAS el min-height se rebaja. Un teléfono
+      girado tiene ~430px de alto y exigir 100svh dejaba los CTAs en y=567,
+      fuera de pantalla.
+    */
+    /* clip y no hidden: no crea contenedor de scroll y evita desbordes
+       horizontales del halo, del parallax y del sangrado del conjunto. */
+    overflow: clip;
+    padding-block: calc(var(--nav-h) + var(--space-xl)) var(--space-2xl);
+  }
+
+  /* =========================================================================
+     FONDO DEL HERO — SOLO ESCRITORIO
+
+     Tres capas, de abajo arriba:
+
+       imagen  (::before)  fotografía, difuminada a transparente en los 4 bordes
+       velo    (::after)   degradado oscuro, MÁS DENSO A LA IZQUIERDA
+       figuras             intactas, con su z-index propio, muy por encima
+
+     SE PINTA EN CSS Y NO CON UN <img> A PROPÓSITO. Así degrada solo: si el
+     archivo falta o da 404 no se ve un icono de imagen rota, se ve el --bg de
+     siempre y la sección sigue igual de legible. Es la misma razón por la que
+     el halo es un div y no una imagen.
+
+     Y VA DENTRO DE UNA MEDIA QUERY QUE NO CASA EN MÓVIL, que es lo que evita
+     la descarga: un fondo declarado fuera y anulado dentro SÍ se descargaría.
+     En teléfono no existe, así que no toca el LCP donde más caro sale.
+     ====================================================================== */
+  @media (min-width: 48rem) {
+    .hero {
+      position: relative;
+      /*
+        Las dos capas van en z-index negativo para quedar por debajo del
+        contenido sin tener que tocar el z-index de nada más. `isolation`
+        acota ese apilado al hero: sin ella, un z-index negativo puede colarse
+        por detrás del fondo de un ancestro y desaparecer.
+      */
+      isolation: isolate;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* CAPA DE ABAJO — la fotografía. */
+    .hero::before {
+      z-index: -2;
+      background-image: var(--fondo-hero-1280);
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      /*
+        MÁSCARA: se difumina a transparente en los cuatro bordes, para que la
+        foto no termine en un canto recto contra el --bg. Son dos degradados
+        cruzados y se INTERSECAN (mask-composite: intersect), no se suman: con
+        la suma por defecto, cada eje "rescata" lo que el otro había ocultado y
+        las esquinas se quedaban opacas, que es justo lo que había que evitar.
+      */
+      mask-image:
+        linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%),
+        linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
+      mask-composite: intersect;
+      -webkit-mask-image:
+        linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%),
+        linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
+      -webkit-mask-composite: source-in;
+    }
+
+    /*
+      CAPA DEL MEDIO — el velo.
+
+      Más denso a la IZQUIERDA porque ahí va el título: es la mitad que tiene
+      que leerse, y el contraste del texto no puede depender de qué haya salido
+      en la foto. A la derecha se abre para que la fotografía respire detrás de
+      las figuras. El segundo degradado, vertical, ancla el borde inferior con
+      la sección siguiente.
+
+      Se usa --bg y no un hex: el hero es oscuro en los dos temas y el velo
+      tiene que ser el fondo del tema activo, no un negro suelto.
+    */
+    .hero::after {
+      z-index: -1;
+      background-image:
+        linear-gradient(
+          to right,
+          var(--bg) 0%,
+          color-mix(in srgb, var(--bg) 88%, transparent) 38%,
+          color-mix(in srgb, var(--bg) 62%, transparent) 70%,
+          color-mix(in srgb, var(--bg) 52%, transparent) 100%
+        ),
+        linear-gradient(
+          to bottom,
+          color-mix(in srgb, var(--bg) 70%, transparent) 0%,
+          transparent 35%,
+          transparent 70%,
+          var(--bg) 100%
+        );
+    }
+
+    /*
+      SIN color-mix NO HAY VELO PARCIAL, Y SIN VELO EL TÍTULO QUEDA SOBRE LA
+      FOTO. Es la trampa que ya documentó la nav: como el valor lleva var(), un
+      navegador sin color-mix no descarta la declaración al parsear sino al
+      computar, y cada parada caería a transparent. El respaldo tapa la foto
+      entera con un velo plano: se pierde el efecto, no la legibilidad.
+    */
+    @supports not (background-color: color-mix(in srgb, red 50%, transparent)) {
+      .hero::after {
+        background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 100%);
+        opacity: 0.88;
+      }
+    }
+  }
+
+  /*
+    El archivo de 1920 solo entra donde de verdad se ve. Un portátil de 1280
+    se queda con el de 1280 y descarga 12.8 KB en vez de 24.2.
+  */
+  @media (min-width: 90rem) {
+    .hero::before {
+      background-image: var(--fondo-hero-1920);
+    }
+  }
+
+  .hero__inner {
+    display: grid;
+    width: 100%;
+    max-width: var(--container);
+    align-items: center;
+    /*
+      2.5rem en TODO el rango, también en escritorio, donde antes eran 4rem.
+      Estrechar el canal ensancha las DOS columnas a la vez: la de texto pasa
+      de 524 a 537px —con más margen que antes para que «para el sector» no se
+      parta al entrar la fuente display, que es lo que dispara el CLS— y la de
+      figuras gana los mismos 13px. Por eso ya no hay override en el @media de
+      62rem: sería una declaración idéntica a esta.
+    */
+    gap: var(--space-xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* =========================================================================
+     ENTRADA RECLAMADA POR EL CSS
+
+     Solo se activa cuando GSAP llegó tarde y el script puso
+     data-hero-entrada="css" en <html>. Ver el porqué en el <script>.
+
+     Con la entrada de GSAP estas reglas no existen, así que no hay dos
+     sistemas peleándose por el mismo elemento — y, sobre todo, ningún
+     `transition` vive en un elemento que GSAP esté animando fotograma a
+     fotograma, que es la forma clásica de que una flotación salga a tirones.
+
+     El desplazamiento es de 12px, no de los 40 de GSAP: el CSS entra cuando
+     la red va mal, y ahí un gesto corto se lee mejor que uno largo.
+     ====================================================================== */
+  :global([data-motion='on'][data-hero-entrada='css']) .hero__content [data-anim],
+  :global([data-motion='on'][data-hero-entrada='css']) .figura__entrada {
+    transform: translateY(12px);
+    transition:
+      opacity var(--t-slow) var(--ease-out),
+      transform var(--t-slow) var(--ease-out);
+  }
+
+  :global([data-motion='on'][data-hero-entrada='css'])
+    .hero__content
+    [data-anim][data-revelada],
+  :global([data-motion='on'][data-hero-entrada='css'])
+    .figura__entrada[data-revelada] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Columna de texto ------------------------------------------------------- */
+
+  /* min-width:0 anula el min-width:auto que traen los ítems de grid; sin esto
+     la palabra más larga del título define el ancho de la pista y el reparto
+     52/48 nunca llega a aplicarse. */
+  .hero__content {
+    min-width: 0;
+  }
+
+  .hero__eyebrow {
+    color: var(--accent);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /*
+    Por debajo de 27rem el eyebrow se parte SIEMPRE en dos líneas, decidido
+    por CSS y no por lo que mida la fuente. Es lo que elimina el reflow al
+    entrar Inter Variable. Por encima cabe de sobra en una línea y vuelve a
+    ser texto corrido con su separador.
+  */
+  @media (max-width: 27rem) {
+    .hero__eyebrow-parte {
+      display: block;
+    }
+
+    .hero__eyebrow-sep {
+      display: none;
+    }
+  }
+
+  .hero__title {
+    margin-block-start: var(--space-md);
+    /*
+      Dos restricciones tiran en direcciones opuestas:
+      - El mínimo baja a 2.5rem (no 2.6) para que "para el sector" quepa sin
+        partirse en un viewport de 375px.
+      - El máximo baja a 5rem (no 6) porque a 6rem la palabra "productividad"
+        mide ~611px y NO cabe en el 52% de la columna: como los ítems de grid
+        tienen min-width:auto, el título ensanchaba su pista y el reparto real
+        acababa siendo 61/39 en vez del 52/48 pedido.
+    */
+    font-size: clamp(2.5rem, -0.75rem + 7.5vw, 5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  .hero__line {
+    display: block;
+  }
+
+  .hero__line--acento {
+    color: var(--accent);
+  }
+
+  .hero__tagline {
+    max-width: 46ch;
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  /* Cuenta regresiva ------------------------------------------------------- */
+  .countdown {
+    display: flex;
+    max-width: 25rem;
+    margin-block-start: var(--space-xl);
+  }
+
+  .countdown__unit {
+    flex: 1 1 0;
+    padding-inline: var(--space-sm);
+    text-align: center;
+  }
+
+  .countdown__unit + .countdown__unit {
+    border-inline-start: 1px solid var(--border);
+  }
+
+  /*
+    Reserva de ancho: sin ella el bloque se movía dos veces (cambio de fuente
+    y cambio de número de cifras). 2ch sobre tabular-nums equivale a dos
+    dígitos exactos y deja crecer a tres sin recortar.
+  */
+  .countdown__value {
+    display: inline-block;
+    min-inline-size: 2ch;
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 1.25rem + 2vw, 2.75rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .countdown__label {
+    display: block;
+    margin-block-start: var(--space-xs);
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* Botones ---------------------------------------------------------------- */
+  .hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-xl);
+  }
+
+  .btn {
+    padding: 0.85rem var(--space-lg);
+    border-radius: var(--radius-pill);
+    font-size: var(--step--1);
+    font-weight: 600;
+    transition:
+      transform var(--t-fast) var(--ease-out),
+      background-color var(--t-base) var(--ease-out),
+      border-color var(--t-base) var(--ease-out),
+      filter var(--t-fast) var(--ease-out);
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn--primary {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .btn--primary:hover {
+    filter: brightness(1.08);
+  }
+
+  .btn--ghost {
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .btn--ghost:hover {
+    border-color: var(--primary-bright);
+  }
+
+  /* =========================================================================
+     Columna de figuras
+     ====================================================================== */
+  .hero__media {
+    position: relative;
+  }
+
+  .hero__halo {
+    position: absolute;
+    inset: 0;
+    width: 80%;
+    aspect-ratio: 1;
+    margin: auto;
+    border-radius: 50%;
+    /* Sutil a propósito: solo evita que los recortes floten sobre un plano
+       vacío. Se conserva tal cual desde la Fase 2. */
+    background: radial-gradient(circle, var(--primary) 0%, transparent 68%);
+    opacity: 0.3;
+    filter: blur(56px);
+    pointer-events: none;
+  }
+
+  /* === BASE (móvil): rejilla de retratos ================================= */
+  .conjunto {
+    /*
+      Flex con wrap y no grid a propósito: con un número impar de figuras el
+      sobrante queda CENTRADO en su fila en vez de alineado a la izquierda con
+      un hueco huérfano al lado. Con 6 y 3 columnas salen dos filas llenas;
+      con 3 y 2 columnas, 2+1 centrado.
+    */
+    --cols: 2;
+
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pieza {
+    /* El ancho sale del número de COLUMNAS, no del de figuras: la rejilla se
+       ve igual de ordenada con 3 que con 6. */
+    inline-size: calc((100% - (var(--cols) - 1) * var(--space-md)) / var(--cols));
+  }
+
+  /*
+    FASE 3 — cada figura es un enlace a la ficha del ponente.
+
+    `display: contents` es deliberado: el <a> envuelve a la <figure> pero NO
+    debe generar caja propia. Si la generara, se metería entre la <li>.pieza
+    —que es quien posiciona con --x, --esc y --z— y la figura, y toda la
+    geometría del abanico se rompería. Con `contents` el enlace aporta
+    semántica, foco y activación por teclado sin existir para el layout.
+
+    El precio conocido de `display: contents` era que algunos navegadores
+    quitaban el rol del elemento del árbol de accesibilidad; se corrigió en
+    Chrome/Firefox/Safari hace varias versiones y el enlace se anuncia bien.
+  */
+  .figura__enlace {
+    display: contents;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .figura {
+    position: relative;
+    margin: 0;
+    /* El anillo de foco lo dibuja :focus-visible global; el radio hace que
+       siga la silueta del marco y no un rectángulo suelto. */
+    border-radius: var(--radius-media);
+  }
+
+  /*
+    Con `display: contents` el <a> no tiene caja, así que el navegador no sabe
+    dónde pintar su anillo de foco. Se lo pinta la figura en su lugar.
+  */
+  .figura__enlace:focus-visible {
+    outline: none;
+  }
+
+  .figura__enlace:focus-visible .figura {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+
+  /* En la rejilla no hay solapes, así que la zona sensible es la figura
+     entera. En la composición se reduce a su banda (ver más abajo). */
+  .figura__zona {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
+  .figura__marco {
+    position: relative;
+    aspect-ratio: 672 / 900;
+  }
+
+  .figura__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /*
+      Desvanecido inferior: las figuras están recortadas al borde inferior del
+      lienzo y ese corte recto, flotando sobre el halo, se lee como un tajo.
+
+      Va en el <img> y NO en .figura__marco a propósito: así el placeholder
+      punteado (hermano, no hijo) se queda intacto cuando la imagen no carga.
+
+      `black` y `transparent` NO son colores de diseño: de una máscara el
+      navegador solo lee el canal alfa, así que esto significa «opaco →
+      transparente», no «negro».
+    */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 88%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 88%,
+      transparent 100%
+    );
+  }
+
+  .figura__placeholder {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-content: center;
+    padding: var(--space-xs);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-media);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  /*
+    Reparto de responsabilidades entre CSS y JS:
+    - Sin JS ([data-js] ausente): se ve la imagen, nunca el placeholder.
+    - Con JS: manda el placeholder y la imagen espera invisible; solo aparece
+      al confirmarse la carga. Así jamás se ve el icono de imagen rota.
+  */
+  :global([data-js]) .figura__placeholder {
+    display: grid;
+  }
+
+  :global([data-js]) .figura__img {
+    opacity: 0;
+    transition: opacity var(--t-slow) var(--ease-out);
+  }
+
+  /* La imagen ya estaba descargada antes de que corriera el script: aparece
+     de golpe. Ver el porqué en el <script>. */
+  :global([data-js]) .figura__marco[data-instantanea] .figura__img {
+    transition: none;
+  }
+
+  :global([data-js]) .figura__marco[data-state='loaded'] .figura__img {
+    opacity: 1;
+  }
+
+  :global([data-js]) .figura__marco[data-state='loaded'] .figura__placeholder {
+    display: none;
+  }
+
+  :global([data-js]) .figura__marco[data-state='failed'] .figura__img {
+    display: none;
+  }
+
+  /* Etiqueta en modo «siempre visible» (móvil) ----------------------------- */
+  .figura__etiqueta {
+    display: block;
+    margin-block-start: var(--space-xs);
+    text-align: center;
+  }
+
+  /* La guía es un recurso de la composición: en la rejilla no apunta a nada. */
+  .figura__guia {
+    display: none;
+  }
+
+  .figura__texto {
+    display: grid;
+    gap: 2px;
+    min-inline-size: 0;
+  }
+
+  .figura__nombre {
+    color: var(--text);
+    font-size: var(--step--1);
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+
+  .figura__tema {
+    color: var(--text-muted);
+    /* 12px, no 11: era el texto más pequeño del sitio y va bajo cada cara en
+       la rejilla de móvil, que es donde se lee. */
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  /*
+    Tres columnas en cuanto el ancho da para que una cara siga siendo
+    reconocible. Por debajo de 27rem (432px) tres retratos dejarían cada cara
+    en ~30px: se prioriza MENOS columnas antes que más figuras por fila.
+    Con 6 figuras esto da la rejilla 3×2.
+  */
+  @media (min-width: 27rem) {
+    .conjunto {
+      --cols: 3;
+    }
+  }
+
+  /*
+    PANTALLA BAJA — típicamente un teléfono girado.
+
+    Medido a 932×430: el hero pedía 100svh y acababa midiendo 1025px, con los
+    CTAs en y=567, fuera de pantalla. En un viewport de 430px de alto, reservar
+    la altura completa no aporta nada: el contenido ya es más alto que la
+    pantalla, así que el min-height solo añade aire muerto por arriba y por
+    abajo.
+
+    Se afloja el mínimo y se recorta el padding vertical, que a esa altura es
+    lo que más pesa. Solo por debajo de 34rem de ALTO: cualquier pantalla
+    vertical, por pequeña que sea, queda fuera de esta regla.
+  */
+  @media (max-height: 34rem) {
+    .hero {
+      min-height: 0;
+      padding-block: calc(var(--nav-h) + var(--space-2xs)) var(--space-lg);
+    }
+
+    /*
+      Aflojar el min-height no bastaba: medido a 932×430, el hero bajaba de
+      1025 a 961px pero los CTAs seguían en y=543, fuera de una pantalla de
+      430. El contenido ya era más alto que el viewport, así que hay que
+      comprimir el bloque, no solo la caja que lo envuelve.
+
+      Se recorta lo que más ocupa a esa altura: el título —que a 932px de
+      ancho se iba a 3.6rem y cuatro líneas— y el ritmo vertical entre
+      bloques. El texto no pierde jerarquía, solo deja de estar compuesto para
+      una pantalla alta que aquí no existe.
+    */
+    .hero__title {
+      font-size: 2.25rem;
+      margin-block-start: var(--space-2xs);
+    }
+
+    .hero__tagline {
+      margin-block-start: var(--space-xs);
+    }
+
+    .countdown,
+    .hero__ctas {
+      margin-block-start: var(--space-sm);
+    }
+  }
+
+  /*
+    SEGUNDO ESCALÓN, para pantallas aún más bajas (un iPhone 12 girado son
+    390px). Con el escalón anterior los CTAs se quedaban 23px fuera; aquí se
+    aprieta el ritmo al mínimo y el título baja un punto más.
+
+    Va en un tramo aparte y no endureciendo el escalón de 34rem porque a 430px
+    de alto ese ya entra holgado y comprimirlo más solo le quitaría aire sin
+    ganar nada.
+  */
+  @media (max-height: 26rem) {
+    .hero {
+      padding-block: var(--nav-h) var(--space-md);
+    }
+
+    .hero__title {
+      font-size: 2rem;
+    }
+
+    .hero__tagline,
+    .countdown,
+    .hero__ctas {
+      margin-block-start: var(--space-2xs);
+    }
+  }
+
+  /* === COMPOSICIÓN (≥ 43.75rem / 700px) ==================================
+     DIMENSIONADO POR ALTO, no por ancho.
+
+     Se fija el alto de figura deseado (--fig-alto, ligado a la altura del
+     viewport) y de ahí sale el ancho del conjunto. Solo si ese ancho no cabe
+     manda el `min(100%, …)` y la figura se reduce hasta que quepa. Antes era
+     al revés —se repartía el ancho y el alto salía de rebote—, y por eso la
+     figura se quedaba en 228px dentro de una columna de 598px.
+     ===================================================================== */
+  @media (min-width: 43.75rem) {
+    .hero__media {
+      /*
+        SANGRADO: el conjunto se sale del padding del contenedor hacia el
+        margen exterior de la página. Es ancho gratis que no le quita ni un
+        píxel a la columna de texto — que no admite recortes: a 5rem el título
+        necesita ~510px o «para el sector» se parte al entrar la fuente
+        display y reaparece el CLS de la Fase 2b.
+
+        Los 24px que se restan son el colchón contra la barra de scroll: en un
+        navegador con barra clásica, 100vw es mayor que el ancho visible.
+      */
+      --espacio-exterior: max(0px, calc((100vw - var(--container)) / 2));
+      --sangrado: clamp(
+        0px,
+        calc(var(--espacio-exterior) + var(--gutter) - 24px),
+        220px
+      );
+
+      margin-inline-end: calc(-1 * var(--sangrado));
+    }
+
+    .conjunto {
+      /*
+        Alto de figura deseado. Ligado a svh para que en pantallas bajas el
+        conjunto no empuje el layout, y topado para que en pantallas muy altas
+        no se desmadre.
+      */
+      --fig-alto: clamp(220px, 46svh, 470px);
+
+      position: relative;
+      display: block;
+      /*
+        El ancho lo decide el ALTO… salvo que no quepa, y entonces manda el
+        100%. `--ancho-por-alto` es el ancho del conjunto por unidad de alto
+        de figura, calculado en build desde el número de figuras.
+      */
+      inline-size: min(100%, calc(var(--fig-alto) * var(--ancho-por-alto)));
+      /* Y de ahí sale el alto, que además RESERVA la caja desde el primer
+         pintado: las piezas van en absolute y no aportan alto. CLS 0. */
+      aspect-ratio: var(--razon);
+      margin-inline: auto;
+    }
+
+    .pieza {
+      position: absolute;
+      /* Todas las medidas en anchos/altos de figura, resueltas contra la caja
+         del conjunto. Ni una posición escrita a mano. */
+      inset-inline-start: calc(var(--x) / var(--w-total) * 100%);
+      inset-block-end: calc(var(--elev) / var(--h-total) * 100%);
+      inline-size: calc(100% / var(--w-total));
+      z-index: var(--z);
+      transition: opacity var(--t-base) var(--ease-out);
+      /*
+        La caja de la pieza NO recibe puntero: solo su banda lo hace. Sin
+        esto, el rectángulo transparente de una figura con más z-index se
+        come el hover de sus vecinas.
+      */
+      pointer-events: none;
+    }
+
+    /*
+      La banda: desde el punto medio con la vecina izquierda hasta el punto
+      medio con la derecha, en unidades de ancho de lienzo (la pieza mide
+      exactamente uno). Las de los extremos llegan hasta el borde del
+      conjunto, así que la partición no deja ni un punto muerto.
+
+      Va a la altura completa a propósito: como las bandas no se solapan, da
+      igual el z-index y el resultado es predecible — cada columna vertical
+      del conjunto enciende una figura y solo una.
+    */
+    .figura__zona {
+      /*
+        Se estira 6rem POR ENCIMA de la figura para tapar el hueco donde se
+        dibuja la etiqueta. Sin eso, mover el ratón desde la cara hacia el
+        nombre salía de la zona sensible y la etiqueta se desvanecía justo al
+        intentar leerla: es el fallo que WCAG 1.4.13 llama «Hoverable». La
+        etiqueta misma no puede sostener el hover porque lleva
+        pointer-events: none para no robárselo a la figura.
+
+        Como las bandas no se solapan entre sí, alargarlas hacia arriba no
+        crea ninguna ambigüedad nueva.
+      */
+      inset-block: -6rem 0;
+      inset-inline-start: calc(var(--zona-x) * 100%);
+      inline-size: calc(var(--zona-w) * 100%);
+      pointer-events: auto;
+    }
+
+    /*
+      Profundidad: la fila frontal a escala 1 y opacidad 1; la de fondo
+      encogida y apagada. transform-origin abajo para que cada fila comparta
+      LÍNEA BASE al escalar.
+    */
+    .figura__profundidad {
+      transform: scale(var(--esc));
+      transform-origin: 50% 100%;
+      opacity: var(--opa);
+      transition:
+        transform var(--t-base) var(--ease-out),
+        opacity var(--t-base) var(--ease-out);
+    }
+
+    /* -----------------------------------------------------------------------
+       ETIQUETA SUPERPUESTA, ENCIMA DE LA FIGURA
+
+       Va arriba y no al lado por una razón medida: una etiqueta lateral
+       necesita reservar ~120px a cada lado del conjunto, y como el conjunto
+       está limitado por el ancho, esa reserva se la come la figura. Medido a
+       1440px: con etiqueta lateral la figura frontal se queda en 295px; con
+       la etiqueta encima llega a 423px. El encargo pide explícitamente que el
+       espacio de la etiqueta no reste tamaño a las figuras.
+
+       Encima del conjunto hay hueco de sobra (la caja se ancla abajo y la
+       columna es más alta), la etiqueta nunca tapa una cara porque va por
+       encima de todas las cabezas, y como solo se muestra UNA a la vez no
+       compite con las vecinas: puede invadir su espacio sin conflicto.
+       -------------------------------------------------------------------- */
+    .figura__etiqueta {
+      position: absolute;
+      /*
+        `var(--esc) * 100%` y no `100%`: la caja de la figura NO encoge al
+        aplicar `scale()` —el transform no toca el layout—, así que anclar la
+        etiqueta al 100% la dejaba flotando sobre el borde de una caja
+        invisible. Medido en la fila de fondo: 73px de aire entre el final de
+        la guía y la coronilla. Con la escala dentro, la guía acaba justo en
+        el borde superior real del lienzo dibujado.
+      */
+      inset-block-end: calc(var(--esc) * 100%);
+      inset-inline-start: 50%;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-block-start: 0;
+      /* max-content topado: el nombre no se parte en tres renglones y el tema
+         cabe entero. Como flota sobre hueco vacío, puede permitírselo. */
+      inline-size: max-content;
+      max-inline-size: 13rem;
+      translate: -50% 0;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .figura__texto {
+      opacity: 0;
+      transition:
+        opacity var(--t-slow) var(--ease-out),
+        transform var(--t-slow) var(--ease-out);
+      transform: translateY(4px);
+    }
+
+    .figura__tema {
+      /*
+        Hasta DOS líneas, no una. Con la etiqueta encima del conjunto hay
+        hueco vertical de sobra, y a una sola línea un tema real se cortaba
+        con puntos suspensivos a media palabra. El tope sigue existiendo —dos
+        líneas y corta— para que un tema kilométrico no pueda estirar la
+        etiqueta hasta salirse por arriba.
+      */
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    /*
+      Guía vertical: baja desde el texto hasta el borde superior del lienzo.
+      Se dibuja con scaleY desde arriba, así que CRECE hacia la figura en vez
+      de aparecer entera.
+    */
+    .figura__guia {
+      display: block;
+      inline-size: 1px;
+      block-size: 28px;
+      margin-block-start: var(--space-xs);
+      background-color: var(--text-muted);
+      transform: scaleY(0);
+      transform-origin: 50% 0;
+      transition: transform var(--t-slow) var(--ease-out);
+    }
+
+    /* Estado activo: ratón, foco de teclado y toque, el mismo resultado.
+       Se usa :focus y no solo :focus-visible para que en táctil —donde no hay
+       hover— un toque revele la etiqueta.
+
+       DESDE LA FASE 3 EL FOCO LO RECIBE EL ENLACE, no la <figure>: la figura
+       va envuelta en <a href="#ponente-slug">, así que el elemento enfocado es
+       el ANCESTRO. Por eso estas reglas son `.figura__enlace:focus .figura…` y
+       no `.figura:focus …`, que ya no casaría nunca. */
+    .figura:hover .figura__texto,
+    .figura__enlace:focus .figura__texto {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .figura:hover .figura__guia,
+    .figura__enlace:focus .figura__guia {
+      transform: scaleY(1);
+    }
+
+    /* La activa recupera escala y opacidad plenas y se eleva unos px. */
+    .figura:hover .figura__profundidad,
+    .figura__enlace:focus .figura__profundidad {
+      transform: scale(var(--esc)) translateY(-6px);
+      opacity: 1;
+    }
+
+    /*
+      Las demás bajan a 0.55. Con :has, porque es la única forma de que un
+      elemento afecte a sus hermanos sin JS: el estado visual del hero no
+      debería depender del bundle de animaciones.
+
+      Ojo: NO se toca el z-index de la activa. Subirlo metía una figura de
+      fondo por delante de la fila frontal al activarla, tapando dos caras.
+    */
+    .conjunto:has(.figura:hover, .figura__enlace:focus)
+      .pieza:not(:has(.figura:hover, .figura__enlace:focus)) {
+      opacity: 0.55;
+    }
+
+    /*
+      El ratón GANA al foco cuando hay conflicto.
+
+      `:focus` persiste tras un clic, así que al hacer clic en una figura y
+      pasar el ratón por otra quedaban DOS etiquetas encendidas a la vez,
+      superpuestas en la misma banda de arriba. Cuando hay algo bajo el ratón,
+      la que solo tiene foco se repliega.
+
+      Se usa `:focus` y no `:focus-visible` en el estado activo a propósito:
+      en táctil no hay hover, y `:focus-visible` no casa al tocar, así que un
+      toque no revelaría nada. El precio es este conflicto, y esta regla es el
+      precio de ese precio.
+    */
+    .conjunto:has(.figura:hover)
+      .figura__enlace:focus:not(:has(.figura:hover))
+      .figura__texto {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    .conjunto:has(.figura:hover)
+      .figura__enlace:focus:not(:has(.figura:hover))
+      .figura__guia {
+      transform: scaleY(0);
+    }
+
+    /*
+      El anillo de foco por teclado SÍ sube al frente.
+
+      El anillo se dibuja sobre la caja de la figura, y las vecinas —que se
+      solapan— pintan su cuerpo por encima y lo parten. Subir el z-index solo
+      con :focus-visible (teclado) lo deja entero sin tocar el comportamiento
+      del ratón, que es donde una figura de fondo colándose delante de la fila
+      frontal sí se vería mal.
+    */
+    .pieza:has(.figura__enlace:focus-visible) {
+      z-index: 200;
+    }
+  }
+
+  /*
+    TRAMO APILADO (700–992px): hueco para la etiqueta.
+
+    Aquí el hero es de una sola columna, así que encima del conjunto no hay
+    espacio vacío: están los CTAs. Medido con hover real a 700, 768, 900 y
+    991px, la etiqueta caía sobre los botones —solapaban 30px— porque se
+    dibuja por encima del conjunto y ahí ya no hay columna de texto al lado
+    que le deje sitio.
+
+    Se reserva desde el contenedor del conjunto y no encogiendo la figura: en
+    este tramo el hero ya es más alto que el viewport y se recorre haciendo
+    scroll, así que 5rem de aire cuestan menos que perder tamaño de figura,
+    que es justo lo que este rediseño venía a ganar.
+
+    A partir de 62rem el conjunto vuelve a tener su propia columna y encima de
+    él solo hay hueco vacío, así que la reserva desaparece.
+  */
+  @media (min-width: 43.75rem) and (max-width: 61.9375rem) {
+    .hero__media {
+      padding-block-start: 5rem;
+    }
+  }
+
+  /* Desktop ---------------------------------------------------------------- */
+  @media (min-width: 62rem) {
+    .hero__inner {
+      grid-template-columns: 52fr 48fr;
+    }
+  }
+</style>

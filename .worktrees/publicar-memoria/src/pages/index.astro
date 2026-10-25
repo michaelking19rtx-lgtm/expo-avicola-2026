@@ -1,0 +1,80 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import VideoSection from '../components/VideoSection.astro';
+import Ponentes from '../components/Ponentes.astro';
+import Pilares from '../components/Pilares.astro';
+import Programa from '../components/Programa.astro';
+import ParaQuien from '../components/ParaQuien.astro';
+import Boletos from '../components/Boletos.astro';
+import Sede from '../components/Sede.astro';
+import Patrocinadores from '../components/Patrocinadores.astro';
+import Faq from '../components/Faq.astro';
+import CtaFinal from '../components/CtaFinal.astro';
+import Footer from '../components/Footer.astro';
+import BarraCompra from '../components/BarraCompra.astro';
+import BotonWhatsApp from '../components/BotonWhatsApp.astro';
+---
+
+{/*
+  `evento`: la home es la única página que emite el JSON-LD del congreso.
+
+  SIN `noindex` desde que llegaron los seis nombres reales. La home lo llevó
+  desde la Fase 2c porque el hero enseñaba caras reales junto a «Ponente por
+  confirmar», y que un buscador cachee esa versión es peor que no aparecer.
+  Hoy las seis etiquetas son nombre real y tema real.
+
+  SI VUELVE A ENTRAR UN PLACEHOLDER EN EL HERO, vuelve a ponerlo: es un
+  atributo booleano de <Base>, `<Base evento noindex>`, y nada más depende de
+  él. `/admin` sí lo lleva de forma permanente, por otro motivo.
+*/}
+<Base evento>
+  <Nav />
+  {/* tabindex="-1": destino del enlace «Saltar al contenido». Sin él, un <main>
+      no es focalizable y el salto movería el scroll pero no el foco. */}
+  <main id="contenido" tabindex="-1">
+    <Hero />
+    <VideoSection />
+
+    <Ponentes />
+    <Pilares />
+
+    {/*
+      SUPERFICIES CLARAS — claro donde se lee, oscuro donde se decide.
+
+      El mecanismo entero vive en global.css («Superficies claras»); aquí solo
+      se declara QUÉ secciones son claras.
+
+      Las fronteras son un CORTE SECO, sin degradado. Ya no hay `data-borde`:
+      existía solo para decidir qué banda pintaba cada sección y cuál se
+      suprimía entre dos claras seguidas. Sin bandas, el atributo no decidía
+      nada, así que se retiró en vez de dejarlo como marcado muerto.
+
+        Pilares → [Programa · ¿Para quién?] → Boletos → Sede → [Patros · FAQ] → CTA
+    */}
+    <Programa data-superficie="clara" />
+    <ParaQuien data-superficie="clara" />
+
+    <Boletos />
+    <Sede />
+
+    <Patrocinadores data-superficie="clara" />
+    <Faq data-superficie="clara" />
+
+    <CtaFinal />
+  </main>
+
+  {/* El pie va FUERA de <main>: es contenido de la página, no del contenido
+      principal, y así «Saltar al contenido» no lo mete en el mismo saco. */}
+  <Footer />
+
+  {/* Barra de compra fija, solo móvil. Va fuera de <main> por lo mismo que el
+      pie, y además así ninguna sección clara la alcanza: es contenido del
+      sitio, no de la sección que tenga debajo — el mismo criterio que la nav. */}
+  <BarraCompra />
+
+  {/* Botón flotante de WhatsApp. Solo escritorio: en móvil el contacto vive
+      DENTRO de la barra de compra, para no pelearse la esquina del pulgar. */}
+  <BotonWhatsApp />
+</Base>

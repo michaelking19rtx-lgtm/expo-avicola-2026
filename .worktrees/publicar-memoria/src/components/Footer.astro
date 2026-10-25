@@ -1,0 +1,300 @@
+---
+import site from '../data/site.json';
+import enlaces from '../data/navegacion.json';
+import { asset } from '../scripts/paths.js';
+import { fechaLarga } from '../scripts/fechas.js';
+import { whatsappUrl, whatsappLegible, MENSAJES } from '../scripts/contacto.js';
+
+/*
+  Pie de página.
+
+  Cada vía de contacto se resuelve POR SEPARADO: llegan de una en una, así que
+  las que ya existen se pintan y las que faltan siguen en "Próximamente". No se
+  inventa nada.
+
+  Hoy tienen valor el CORREO y el WHATSAPP; el teléfono sigue en null.
+*/
+const contacto = site.contacto ?? {};
+
+/*
+  `unknown` y no `string`: hoy las tres claves de contacto son null en el JSON,
+  así que TypeScript infiere el tipo `null` para ellas. Cuando se rellenen
+  llegarán como texto, y puede venir con espacios o guiones («+52 238 ...»), de
+  ahí el filtro de dígitos para tel: y wa.me.
+*/
+const soloDigitos = (valor: unknown) => String(valor).replace(/\D/g, '');
+
+const vias = [
+  {
+    etiqueta: 'Correo',
+    valor: contacto.correo,
+    href: contacto.correo ? `mailto:${contacto.correo}` : null,
+    externo: false,
+    nota: null,
+  },
+  {
+    etiqueta: 'Teléfono',
+    valor: contacto.telefono,
+    href: contacto.telefono ? `tel:${soloDigitos(contacto.telefono)}` : null,
+    externo: false,
+    nota: null,
+  },
+  {
+    /*
+      Se PINTA el número legible («236 113 8979») y se ENLAZA el crudo, que
+      son dos cosas distintas y viven separadas en site.json. El enlace lo
+      construye contacto.js, único sitio del repo donde se arma un wa.me.
+
+      El mensaje del pie es distinto al del botón flotante a propósito: quien
+      escribe desde aquí viene de buscar un dato concreto.
+    */
+    etiqueta: 'WhatsApp',
+    valor: whatsappLegible,
+    href: whatsappUrl(MENSAJES.pie),
+    externo: true,
+    nota: 'abre WhatsApp en una pestaña nueva',
+  },
+];
+
+const anio = new Date(site.fecha).getUTCFullYear();
+const inicio = asset('');
+const normalizar = (ruta: string) => ruta.replace(/\/+$/, '') || '/';
+const enInicio = normalizar(Astro.url.pathname) === normalizar(inicio);
+const hrefSitio = (href: string) => {
+  if (href.startsWith('#')) return enInicio ? href : `${inicio}${href}`;
+  if (/^(?:https?:|mailto:|tel:)/.test(href)) return href;
+  return asset(href.replace(/^\/+/, ''));
+};
+---
+
+<footer class="pie">
+  <div class="pie__inner">
+    <div class="pie__marca">
+      <a class="pie__wordmark" href={asset('')}>Expo Avícola Productiva</a>
+      <p class="pie__desc">{site.tagline}</p>
+      <p class="pie__cuando">
+        {fechaLarga(site.fecha)} · {site.ciudad}
+      </p>
+    </div>
+
+    {/*
+      La etiqueta NO puede ser "Secciones del sitio": ese nombre ya lo usa la
+      nav de la cabecera, y dos landmarks de navegación con nombre idéntico son
+      indistinguibles para quien navega por landmarks con lector de pantalla.
+    */}
+    <nav class="pie__nav" aria-label="Enlaces del pie de página">
+      <h2 class="pie__titulo">Navegación</h2>
+      <ul class="pie__enlaces" role="list">
+        {enlaces.map((enlace) => (
+          <li>
+            <a class="pie__enlace" href={hrefSitio(enlace.href)}>{enlace.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="pie__contacto">
+      <h2 class="pie__titulo">Contacto</h2>
+      <dl class="vias">
+        {vias.map((via) => (
+          <div class="vias__fila">
+            <dt class="vias__etiqueta">{via.etiqueta}</dt>
+            <dd class="vias__valor">
+              {via.href ? (
+                <a
+                  class="pie__enlace"
+                  href={via.href}
+                  {...(via.externo
+                    ? { target: '_blank', rel: 'noopener noreferrer' }
+                    : {})}
+                >
+                  {via.valor}
+                  {via.nota && <span class="sr-only"> ({via.nota})</span>}
+                </a>
+              ) : (
+                <span class="vias__pendiente">Próximamente</span>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </div>
+
+  <div class="pie__barra">
+    <p class="pie__copy">© {anio} Expo Avícola Productiva</p>
+    {/*
+      Aviso de privacidad: TEXTO PLANO a propósito. La página /privacidad
+      todavía no existe y enlazarla sería un 404 — justo lo que llevamos
+      evitando con las anclas muertas. Cuando exista, esto pasa a ser:
+
+      <a class="pie__enlace" href={asset('privacidad')}>Aviso de privacidad</a>
+    */}
+    <p class="pie__legal">Aviso de privacidad · Próximamente</p>
+  </div>
+</footer>
+
+<style>
+  .pie {
+    padding-block-start: var(--space-3xl);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .pie__inner {
+    display: grid;
+    max-width: var(--container);
+    gap: var(--space-2xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /*
+    Los tres bloques del pie (marca, nav, contacto) son items de grid de
+    `.pie__inner`, y un item de grid trae `min-width: auto` de fábrica: no
+    puede encoger por debajo del min-content de su contenido. Medido a 360px:
+    el correo `contacto@visionpecuariamx.com` no tiene ningún punto de corte
+    —es una sola palabra sin espacios ni guiones— así que su min-content es
+    el ancho de la palabra entera, y ESE ancho forzaba la pista de la grid
+    (y con ella todo el pie) a 381px en un viewport de 360. `min-width: 0`
+    aquí es lo que le permite a la pista encoger de verdad.
+  */
+  .pie__marca,
+  .pie__nav,
+  .pie__contacto {
+    min-width: 0;
+  }
+
+  /* Marca ------------------------------------------------------------------ */
+  .pie__wordmark {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .pie__desc {
+    max-width: 34ch;
+    margin-block-start: var(--space-sm);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .pie__cuando {
+    margin-block-start: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  /* Columnas de enlaces ---------------------------------------------------- */
+  .pie__titulo {
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .pie__enlaces {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+    list-style: none;
+  }
+
+  .pie__enlace {
+    color: var(--text);
+    transition: color var(--t-base) var(--ease-out);
+  }
+
+  /*
+    ÁREAS DE TOQUE en móvil. Medidos a 360px, estos cuatro enlaces daban
+    20px de alto —«Sede» era un blanco de 39×20— frente a los 44×44 que pide
+    WCAG 2.5.5. El texto no cambia de tamaño: se agranda el área pulsable con
+    padding, que es lo único que hace falta.
+
+    Acotado por ancho para no separar el pie en escritorio, donde se pulsa con
+    ratón y el listado ya está compuesto.
+  */
+  @media (max-width: 61.9375rem) {
+    .pie__enlace,
+    .pie__wordmark {
+      display: inline-block;
+      min-block-size: 44px;
+      padding-block: 0.7rem;
+    }
+
+    .pie__enlace {
+      /* Un poco de aire lateral para que dos enlaces contiguos no se toquen. */
+      padding-inline-end: var(--space-sm);
+    }
+  }
+
+  .pie__enlace:hover {
+    color: var(--accent);
+  }
+
+  /* Contacto --------------------------------------------------------------- */
+  .vias {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+  }
+
+  .vias__fila {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: var(--space-sm);
+    align-items: baseline;
+  }
+
+  /*
+    min-width: 0 en la columna del valor (mismo motivo que .pie__contacto
+    arriba, un nivel más adentro: `.vias__fila` es OTRA grid, y la celda del
+    valor es OTRO item que por defecto no encoge). `overflow-wrap: anywhere`
+    en el propio texto es la mitad que faltaba: sin un punto de corte, el
+    correo simplemente NO CABE en 265px por ancho que se le dé a la columna,
+    así que además de poder encoger, el texto tiene que poder partirse a
+    media palabra cuando no hay otra opción. Es la propiedad que SÍ reduce el
+    min-content en el cálculo de layout (a diferencia de `word-break:
+    break-word`, que solo fuerza el corte visual sin achicar el mínimo).
+  */
+  .vias__valor {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .vias__etiqueta {
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  .vias__pendiente {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Barra inferior --------------------------------------------------------- */
+  .pie__barra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+    justify-content: space-between;
+    max-width: var(--container);
+    margin-inline: auto;
+    margin-block-start: var(--space-2xl);
+    padding-block: var(--space-lg);
+    padding-inline: var(--gutter);
+    border-block-start: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+
+  @media (min-width: 62rem) {
+    .pie__inner {
+      grid-template-columns: 2fr 1fr 1.4fr;
+      gap: var(--space-xl);
+    }
+  }
+</style>

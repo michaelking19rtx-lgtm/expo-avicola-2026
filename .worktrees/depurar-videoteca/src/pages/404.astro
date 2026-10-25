@@ -1,0 +1,91 @@
+---
+import Base from '../layouts/Base.astro';
+import site from '../data/site.json';
+import { asset } from '../scripts/paths.js';
+
+/*
+  Página de error de GitHub Pages.
+
+  Sin JSON-LD del evento (no es la home) y con `noindex`: una página de error no
+  debe entrar en el índice. También queda fuera del sitemap, filtrada en
+  astro.config.mjs.
+
+  Sin capa de movimiento a propósito: es una página de paso: cargar 132 KB de
+  GSAP para animar un mensaje de error sería exactamente el tipo de peso que
+  esta fase intenta quitar.
+*/
+---
+
+<Base title={`Página no encontrada — ${site.nombre}`} noindex>
+  <main class="error" id="contenido">
+    <div class="error__inner">
+      <p class="error__codigo" aria-hidden="true">404</p>
+      <h1 class="error__titulo">Esta página no existe</h1>
+      <p class="error__texto">
+        El enlace que seguiste puede estar roto o la página pudo haberse movido.
+        Desde el inicio llegas a todo: programa, boletos y sede.
+      </p>
+      <a class="error__cta" href={asset('')}>Volver al inicio</a>
+    </div>
+  </main>
+</Base>
+
+<style>
+  .error {
+    display: grid;
+    place-items: center;
+    min-height: 100svh;
+    padding-block: var(--space-3xl);
+    padding-inline: var(--gutter);
+  }
+
+  .error__inner {
+    max-width: 44ch;
+    text-align: center;
+  }
+
+  /*
+    El 404 es textura, no información: quien use lector de pantalla ya recibe
+    «Esta página no existe» en el h1, que dice lo mismo y mejor.
+  */
+  .error__codigo {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: var(--step-5);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    opacity: 0.18;
+  }
+
+  .error__titulo {
+    margin-block-start: var(--space-md);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .error__texto {
+    margin-block-start: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  .error__cta {
+    display: inline-block;
+    margin-block-start: var(--space-xl);
+    padding: var(--space-md) var(--space-2xl);
+    border-radius: var(--radius-pill);
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    font-size: var(--step-0);
+    font-weight: 600;
+    transition:
+      filter var(--t-base) var(--ease-out),
+      transform var(--t-fast) var(--ease-out);
+  }
+
+  .error__cta:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+</style>

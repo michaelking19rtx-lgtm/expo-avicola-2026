@@ -1,0 +1,139 @@
+---
+import IconoWhatsApp from './IconoWhatsApp.astro';
+import { whatsappUrl, MENSAJES } from '../scripts/contacto.js';
+
+/*
+  Botón flotante de WhatsApp — SOLO ESCRITORIO.
+
+  En MÓVIL NO EXISTE, y no por descuido: va dentro de la barra de compra fija,
+  como icono a la izquierda del precio (ver BarraCompra.astro). Dos elementos
+  peleándose la esquina inferior derecha es peor que ninguno de los dos —se
+  tapan entre sí, y en un teléfono esa esquina es justo donde cae el pulgar—.
+  Estaba anotado como decisión desde que se construyó la barra.
+
+  Sin número configurado no se pinta nada. Un botón de contacto que no
+  contacta es peor que su ausencia.
+*/
+const href = whatsappUrl(MENSAJES.flotante);
+---
+
+{href && (
+  <a
+    class="wa"
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    data-wa-flotante
+  >
+    <IconoWhatsApp clase="wa__icono" tamano={26} />
+    <span class="sr-only">
+      Escribir por WhatsApp (abre WhatsApp en una pestaña nueva)
+    </span>
+  </a>
+)}
+
+<style>
+  /*
+    NO EXISTE EN MÓVIL. El mismo corte que usa la barra de compra, para que el
+    relevo entre los dos sea exacto: donde termina uno empieza el otro y nunca
+    se ven a la vez.
+  */
+  .wa {
+    display: none;
+  }
+
+  @media (min-width: 48rem) {
+    .wa {
+      position: fixed;
+      inset-block-end: var(--space-lg);
+      inset-inline-end: var(--space-lg);
+      z-index: var(--z-sticky);
+
+      display: grid;
+      place-items: center;
+      /* Mínimo de área táctil, con holgura sobre los 48 exigidos. */
+      inline-size: 52px;
+      block-size: 52px;
+
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background-color: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-md);
+
+      /*
+        DISCRETO: el CTA de la página es comprar, no escribir. El botón se
+        queda en superficie neutra y solo el icono lleva acento, en vez de ser
+        un círculo lima que compita con «Comprar mi boleto».
+      */
+      opacity: 0;
+      visibility: hidden;
+      translate: 0 8px;
+      transition:
+        opacity var(--t-base) var(--ease-out),
+        translate var(--t-base) var(--ease-out),
+        visibility 0s linear var(--t-base),
+        border-color var(--t-base) var(--ease-out);
+    }
+
+    /*
+      `visibility` además de la opacidad: saca el botón del orden de tabulación
+      mientras no se ve, para que no se pueda enfocar a ciegas un enlace
+      invisible. Mismo criterio que la barra de compra.
+    */
+    .wa[data-visible] {
+      opacity: 1;
+      visibility: visible;
+      translate: 0 0;
+      transition:
+        opacity var(--t-base) var(--ease-out),
+        translate var(--t-base) var(--ease-out),
+        visibility 0s,
+        border-color var(--t-base) var(--ease-out);
+    }
+
+    .wa__icono {
+      color: var(--accent);
+    }
+
+    .wa:hover {
+      border-color: var(--accent);
+    }
+  }
+
+  /*
+    SIN MOVIMIENTO: aparece y desaparece sin desplazamiento ni transición. El
+    corte global de global.css ya neutraliza las duraciones, pero el
+    `translate` es una propiedad de posición, no de tiempo, y se quedaría
+    aplicado: hay que devolverlo a cero explícitamente.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .wa,
+    .wa[data-visible] {
+      translate: 0 0;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+    Aparece al salir el hero de vista, igual que la barra de compra y por la
+    misma razón: desde el primer píxel competiría con el CTA del hero.
+
+    IntersectionObserver y NO un listener de scroll — el scroll lo conduce
+    Lenis y engancharse ahí sería correr en cada frame del scroll suave.
+  */
+  const boton = document.querySelector('[data-wa-flotante]');
+  const hero = document.querySelector('#inicio');
+
+  if (boton && hero) {
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        boton.toggleAttribute('data-visible', !entrada.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+    observador.observe(hero);
+  }
+</script>
